@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "Dialogue Manager"
+version = "0.1"
+authors = [
+  { name="Eric", email="eric@locallyringed.space" }
+]
+description = "An engine and library for handling dialogue graphs in video games."
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "pytest-testmon",
+  "pytest-xdist",
+]
+
+[template.plugins.default]
+src-layout = true
+
+[project.urls]
+# Homepage = "TODO"
+# Issues = "TODO"
+
+[project.scripts]
+# TODO
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
