@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "Dialogue Manager"
+name = "Dialogue-Manager"
 version = "0.1"
 authors = [
   { name="Eric", email="eric@locallyringed.space" }
@@ -36,4 +36,4 @@ src-layout = true
 # TODO
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["src/dialogue_manager"]
