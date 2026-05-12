@@ -1,0 +1,68 @@
+name: Alice
+
+vertices: 
+    begin:
+        text: "Hello. You have {player.gold} gold. Want to buy a flower?"
+        effects: []
+    buy_flower:
+        text: "Thanks. You now have {player.gold} gold. Want to buy another?"
+        effects: [
+            {type: "modify_list", target: "player.inventory", append: "Flower", remove: null},
+            {type: "modify_list", target: "alice.inventory", append: null, remove: "Flower"},
+        ]
+    insufficient_gold:
+        text: "You don't have enough money."
+        effects: []
+    end:
+        text: "Okay, goodbye."
+        effects: []
+
+edges:
+    begin_to_buy_flower:
+        from: "begin"
+        to: "buy_flower"
+        text: "Yes, I'll buy a flower."
+        filters: [
+            {type: "check_value", path: "player.gold", op: ">=", value: 1},
+        ]
+        effects: [
+            {type: "modify_value", target: "player.gold", delta: -1},
+        ]
+    begin_to_insufficient_gold:
+        from: "begin"
+        to: "insufficient_gold"
+        text: "Well, can I buy one with {player.gold} gold?"
+        filters: [
+            {type: "check_value", path: "player.gold", op: "<", value: 1},
+        ]
+        effects: []
+    begin_to_end:
+        from: "begin"
+        to: "end"
+        text: "No thanks."
+        filters: []
+        effects: []
+    buy_flower_to_buy_flower:
+        from: "buy_flower"
+        to: "buy_flower"
+        text: "Yes, I'll buy another."
+        filters: [
+            {type: "check_value", path: "player.gold", op: ">=", value: 1},
+        ]
+        effects: [
+            {type: "modify_value", target: "player.gold", delta: -1},
+        ]
+    buy_flower_to_insufficient_gold:
+        from: "buy_flower"
+        to: "insufficient_gold"
+        text: "I'm a little short. Can we make a deal?"
+        filters: [
+            {type: "check_value", path: "player.gold", op: "<", value: 1},
+        ]
+        effects: []
+    buy_flower_to_end:
+        from: "buy_flower"
+        to: "end"
+        text: "No thanks, I have enough."
+        filters: []
+        effects: []
