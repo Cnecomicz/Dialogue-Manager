@@ -1,6 +1,6 @@
 from yaml import safe_load
 
-class GraphBuilder:
+class Graph:
     def __init__(self, yaml_file: str):
         with open(yaml_file, 'r') as f:
             yaml_data = safe_load(f)
