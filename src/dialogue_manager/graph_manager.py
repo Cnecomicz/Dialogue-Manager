@@ -34,5 +34,16 @@ class GraphManager:
                         is_valid_edge = False
         return is_valid_edge
 
+    def select(self, edge: Edge):
+        if edge not in self.current_edges:
+            raise InvalidEdgeError(
+                f"Cannot select {edge.edge_name} at vertex "
+                f"{self.current_vertex} with the current game state. "
+                f"{edge=}, "
+                f"{self.current_vertex=}, "
+                f"{self.graph=}, "
+                f"{self.game_state=}"
+            )
+
 
     
