@@ -6,3 +6,7 @@ class Edge:
         self.text = data["text"]
         self.filters = data["filters"]
         self.effects = data["effects"]
+
+    def resolve_vertex_references(self, vertices: dict):
+        self.from_vertex = vertices[self.from_vertex]
+        self.to_vertex = vertices[self.to_vertex]
