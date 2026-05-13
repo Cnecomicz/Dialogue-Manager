@@ -23,3 +23,9 @@ def test_error_when_selecting_invalid_edge(hello_world_graph, mock_game_state_wi
     graph_manager = GraphManager(hello_world_graph, mock_game_state_with_gold)
     with raises(InvalidEdgeError):
         graph_manager.select(hello_world_graph.edge_dict["begin_to_insufficient_gold"])
+
+# Selecting a valid edge causes its effects to occur
+def test_select_edge_to_cause_effects(hello_world_graph, mock_game_state_with_gold):
+    graph_manager = GraphManager(hello_world_graph, mock_game_state_with_gold)
+    graph_manager.select(hello_world_graph.edge_dict["begin_to_buy_flower"])
+    assert mock_game_state_with_gold.player.gold == 1
