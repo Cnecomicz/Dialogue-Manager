@@ -10,7 +10,7 @@ def test_creation_of_vertices_and_edges(hello_world_graph):
 
 # Vertices and edges are proper classes
 def test_vertices_and_edges_are_classes(hello_world_graph):
-    for vertex in hello_world_graph.vertices:
+    for vertex_name, vertex in hello_world_graph.vertices.items():
         assert isinstance(vertex, Vertex)
-    for edge in hello_world_graph.edges:
+    for edge_name, edge in hello_world_graph.edges.items():
         assert isinstance(edge, Edge)
