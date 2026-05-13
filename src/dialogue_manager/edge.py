@@ -7,6 +7,6 @@ class Edge:
         self.filters = data["filters"]
         self.effects = data["effects"]
 
-    def resolve_vertex_references(self, vertices: dict):
-        self.from_vertex = vertices[self.from_vertex]
-        self.to_vertex = vertices[self.to_vertex]
+    def resolve_vertex_references(self, vertex_dict: dict):
+        self.from_vertex = vertex_dict[self.from_vertex]
+        self.to_vertex = vertex_dict[self.to_vertex]
