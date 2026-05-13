@@ -54,6 +54,7 @@ class GraphManager:
                     )
                     new_value = target_value + effect["delta"]
                     set_nested_attr(self.game_state, effect["target"], new_value)
+        self.current_vertex = self.graph.vertex_dict[edge.to_vertex.vertex_name]
 
 
     
