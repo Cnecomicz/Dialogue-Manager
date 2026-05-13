@@ -29,3 +29,9 @@ def test_select_edge_to_cause_effects(hello_world_graph, mock_game_state_with_go
     graph_manager = GraphManager(hello_world_graph, mock_game_state_with_gold)
     graph_manager.select(hello_world_graph.edge_dict["begin_to_buy_flower"])
     assert mock_game_state_with_gold.player.gold == 1
+
+# Selecting an edge updates your current vertex
+def test_select_edge_to_go_to_next_vertex(hello_world_graph, mock_game_state_with_gold):
+    graph_manager = GraphManager(hello_world_graph, mock_game_state_with_gold)
+    graph_manager.select(hello_world_graph.edge_dict["begin_to_buy_flower"])
+    assert graph_manager.current_vertex == hello_world_graph.vertex_dict["buy_flower"]
