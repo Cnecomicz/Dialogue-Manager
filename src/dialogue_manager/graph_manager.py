@@ -1,6 +1,8 @@
 from dialogue_manager.edge import Edge
 from dialogue_manager.graph import Graph
-from dialogue_manager.helper_functions import get_operator, get_nested_attr
+from dialogue_manager.helper_functions import (
+    get_operator, get_nested_attr, set_nested_attr
+)
 
 class InvalidEdgeError(Exception):
     pass
@@ -35,7 +37,7 @@ class GraphManager:
         return is_valid_edge
 
     def select(self, edge: Edge):
-        if edge not in self.current_edges:
+        if edge not in self.current_edges.values():
             raise InvalidEdgeError(
                 f"Cannot select {edge.edge_name} at vertex "
                 f"{self.current_vertex} with the current game state. "
@@ -44,6 +46,14 @@ class GraphManager:
                 f"{self.graph=}, "
                 f"{self.game_state=}"
             )
+        for effect in edge.effects:
+            match effect["type"]:
+                case "modify_value":
+                    target_value = get_nested_attr(
+                        self.game_state, effect["target"]
+                    )
+                    new_value = target_value + effect["delta"]
+                    set_nested_attr(self.game_state, effect["target"], new_value)
 
 
     
