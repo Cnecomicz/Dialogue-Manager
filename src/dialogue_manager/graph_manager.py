@@ -2,6 +2,9 @@ from dialogue_manager.edge import Edge
 from dialogue_manager.graph import Graph
 from dialogue_manager.helper_functions import get_operator, get_nested_attr
 
+class InvalidEdgeError(Exception):
+    pass
+
 class GraphManager:
     def __init__(self, graph: Graph, game_state: "GameState"):
         self.graph = graph
