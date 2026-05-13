@@ -8,7 +8,7 @@ def test_starting_current_vertex(hello_world_graph):
     assert graph_manager.current_vertex == hello_world_graph.vertex_dict["begin"]
 
 # GraphManager can return valid edge choices for your current vertex
-def test_get_valid_edges(hello_world_graph):
+def test_get_valid_edges(hello_world_graph, mock_game_state_with_gold):
     graph_manager = GraphManager(hello_world_graph, mock_game_state_with_gold)
     assert len(graph_manager.current_edges) == 2
     assert graph_manager.current_edges == {
