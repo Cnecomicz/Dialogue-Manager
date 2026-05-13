@@ -1,5 +1,5 @@
 class Vertex:
-    def __init__(self, name: str, data: dict):
-        self.name = name
+    def __init__(self, vertex_name: str, data: dict):
+        self.vertex_name = vertex_name
         self.text = data["text"]
         self.effects = data["effects"]

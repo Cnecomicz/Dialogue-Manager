@@ -9,8 +9,8 @@ class Graph:
             yaml_data = safe_load(f)
         self.name = yaml_data["name"]
         self.vertices = [
-            Vertex(name, data) for name, data in yaml_data["vertices"].items()
+            Vertex(vertex_name, data) for vertex_name, data in yaml_data["vertices"].items()
         ]
         self.edges = [
-            Edge(name, data) for name, data in yaml_data["edges"].items()
+            Edge(edge_name, data) for edge_name, data in yaml_data["edges"].items()
         ]
