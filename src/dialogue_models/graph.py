@@ -5,8 +5,11 @@ from dialogue_models.vertex import Vertex
 
 class Graph:
     def __init__(self, yaml_file: str) -> None:
-        with open(yaml_file, 'r') as f:
-            yaml_data = safe_load(f)
+        if yaml_file == "":
+            yaml_data = {"name": "", "vertices": {}, "edges": {}}
+        else:
+            with open(yaml_file, 'r') as f:
+                yaml_data = safe_load(f)
         self.name = yaml_data["name"]
         self.vertex_dict = self.initial_populate_vertices(yaml_data)
         self.edge_dict = self.initial_populate_edges(yaml_data)
