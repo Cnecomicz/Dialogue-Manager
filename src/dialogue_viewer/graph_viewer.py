@@ -29,10 +29,16 @@ class GraphViewer:
                     + condition["op"] + " "
                     + str(condition["value"])
                 )
+            case "check_list":
+                return (
+                    str(condition["value"]) + " "
+                    + condition["op"] + " "
+                    + condition["path"]
+                )
 
     def get_effects_text(self, effects: list[dict[str, str]]) -> str:
         if effects:
-            effects_text = r"\nEFFECTS:\n"
+            effects_text = r"EFFECTS:\n"
             for effect in effects:
                 effects_text += self.convert_effect_to_str(effect)+r"\n"
         else:
@@ -41,7 +47,7 @@ class GraphViewer:
 
     def get_filters_text(self, filters: list[dict[str, str]]) -> str:
         if filters:
-            filters_text = r"\nFILTERS:\n"
+            filters_text = r"FILTERS:\n"
             for condition in filters:
                 filters_text += self.convert_filter_to_str(condition)+r"\n"
         else:
@@ -74,11 +80,15 @@ class GraphViewer:
             fontname="Helvetica",
         )
         for vertex_name, vertex in self.graph.vertex_dict.items():
-            dialogue_text = fr"TEXT:\n{vertex.text}\n"
             effects_text = self.get_effects_text(vertex.effects)
+            dialogue_text = fr"TEXT:\n{vertex.text}"
+            if effects_text:
+                text = fr"{effects_text}\n{dialogue_text}"
+            else:
+                text = dialogue_text
             dot.node(
                 vertex_name, 
-                dialogue_text+effects_text,
+                text,
                 shape="box",
                 style="rounded,filled",
                 fillcolor="#a36a2a",
@@ -88,10 +98,14 @@ class GraphViewer:
             dialogue_text = fr"TEXT:\n{edge.text}\n"
             filters_text = self.get_filters_text(edge.filters)
             effects_text = self.get_effects_text(edge.effects)
+            text = dialogue_text
+            if filters_text:
+                text += fr"\n{filters_text}"
+            if effects_text:
+                text += fr"\n{effects_text}"
             dot.node(
                 edge_name,
-                dialogue_text+filters_text+effects_text,
-                # shape="circle",
+                text,
                 style="filled",
                 fillcolor="#336699",
                 color="#aaaaaa"

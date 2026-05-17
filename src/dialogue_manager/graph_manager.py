@@ -40,6 +40,14 @@ class GraphManager:
                     filter_value = condition["value"]
                     if not(operator_function(current_value, filter_value)):
                         is_valid_edge = False
+                case "check_list":
+                    operator_function = get_operator(condition["op"])
+                    current_list = get_nested_attr(
+                        self.game_state, condition["path"]
+                    )
+                    filter_value = condition["value"]
+                    if not(operator_function(filter_value, current_list)):
+                        is_valid_edge = False
         return is_valid_edge
 
     def get_current_edges(self) -> list[str]:

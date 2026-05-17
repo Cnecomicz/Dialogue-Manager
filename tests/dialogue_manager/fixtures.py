@@ -30,7 +30,7 @@ def mock_game_state_with_limited_inventory():
             self.inventory = []
     class MockAlice:
         def __init__(self):
-            self.inventory = ["Flower"]
+            self.inventory = ["Flower",]
     class MockGameState:
         def __init__(self):
             self.player = MockPlayer()

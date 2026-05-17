@@ -13,6 +13,9 @@ vertices:
     insufficient_gold:
         text: "You don't have enough money."
         effects: []
+    insufficient_flowers:
+        text: "I'm sorry. I'm all out of flowers."
+        effects: []
     end:
         text: "Okay, goodbye."
         effects: []
@@ -24,10 +27,20 @@ edges:
         text: "Yes, I'll buy a flower."
         filters: [
             {type: "check_value", path: "player.gold", op: ">=", value: 1},
+            {type: "check_list", path: "alice.inventory", op: "in", value: "Flower"},
         ]
         effects: [
             {type: "modify_value", target: "player.gold", delta: -1},
         ]
+    begin_to_insufficient_flowers:
+        from: "begin"
+        to: "insufficient_flowers"
+        text: "Yes, I'll buy a flower."
+        filters: [
+            {type: "check_value", path: "player.gold", op: ">=", value: 1},
+            {type: "check_list", path: "alice.inventory", op: "not in", value: "Flower"},
+        ]
+        effects: []
     begin_to_insufficient_gold:
         from: "begin"
         to: "insufficient_gold"
@@ -48,10 +61,20 @@ edges:
         text: "Yes, I'll buy another."
         filters: [
             {type: "check_value", path: "player.gold", op: ">=", value: 1},
+            {type: "check_list", path: "alice.inventory", op: "in", value: "Flower"},
         ]
         effects: [
             {type: "modify_value", target: "player.gold", delta: -1},
         ]
+    buy_flower_to_insufficient_flowers:
+        from: "buy_flower"
+        to: "insufficient_flowers"
+        text: "Yes, I'll buy another."
+        filters: [
+            {type: "check_value", path: "player.gold", op: ">=", value: 1},
+            {type: "check_list", path: "alice.inventory", op: "not in", value: "Flower"},
+        ]
+        effects: []
     buy_flower_to_insufficient_gold:
         from: "buy_flower"
         to: "insufficient_gold"
