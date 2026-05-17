@@ -7,8 +7,8 @@ vertices:
     buy_flower:
         text: "Thanks. You now have {player.gold} gold. Want to buy another?"
         effects: [
-            {type: "modify_list", target: "player.inventory", append: "Flower", remove: null},
-            {type: "modify_list", target: "alice.inventory", append: null, remove: "Flower"},
+            {type: "modify_list", target: "player.inventory", "method": "append", "value": "Flower"},
+            {type: "modify_list", target: "alice.inventory", "method": "remove", "value": "Flower"},
         ]
     insufficient_gold:
         text: "You don't have enough money."
