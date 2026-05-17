@@ -1,5 +1,6 @@
 from dialogue_manager.edge import Edge
 from dialogue_manager.graph import Graph
+from dialogue_manager.vertex import Vertex
 from dialogue_manager.helper_functions import (
     get_operator, get_nested_attr, set_nested_attr
 )
@@ -22,6 +23,11 @@ class GraphManager:
                 current_edges[edge_name] = edge
         return current_edges
 
+    def enter_vertex(self, vertex: Vertex):
+        for effect in vertex.effects:
+            self.proc_effect(effect)
+        self.current_vertex = vertex
+
     def evaluate_edge_filters(self, edge: Edge):
         is_valid_edge = True
         for condition in edge.filters:
@@ -39,6 +45,28 @@ class GraphManager:
     def get_current_edges(self):
         return list(self.current_edges.keys())
 
+    def proc_effect(self, effect: dict[str, str]):
+        match effect["type"]:
+            case "modify_value":
+                target_value = get_nested_attr(
+                    self.game_state, effect["target"]
+                )
+                new_value = target_value + effect["delta"]
+                set_nested_attr(self.game_state, effect["target"], new_value)
+            case "modify_list":
+                match effect["method"]:
+                    case "append":
+                        target_list = get_nested_attr(
+                            self.game_state, effect["target"]
+                        )
+                        target_list.append(effect["value"])
+                    case "remove":
+                        target_list = get_nested_attr(
+                            self.game_state, effect["target"]
+                        )
+                        print(f"{effect['target']} {target_list}")
+                        target_list.remove(effect["value"])
+
     def select(self, edge_name: str):
         if edge_name not in self.get_current_edges():
             raise InvalidEdgeError(
@@ -51,14 +79,9 @@ class GraphManager:
             )
         edge = self.current_edges[edge_name]
         for effect in edge.effects:
-            match effect["type"]:
-                case "modify_value":
-                    target_value = get_nested_attr(
-                        self.game_state, effect["target"]
-                    )
-                    new_value = target_value + effect["delta"]
-                    set_nested_attr(self.game_state, effect["target"], new_value)
-        self.current_vertex = self.graph.vertex_dict[edge.to_vertex.vertex_name]
+            self.proc_effect(effect)
+        vertex = self.graph.vertex_dict[edge.to_vertex.vertex_name]
+        self.enter_vertex(vertex)
 
 
     

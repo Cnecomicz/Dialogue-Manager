@@ -53,7 +53,7 @@ def test_get_valid_edges(hello_world_graph, mock_game_state_with_gold):
 def test_new_vertex_causes_effects(hello_world_graph, mock_game_state_with_gold):
     graph_manager = GraphManager(hello_world_graph, mock_game_state_with_gold)
     assert mock_game_state_with_gold.player.inventory == []
-    assert mock_game_state_with_gold.alice.inventory == ["Flower"]
+    assert mock_game_state_with_gold.alice.inventory == ["Flower", "Flower"]
     graph_manager.select("begin_to_buy_flower")
     assert mock_game_state_with_gold.player.inventory == ["Flower"]
-    assert mock_game_state_with_gold.alice.inventory == []
+    assert mock_game_state_with_gold.alice.inventory == ["Flower"]

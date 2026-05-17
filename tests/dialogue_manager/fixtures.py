@@ -11,8 +11,13 @@ def mock_game_state_with_gold():
     class MockPlayer:
         def __init__(self):
             self.gold = 2
+            self.inventory = []
+    class MockAlice:
+        def __init__(self):
+            self.inventory = ["Flower", "Flower"]
     class MockGameState:
         def __init__(self):
             self.player = MockPlayer()
+            self.alice = MockAlice()
     game_state = MockGameState()
     return game_state
