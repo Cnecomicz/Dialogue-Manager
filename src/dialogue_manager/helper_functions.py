@@ -2,19 +2,8 @@ from operator import eq, ge, gt, le, lt, ne
 from typing import Any, Callable
 
 def get_operator(op: str) -> Callable[[object, object], bool]:
-    match op:
-        case ">":
-            return gt
-        case ">=":
-            return ge
-        case "<":
-            return lt
-        case "<=":
-            return le
-        case "==":
-            return eq
-        case "!=":
-            return ne
+    operators = {"==": eq, ">=": ge, ">": gt, "<=": le, "<": lt, "!=": ne}
+    return operators[op]
 
 def get_nested_attr(obj: object, path: str) -> object:
     for attr in path.split("."):
