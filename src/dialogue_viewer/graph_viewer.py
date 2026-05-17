@@ -3,10 +3,10 @@ from graphviz import Digraph
 from dialogue_manager.graph import Graph
 
 class GraphViewer:
-    def __init__(self, graph: Graph):
+    def __init__(self, graph: Graph) -> None:
         self.graph = graph
 
-    def convert_effect_to_str(self, effect: dict):
+    def convert_effect_to_str(self, effect: dict[str, str]) -> str:
         match effect["type"]:
             case "modify_value":
                 return (
@@ -21,7 +21,7 @@ class GraphViewer:
                     + effect["value"] + ")"
                 )
 
-    def convert_filter_to_str(self, condition: dict):
+    def convert_filter_to_str(self, condition: dict[str, str]) -> str:
         match condition["type"]:
             case "check_value":
                 return (
@@ -30,7 +30,7 @@ class GraphViewer:
                     + str(condition["value"])
                 )
 
-    def get_effects_text(self, effects: list):
+    def get_effects_text(self, effects: list[dict[str, str]]) -> str:
         if effects:
             effects_text = r"\nEFFECTS:\n"
             for effect in effects:
@@ -39,7 +39,7 @@ class GraphViewer:
             effects_text = ""
         return effects_text
 
-    def get_filters_text(self, filters: list):
+    def get_filters_text(self, filters: list[dict[str, str]]) -> str:
         if filters:
             filters_text = r"\nFILTERS:\n"
             for condition in filters:
@@ -49,7 +49,7 @@ class GraphViewer:
         return filters_text
 
 
-    def render(self):
+    def render(self) -> None:
         dot = Digraph(comment=self.graph.name)
         dot.attr(
             bgcolor="#303841",

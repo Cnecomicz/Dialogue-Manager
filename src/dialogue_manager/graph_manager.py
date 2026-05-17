@@ -9,13 +9,13 @@ class InvalidEdgeError(Exception):
     pass
 
 class GraphManager:
-    def __init__(self, graph: Graph, game_state: "GameState"):
+    def __init__(self, graph: Graph, game_state: "GameState") -> None:
         self.graph = graph
         self.game_state = game_state
         self.current_vertex = self.graph.vertex_dict["begin"]
 
     @property
-    def current_edges(self):
+    def current_edges(self) -> dict[str, Edge]:
         current_edges = {}
         for edge_name, edge in self.graph.edge_dict.items():
             if (edge.from_vertex == self.current_vertex 
@@ -23,12 +23,12 @@ class GraphManager:
                 current_edges[edge_name] = edge
         return current_edges
 
-    def enter_vertex(self, vertex: Vertex):
+    def enter_vertex(self, vertex: Vertex) -> None:
         for effect in vertex.effects:
             self.proc_effect(effect)
         self.current_vertex = vertex
 
-    def evaluate_edge_filters(self, edge: Edge):
+    def evaluate_edge_filters(self, edge: Edge) -> bool:
         is_valid_edge = True
         for condition in edge.filters:
             match condition["type"]:
@@ -42,10 +42,10 @@ class GraphManager:
                         is_valid_edge = False
         return is_valid_edge
 
-    def get_current_edges(self):
+    def get_current_edges(self) -> list[str]:
         return list(self.current_edges.keys())
 
-    def proc_effect(self, effect: dict[str, str]):
+    def proc_effect(self, effect: dict[str, str]) -> None:
         match effect["type"]:
             case "modify_value":
                 target_value = get_nested_attr(
@@ -64,10 +64,9 @@ class GraphManager:
                         target_list = get_nested_attr(
                             self.game_state, effect["target"]
                         )
-                        print(f"{effect['target']} {target_list}")
                         target_list.remove(effect["value"])
 
-    def select(self, edge_name: str):
+    def select(self, edge_name: str) -> None:
         if edge_name not in self.get_current_edges():
             raise InvalidEdgeError(
                 f"Cannot select {edge_name} at vertex "
