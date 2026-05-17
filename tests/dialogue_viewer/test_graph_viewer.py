@@ -1,5 +1,3 @@
-from fixtures import hello_world_graph
-
 from dialogue_viewer.graph_viewer import GraphViewer
 
 # The GraphViewer takes in a Graph

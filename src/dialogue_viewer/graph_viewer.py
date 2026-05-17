@@ -1,6 +1,6 @@
 from graphviz import Digraph
 
-from core.graph import Graph
+from dialogue_models.graph import Graph
 
 class GraphViewer:
     def __init__(self, graph: Graph) -> None:

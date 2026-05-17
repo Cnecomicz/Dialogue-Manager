@@ -1,9 +1,5 @@
 from pytest import raises
 
-from fixtures import (
-    hello_world_graph, mock_game_state, mock_game_state_with_limited_inventory
-)
-
 from dialogue_manager.graph_manager import GraphManager, InvalidEdgeError
 
 # GraphManager has a current vertex that starts with "begin"

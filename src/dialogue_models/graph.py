@@ -1,7 +1,7 @@
 from yaml import safe_load
 
-from core.edge import Edge
-from core.vertex import Vertex
+from dialogue_models.edge import Edge
+from dialogue_models.vertex import Vertex
 
 class Graph:
     def __init__(self, yaml_file: str) -> None:

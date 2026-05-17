@@ -1,7 +1,5 @@
-from fixtures import hello_world_graph
-
-from core.edge import Edge
-from core.vertex import Vertex
+from dialogue_models.edge import Edge
+from dialogue_models.vertex import Vertex
 
 # The from_vertex and to_vertex attributes are Vertices
 def test_from_and_to_are_vertices(hello_world_graph):

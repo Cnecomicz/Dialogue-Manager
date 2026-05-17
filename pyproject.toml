@@ -39,6 +39,8 @@ src-layout = true
 
 [tool.hatch.build.targets.wheel]
 packages = [
+  "src/dialogue_editor",
   "src/dialogue_manager", 
+  "src/dialogue_models",
   "src/dialogue_viewer",
 ]
