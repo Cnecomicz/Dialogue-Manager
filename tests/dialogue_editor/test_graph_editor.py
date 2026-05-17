@@ -8,6 +8,11 @@ def test_loading_graph():
     assert len(graph_editor.graph.edge_dict) == 8
 
 # But loading is optional and if not passed in you start a new file
+def test_not_loading_graph():
+    graph_editor = GraphEditor()
+    assert graph_editor.graph.name == ""
+    assert len(graph_editor.graph.vertex_dict) == 0
+    assert len(graph_editor.graph.edge_dict) == 0
 
 # You can add new vertices
 
