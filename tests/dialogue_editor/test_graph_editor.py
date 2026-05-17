@@ -30,9 +30,9 @@ def test_editing_vertex():
     graph_editor.add_vertex("begin", "Hello world.", [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"},])
     graph_editor.edit_vertex_text("begin", "Updated text.")
     graph_editor.remove_effect("begin", "player.inventory.append(Flower)")
-    graph_editor.add_effect("begin", "player.inventory.remove(Flower)")
+    graph_editor.add_effect("begin", "player.gold = player.gold-1")
     assert graph_editor.graph.vertex_dict["begin"] == Vertex(
-        "begin", {"text": "Updated text.", "effects": [{"type": "modify_list", "target": "player.inventory", "method": "remove", "value": "Flower"},]}
+        "begin", {"text": "Updated text.", "effects": [{"type": "modify_value", "target": "player.gold", "delta": -1},]}
     )
 
 # You can add new edges

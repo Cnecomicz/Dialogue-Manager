@@ -4,6 +4,12 @@ class Vertex:
         self.text = data["text"]
         self.effects = data["effects"]
 
+    def __repr__(self) -> str:
+        return (
+            f'Vertex(vertex_name="{self.vertex_name}", '
+            f'data={{"text": "{self.text}", "effects": {self.effects}}})'
+        )
+
     def __eq__(self, other):
         if not isinstance(other, Vertex):
             return NotImplemented

@@ -1,46 +1,19 @@
 from graphviz import Digraph
 
 from dialogue_model.graph import Graph
+from dialogue_model.codecs import (
+    convert_effect_to_text, convert_filter_to_text
+)
 
 class GraphViewer:
     def __init__(self, graph: Graph) -> None:
         self.graph = graph
 
-    def convert_effect_to_str(self, effect: dict[str, str]) -> str:
-        match effect["type"]:
-            case "modify_value":
-                return (
-                    effect["target"] + " = "
-                    + effect["target"]
-                    + str(effect["delta"])
-                )
-            case "modify_list":
-                return (
-                    effect["target"] + "."
-                    + effect["method"] + "("
-                    + effect["value"] + ")"
-                )
-
-    def convert_filter_to_str(self, condition: dict[str, str]) -> str:
-        match condition["type"]:
-            case "check_value":
-                return (
-                    condition["path"] + " "
-                    + condition["op"] + " "
-                    + str(condition["value"])
-                )
-            case "check_list":
-                return (
-                    str(condition["value"]) + " "
-                    + condition["op"] + " "
-                    + condition["path"]
-                )
-
     def get_effects_text(self, effects: list[dict[str, str]]) -> str:
         if effects:
             effects_text = r"EFFECTS:\n"
             for effect in effects:
-                effects_text += self.convert_effect_to_str(effect)+r"\n"
+                effects_text += convert_effect_to_text(effect)+r"\n"
         else:
             effects_text = ""
         return effects_text
@@ -49,7 +22,7 @@ class GraphViewer:
         if filters:
             filters_text = r"FILTERS:\n"
             for condition in filters:
-                filters_text += self.convert_filter_to_str(condition)+r"\n"
+                filters_text += convert_filter_to_text(condition)+r"\n"
         else:
             filters_text = ""
         return filters_text
