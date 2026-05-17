@@ -1,4 +1,4 @@
-from dialogue_models.graph import Graph
+from dialogue_model.graph import Graph
 
 class GraphEditor:
     def __init__(self, yaml_file: str = "") -> None:

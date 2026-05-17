@@ -1,9 +1,9 @@
 from dialogue_manager.helper_functions import (
     get_operator, get_nested_attr, set_nested_attr
 )
-from dialogue_models.edge import Edge
-from dialogue_models.graph import Graph
-from dialogue_models.vertex import Vertex
+from dialogue_model.edge import Edge
+from dialogue_model.graph import Graph
+from dialogue_model.vertex import Vertex
 
 class InvalidEdgeError(Exception):
     pass

@@ -1,4 +1,4 @@
-from dialogue_models.vertex import Vertex
+from dialogue_model.vertex import Vertex
 
 class Edge:
     def __init__(self, edge_name: str, data: dict) -> None:

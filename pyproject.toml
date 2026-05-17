@@ -41,6 +41,6 @@ src-layout = true
 packages = [
   "src/dialogue_editor",
   "src/dialogue_manager", 
-  "src/dialogue_models",
+  "src/dialogue_model",
   "src/dialogue_viewer",
 ]

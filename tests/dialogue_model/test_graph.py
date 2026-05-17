@@ -1,5 +1,5 @@
-from dialogue_models.edge import Edge
-from dialogue_models.vertex import Vertex
+from dialogue_model.edge import Edge
+from dialogue_model.vertex import Vertex
 
 # GraphBuilder reads the yaml and creates classes of vertices and edges
 def test_creation_of_vertices_and_edges(hello_world_graph):

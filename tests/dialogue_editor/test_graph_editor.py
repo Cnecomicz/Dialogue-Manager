@@ -1,4 +1,5 @@
 from dialogue_editor.graph_editor import GraphEditor
+from dialogue_model.vertex import Vertex
 
 # You can load an existing yaml
 def test_loading_graph():
@@ -15,6 +16,13 @@ def test_not_loading_graph():
     assert len(graph_editor.graph.edge_dict) == 0
 
 # You can add new vertices
+def test_add_new_vertex():
+    graph_editor = GraphEditor()
+    graph_editor.add_vertex("begin", "Hello world.")
+    assert len(graph_editor.graph.vertex_dict) == 1
+    assert graph_editor.graph.vertex_dict["begin"] == Vertex(
+        "begin", {"text": "Hello world.", "effects": []}
+    )
 
 # You can edit existing vertices
 
