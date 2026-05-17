@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "Dialogue-Manager"
+name = "dialogue"
 version = "0.1"
 authors = [
   { name="Eric", email="eric@locallyringed.space" }
@@ -15,7 +15,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
-dependencies = []
+dependencies = [
+  "graphviz",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -36,4 +38,7 @@ src-layout = true
 # TODO
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/dialogue_manager"]
+packages = [
+  "src/dialogue_manager", 
+  "src/dialogue_viewer",
+]
