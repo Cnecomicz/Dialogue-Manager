@@ -36,16 +36,17 @@ class GraphManager:
                         is_valid_edge = False
         return is_valid_edge
 
-    def select(self, edge: Edge):
-        if edge not in self.current_edges.values():
+    def select(self, edge_name: str):
+        if edge_name not in self.current_edges.keys():
             raise InvalidEdgeError(
-                f"Cannot select {edge.edge_name} at vertex "
+                f"Cannot select {edge_name} at vertex "
                 f"{self.current_vertex} with the current game state. "
-                f"{edge=}, "
+                f"{edge_name=}, "
                 f"{self.current_vertex=}, "
                 f"{self.graph=}, "
                 f"{self.game_state=}"
             )
+        edge = self.current_edges[edge_name]
         for effect in edge.effects:
             match effect["type"]:
                 case "modify_value":
