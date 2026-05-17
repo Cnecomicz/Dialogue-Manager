@@ -25,6 +25,15 @@ def test_add_new_vertex():
     )
 
 # You can edit existing vertices
+def test_editing_vertex():
+    graph_editor = GraphEditor()
+    graph_editor.add_vertex("begin", "Hello world.", [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"},])
+    graph_editor.edit_vertex_text("begin", "Updated text.")
+    graph_editor.remove_effect("begin", "player.inventory.append(Flower)")
+    graph_editor.add_effect("begin", "player.inventory.remove(Flower)")
+    assert graph_editor.graph.vertex_dict["begin"] == Vertex(
+        "begin", {"text": "Updated text.", "effects": [{"type": "modify_list", "target": "player.inventory", "method": "remove", "value": "Flower"},]}
+    )
 
 # You can add new edges
 
