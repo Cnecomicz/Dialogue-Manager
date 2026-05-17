@@ -9,8 +9,8 @@ def test_starting_current_vertex(hello_world_graph):
     graph_manager = GraphManager(hello_world_graph, mock_game_state_with_gold)
     assert graph_manager.current_vertex == hello_world_graph.vertex_dict["begin"]
 
-# GraphManager can return valid edge choices for your current vertex
-def test_get_valid_edges(hello_world_graph, mock_game_state_with_gold):
+# GraphManager keeps track of valid edge choices for your current vertex
+def test_has_valid_edges(hello_world_graph, mock_game_state_with_gold):
     graph_manager = GraphManager(hello_world_graph, mock_game_state_with_gold)
     assert len(graph_manager.current_edges) == 2
     assert graph_manager.current_edges == {
@@ -43,3 +43,8 @@ def test_error_when_selecting_invalid_edge_that_was_previously_valid(hello_world
     graph_manager.select("buy_flower_to_buy_flower")
     with raises(InvalidEdgeError):
         graph_manager.select("buy_flower_to_buy_flower")
+
+# You can get a list of valid edges as strs
+def test_get_valid_edges(hello_world_graph, mock_game_state_with_gold):
+    graph_manager = GraphManager(hello_world_graph, mock_game_state_with_gold)
+    assert graph_manager.get_current_edges() == ["begin_to_buy_flower", "begin_to_end"]
