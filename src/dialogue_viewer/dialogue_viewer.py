@@ -1,2 +1,5 @@
+from dialogue_manager.graph import Graph
+
 class DialogueViewer:
-    pass
+    def __init__(self, graph: Graph):
+        self.graph = graph
