@@ -1,7 +1,7 @@
 from fixtures import hello_world_graph
 
-from dialogue_manager.edge import Edge
-from dialogue_manager.vertex import Vertex
+from core.edge import Edge
+from core.vertex import Vertex
 
 # GraphBuilder reads the yaml and creates classes of vertices and edges
 def test_creation_of_vertices_and_edges(hello_world_graph):

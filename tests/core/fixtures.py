@@ -1,6 +1,6 @@
 from pytest import fixture
 
-from dialogue_manager.graph import Graph
+from core.graph import Graph
 
 @fixture
 def hello_world_graph():
