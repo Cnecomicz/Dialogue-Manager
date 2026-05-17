@@ -35,3 +35,11 @@ def test_select_edge_to_go_to_next_vertex(hello_world_graph, mock_game_state_wit
     graph_manager = GraphManager(hello_world_graph, mock_game_state_with_gold)
     graph_manager.select("begin_to_buy_flower")
     assert graph_manager.current_vertex == hello_world_graph.vertex_dict["buy_flower"]
+
+# If the game state changes mid conversation, the valid edges change to reflect that
+def test_error_when_selecting_invalid_edge_that_was_previously_valid(hello_world_graph, mock_game_state_with_gold):
+    graph_manager = GraphManager(hello_world_graph, mock_game_state_with_gold)
+    graph_manager.select("begin_to_buy_flower")
+    graph_manager.select("buy_flower_to_buy_flower")
+    with raises(InvalidEdgeError):
+        graph_manager.select("buy_flower_to_buy_flower")
