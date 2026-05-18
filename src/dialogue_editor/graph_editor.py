@@ -19,11 +19,11 @@ class GraphEditor:
         from_vertex: str, 
         to_vertex: str, 
         text: str, 
-        filters: list[dict[str, str | int]] = None, 
+        predicates: list[dict[str, str | int]] = None, 
         effects: list[dict[str, str | int]] = None
     ) -> None:
-        if filters is None:
-            filters = []
+        if predicates is None:
+            predicates = []
         if effects is None:
             effects = []
         edge_name = f"{from_vertex}_to_{to_vertex}"
@@ -32,7 +32,7 @@ class GraphEditor:
                 "from": from_vertex,
                 "to": to_vertex,
                 "text": text,
-                "filters": filters,
+                "predicates": predicates,
                 "effects": effects
             }
         )

@@ -25,7 +25,7 @@ edges:
         from: "begin"
         to: "buy_flower"
         text: "Yes, I'll buy a flower."
-        filters: [
+        predicates: [
             {type: "check_value", path: "player.gold", op: ">=", value: 1},
             {type: "check_list", path: "alice.inventory", op: "in", value: "Flower"},
         ]
@@ -36,7 +36,7 @@ edges:
         from: "begin"
         to: "insufficient_flowers"
         text: "Yes, I'll buy a flower."
-        filters: [
+        predicates: [
             {type: "check_value", path: "player.gold", op: ">=", value: 1},
             {type: "check_list", path: "alice.inventory", op: "not in", value: "Flower"},
         ]
@@ -45,7 +45,7 @@ edges:
         from: "begin"
         to: "insufficient_gold"
         text: "Well, can I buy one with {player.gold} gold?"
-        filters: [
+        predicates: [
             {type: "check_value", path: "player.gold", op: "<", value: 1},
         ]
         effects: []
@@ -53,13 +53,13 @@ edges:
         from: "begin"
         to: "end"
         text: "No thanks."
-        filters: []
+        predicates: []
         effects: []
     buy_flower_to_buy_flower:
         from: "buy_flower"
         to: "buy_flower"
         text: "Yes, I'll buy another."
-        filters: [
+        predicates: [
             {type: "check_value", path: "player.gold", op: ">=", value: 1},
             {type: "check_list", path: "alice.inventory", op: "in", value: "Flower"},
         ]
@@ -70,7 +70,7 @@ edges:
         from: "buy_flower"
         to: "insufficient_flowers"
         text: "Yes, I'll buy another."
-        filters: [
+        predicates: [
             {type: "check_value", path: "player.gold", op: ">=", value: 1},
             {type: "check_list", path: "alice.inventory", op: "not in", value: "Flower"},
         ]
@@ -79,7 +79,7 @@ edges:
         from: "buy_flower"
         to: "insufficient_gold"
         text: "I'm a little short. Can we make a deal?"
-        filters: [
+        predicates: [
             {type: "check_value", path: "player.gold", op: "<", value: 1},
         ]
         effects: []
@@ -87,5 +87,5 @@ edges:
         from: "buy_flower"
         to: "end"
         text: "No thanks, I have enough."
-        filters: []
+        predicates: []
         effects: []

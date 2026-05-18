@@ -21,7 +21,7 @@
 <ellipse fill="#336699" stroke="#aaaaaa" cx="829.89" cy="-730.63" rx="138.42" ry="107.06"/>
 <text xml:space="preserve" text-anchor="middle" x="829.89" y="-785.83" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="829.89" y="-770.83" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Yes, I&#39;ll buy a flower.</text>
-<text xml:space="preserve" text-anchor="middle" x="829.89" y="-739.83" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">FILTERS:</text>
+<text xml:space="preserve" text-anchor="middle" x="829.89" y="-739.83" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">PREDICATES:</text>
 <text xml:space="preserve" text-anchor="middle" x="829.89" y="-724.83" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">player.gold &gt;= 1</text>
 <text xml:space="preserve" text-anchor="middle" x="829.89" y="-709.83" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Flower in alice.inventory</text>
 <text xml:space="preserve" text-anchor="middle" x="829.89" y="-678.83" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">EFFECTS:</text>
@@ -39,7 +39,7 @@
 <ellipse fill="#336699" stroke="#aaaaaa" cx="1465.89" cy="-477.04" rx="143.72" ry="74.53"/>
 <text xml:space="preserve" text-anchor="middle" x="1465.89" y="-509.24" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="1465.89" y="-494.24" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Yes, I&#39;ll buy a flower.</text>
-<text xml:space="preserve" text-anchor="middle" x="1465.89" y="-463.24" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">FILTERS:</text>
+<text xml:space="preserve" text-anchor="middle" x="1465.89" y="-463.24" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">PREDICATES:</text>
 <text xml:space="preserve" text-anchor="middle" x="1465.89" y="-448.24" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">player.gold &gt;= 1</text>
 <text xml:space="preserve" text-anchor="middle" x="1465.89" y="-433.24" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Flower not in alice.inventory</text>
 </g>
@@ -55,7 +55,7 @@
 <ellipse fill="#336699" stroke="#aaaaaa" cx="207.89" cy="-730.63" rx="207.89" ry="63.92"/>
 <text xml:space="preserve" text-anchor="middle" x="207.89" y="-755.33" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="207.89" y="-740.33" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Well, can I buy one with {player.gold} gold?</text>
-<text xml:space="preserve" text-anchor="middle" x="207.89" y="-709.33" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">FILTERS:</text>
+<text xml:space="preserve" text-anchor="middle" x="207.89" y="-709.33" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">PREDICATES:</text>
 <text xml:space="preserve" text-anchor="middle" x="207.89" y="-694.33" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">player.gold &lt; 1</text>
 </g>
 <!-- begin&#45;&gt;begin_to_insufficient_gold -->
@@ -93,7 +93,7 @@
 <ellipse fill="#336699" stroke="#aaaaaa" cx="1058.89" cy="-223.46" rx="138.42" ry="107.06"/>
 <text xml:space="preserve" text-anchor="middle" x="1058.89" y="-278.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="1058.89" y="-263.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Yes, I&#39;ll buy another.</text>
-<text xml:space="preserve" text-anchor="middle" x="1058.89" y="-232.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">FILTERS:</text>
+<text xml:space="preserve" text-anchor="middle" x="1058.89" y="-232.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">PREDICATES:</text>
 <text xml:space="preserve" text-anchor="middle" x="1058.89" y="-217.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">player.gold &gt;= 1</text>
 <text xml:space="preserve" text-anchor="middle" x="1058.89" y="-202.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Flower in alice.inventory</text>
 <text xml:space="preserve" text-anchor="middle" x="1058.89" y="-171.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">EFFECTS:</text>
@@ -111,7 +111,7 @@
 <ellipse fill="#336699" stroke="#aaaaaa" cx="1376.89" cy="-223.46" rx="143.72" ry="74.53"/>
 <text xml:space="preserve" text-anchor="middle" x="1376.89" y="-255.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="1376.89" y="-240.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Yes, I&#39;ll buy another.</text>
-<text xml:space="preserve" text-anchor="middle" x="1376.89" y="-209.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">FILTERS:</text>
+<text xml:space="preserve" text-anchor="middle" x="1376.89" y="-209.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">PREDICATES:</text>
 <text xml:space="preserve" text-anchor="middle" x="1376.89" y="-194.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">player.gold &gt;= 1</text>
 <text xml:space="preserve" text-anchor="middle" x="1376.89" y="-179.66" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Flower not in alice.inventory</text>
 </g>
@@ -127,7 +127,7 @@
 <ellipse fill="#336699" stroke="#aaaaaa" cx="386.89" cy="-223.46" rx="188.27" ry="63.92"/>
 <text xml:space="preserve" text-anchor="middle" x="386.89" y="-248.16" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="386.89" y="-233.16" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">I&#39;m a little short. Can we make a deal?</text>
-<text xml:space="preserve" text-anchor="middle" x="386.89" y="-202.16" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">FILTERS:</text>
+<text xml:space="preserve" text-anchor="middle" x="386.89" y="-202.16" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">PREDICATES:</text>
 <text xml:space="preserve" text-anchor="middle" x="386.89" y="-187.16" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">player.gold &lt; 1</text>
 </g>
 <!-- buy_flower&#45;&gt;buy_flower_to_insufficient_gold -->

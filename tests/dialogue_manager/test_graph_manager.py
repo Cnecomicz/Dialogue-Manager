@@ -56,8 +56,8 @@ def test_new_vertex_causes_effects(hello_world_graph, mock_game_state):
     assert mock_game_state.player.inventory == ["Flower"]
     assert mock_game_state.alice.inventory == ["Flower"]
 
-# Edge filters can be ANDed
-def test_edge_filter_1_and_filter_2(hello_world_graph, mock_game_state_with_limited_inventory):
+# Edge predicates can be ANDed
+def test_edge_predicate_1_and_predicate_2(hello_world_graph, mock_game_state_with_limited_inventory):
     graph_manager = GraphManager(hello_world_graph, mock_game_state_with_limited_inventory)
     graph_manager.select("begin_to_buy_flower")
     with raises(InvalidEdgeError):

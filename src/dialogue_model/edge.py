@@ -6,7 +6,7 @@ class Edge:
         self.from_vertex = data["from"]
         self.to_vertex = data["to"]
         self.text = data["text"]
-        self.filters = data["filters"]
+        self.predicates = data["predicates"]
         self.effects = data["effects"]
 
     def __repr__(self) -> str:
@@ -15,7 +15,7 @@ class Edge:
             f'data={{"from": "{self.from_vertex}", '
             f'"to": "{self.to_vertex}", '
             f'"text": "{self.text}", '
-            f'"filters": {self.filters}, '
+            f'"predicates": {self.predicates}, '
             f'"effects": {self.effects}}})'
         )
 

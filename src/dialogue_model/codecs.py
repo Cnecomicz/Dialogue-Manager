@@ -15,19 +15,19 @@ def convert_effect_to_text(effect: dict[str, str | int]) -> str:
                 + effect["value"] + ")"
             )
 
-def convert_filter_to_text(condition: dict[str, str | int]) -> str:
-    match condition["type"]:
+def convert_predicate_to_text(predicate: dict[str, str | int]) -> str:
+    match predicate["type"]:
         case "check_value":
             return (
-                condition["path"] + " "
-                + condition["op"] + " "
-                + str(condition["value"])
+                predicate["path"] + " "
+                + predicate["op"] + " "
+                + str(predicate["value"])
             )
         case "check_list":
             return (
-                str(condition["value"]) + " "
-                + condition["op"] + " "
-                + condition["path"]
+                str(predicate["value"]) + " "
+                + predicate["op"] + " "
+                + predicate["path"]
             )
 
 def convert_text_to_effect(effect: str) -> dict[str, str]:

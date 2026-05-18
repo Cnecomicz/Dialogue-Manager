@@ -44,7 +44,7 @@ def test_add_new_edge():
     graph_editor.add_edge("begin", "end", "This is an edge.")
     assert len(graph_editor.graph.edge_dict) == 1
     assert graph_editor.graph.edge_dict["begin_to_end"] == Edge(
-        "begin_to_end", {"from": "begin", "to": "end", "text": "This is an edge.", "filters": [], "effects": []}
+        "begin_to_end", {"from": "begin", "to": "end", "text": "This is an edge.", "predicates": [], "effects": []}
     )
 
 # If you don't add a to_vertex when creating an edge it makes a new one

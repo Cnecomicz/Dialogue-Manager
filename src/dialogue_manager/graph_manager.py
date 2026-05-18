@@ -19,7 +19,7 @@ class GraphManager:
         current_edges = {}
         for edge_name, edge_obj in self.graph.edge_dict.items():
             if (edge_obj.from_vertex == self.current_vertex 
-            and self.evaluate_edge_filters(edge_name)):
+            and self.evaluate_edge_predicates(edge_name)):
                 current_edges[edge_name] = edge_obj
         return current_edges
 
@@ -29,26 +29,26 @@ class GraphManager:
             self.proc_effect(effect)
         self.current_vertex = vertex
 
-    def evaluate_edge_filters(self, edge: str) -> bool:
+    def evaluate_edge_predicates(self, edge: str) -> bool:
         edge_obj = self.graph.edge_dict[edge]
         is_valid_edge = True
-        for condition in edge_obj.filters:
-            match condition["type"]:
+        for predicate in edge_obj.predicates:
+            match predicate["type"]:
                 case "check_value":
-                    operator_function = get_operator(condition["op"])
+                    operator_function = get_operator(predicate["op"])
                     current_value = get_nested_attr(
-                        self.game_state, condition["path"]
+                        self.game_state, predicate["path"]
                     )
-                    filter_value = condition["value"]
+                    filter_value = predicate["value"]
                     if not(operator_function(current_value, filter_value)):
                         is_valid_edge = False
                 case "check_list":
-                    operator_function = get_operator(condition["op"])
+                    operator_function = get_operator(predicate["op"])
                     current_list = get_nested_attr(
-                        self.game_state, condition["path"]
+                        self.game_state, predicate["path"]
                     )
-                    filter_value = condition["value"]
-                    if not(operator_function(filter_value, current_list)):
+                    predicate_value = predicate["value"]
+                    if not(operator_function(predicate_value, current_list)):
                         is_valid_edge = False
         return is_valid_edge
 

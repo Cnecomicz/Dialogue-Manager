@@ -2,7 +2,7 @@ from graphviz import Digraph
 
 from dialogue_model.graph import Graph
 from dialogue_model.codecs import (
-    convert_effect_to_text, convert_filter_to_text
+    convert_effect_to_text, convert_predicate_to_text
 )
 
 class GraphViewer:
@@ -18,14 +18,14 @@ class GraphViewer:
             effects_text = ""
         return effects_text
 
-    def get_filters_text(self, filters: list[dict[str, str]]) -> str:
-        if filters:
-            filters_text = r"FILTERS:\n"
-            for condition in filters:
-                filters_text += convert_filter_to_text(condition)+r"\n"
+    def get_predicates_text(self, predicates: list[dict[str, str]]) -> str:
+        if predicates:
+            predicates_text = r"PREDICATES:\n"
+            for predicate in predicates:
+                predicates_text += convert_predicate_to_text(predicate)+r"\n"
         else:
-            filters_text = ""
-        return filters_text
+            predicates_text = ""
+        return predicates_text
 
 
     def render(self) -> None:
@@ -69,11 +69,11 @@ class GraphViewer:
             )
         for edge_name, edge in self.graph.edge_dict.items():
             dialogue_text = fr"TEXT:\n{edge.text}\n"
-            filters_text = self.get_filters_text(edge.filters)
+            predicates_text = self.get_predicates_text(edge.predicates)
             effects_text = self.get_effects_text(edge.effects)
             text = dialogue_text
-            if filters_text:
-                text += fr"\n{filters_text}"
+            if predicates_text:
+                text += fr"\n{predicates_text}"
             if effects_text:
                 text += fr"\n{effects_text}"
             dot.node(
