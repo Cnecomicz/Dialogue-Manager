@@ -1,3 +1,5 @@
+from typing import Any
+
 from dialogue_model.vertex import Vertex
 
 class Edge:
@@ -19,7 +21,7 @@ class Edge:
             f'"effects": {self.effects}}})'
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Edge):
             return NotImplemented
         return self.__dict__ == other.__dict__

@@ -1,3 +1,5 @@
+from typing import Any
+
 class Vertex:
     def __init__(self, vertex_name: str, data: dict) -> None:
         self.vertex_name = vertex_name
@@ -10,7 +12,7 @@ class Vertex:
             f'data={{"text": "{self.text}", "effects": {self.effects}}})'
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Vertex):
             return NotImplemented
         return self.__dict__ == other.__dict__
