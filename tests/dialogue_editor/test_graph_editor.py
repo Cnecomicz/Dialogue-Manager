@@ -1,4 +1,5 @@
 from dialogue_editor.graph_editor import GraphEditor
+from dialogue_model.edge import Edge
 from dialogue_model.vertex import Vertex
 
 # You can load an existing yaml
@@ -36,6 +37,17 @@ def test_editing_vertex():
     )
 
 # You can add new edges
+def test_add_new_edge():
+    graph_editor = GraphEditor()
+    graph_editor.add_vertex("begin", "Hello world.")
+    graph_editor.add_vertex("end", "Goodbye world.")
+    graph_editor.add_edge("begin", "end", "This is an edge.")
+    assert len(graph_editor.graph.edge_dict) == 1
+    assert graph_editor.graph.edge_dict["begin_to_end"] == Edge(
+        "begin_to_end", {"from": "begin", "to": "end", "text": "This is an edge.", "filters": [], "effects": []}
+    )
+
+# If you don't add a to_vertex when creating an edge it makes a new one
 
 # You can edit existing edges
 
