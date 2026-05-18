@@ -13,8 +13,6 @@ class Graph:
         self.name = yaml_data["name"]
         self.vertex_dict = self.initial_populate_vertices(yaml_data)
         self.edge_dict = self.initial_populate_edges(yaml_data)
-        for edge_name, edge in self.edge_dict.items():
-            edge.resolve_vertex_references(self.vertex_dict)
 
     def initial_populate_edges(self, yaml_data: dict) -> dict[str, Edge]:
         return {

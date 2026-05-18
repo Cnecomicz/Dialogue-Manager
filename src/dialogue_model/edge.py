@@ -9,9 +9,17 @@ class Edge:
         self.filters = data["filters"]
         self.effects = data["effects"]
 
-    def resolve_vertex_references(
-        self, 
-        vertex_dict: dict[str, Vertex]
-    ) -> None:
-        self.from_vertex = vertex_dict[self.from_vertex]
-        self.to_vertex = vertex_dict[self.to_vertex]
+    def __repr__(self) -> str:
+        return (
+            f'Edge(edge_name="{self.edge_name}", '
+            f'data={{"from": "{self.from_vertex}", '
+            f'"to": "{self.to_vertex}", '
+            f'"text": "{self.text}", '
+            f'"filters": {self.filters}, '
+            f'"effects": {self.effects}}})'
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, Edge):
+            return NotImplemented
+        return self.__dict__ == other.__dict__

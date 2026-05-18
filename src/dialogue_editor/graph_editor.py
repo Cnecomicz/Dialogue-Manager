@@ -1,4 +1,5 @@
 from dialogue_model.codecs import convert_text_to_effect
+from dialogue_model.edge import Edge
 from dialogue_model.graph import Graph
 from dialogue_model.vertex import Vertex
 
@@ -13,8 +14,32 @@ class GraphEditor:
         elif vertex_or_edge_name in self.graph.edge_dict:
             self.graph.edge_dict[vertex_or_edge_name].effects.append(effect)
 
+    def add_edge(
+        self, 
+        from_vertex: str, 
+        to_vertex: str, 
+        text: str, 
+        filters: list[dict[str, str | int]] = None, 
+        effects: list[dict[str, str | int]] = None
+    ) -> None:
+        if filters is None:
+            filters = []
+        if effects is None:
+            effects = []
+        edge_name = f"{from_vertex}_to_{to_vertex}"
+        self.graph.edge_dict[edge_name] = Edge(
+            edge_name, {
+                "from": from_vertex,
+                "to": to_vertex,
+                "text": text,
+                "filters": filters,
+                "effects": effects
+            }
+        )
+        print(edge_name, self.graph.edge_dict[edge_name])
+
     def add_vertex(
-        self, vertex_name: str, text: str, effects: list[dict[str, str]] = None
+        self, vertex_name: str, text: str, effects: list[dict[str, str | int]] = None
     ) -> None:
         if effects is None:
             effects = []

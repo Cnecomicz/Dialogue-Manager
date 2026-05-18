@@ -84,11 +84,11 @@ class GraphViewer:
                 color="#aaaaaa"
             )
             dot.edge(
-                edge.from_vertex.vertex_name, 
+                edge.from_vertex, 
                 edge_name
             )
             dot.edge(
                 edge_name,
-                edge.to_vertex.vertex_name
+                edge.to_vertex
             )
         dot.render(f"data/{self.graph.name}_dialogue_graph", format="svg", cleanup=True)

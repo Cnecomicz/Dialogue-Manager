@@ -12,25 +12,27 @@ class GraphManager:
     def __init__(self, graph: Graph, game_state: "GameState") -> None:
         self.graph = graph
         self.game_state = game_state
-        self.current_vertex = self.graph.vertex_dict["begin"]
+        self.current_vertex = "begin"
 
     @property
     def current_edges(self) -> dict[str, Edge]:
         current_edges = {}
-        for edge_name, edge in self.graph.edge_dict.items():
-            if (edge.from_vertex == self.current_vertex 
-            and self.evaluate_edge_filters(edge)):
-                current_edges[edge_name] = edge
+        for edge_name, edge_obj in self.graph.edge_dict.items():
+            if (edge_obj.from_vertex == self.current_vertex 
+            and self.evaluate_edge_filters(edge_name)):
+                current_edges[edge_name] = edge_obj
         return current_edges
 
-    def enter_vertex(self, vertex: Vertex) -> None:
-        for effect in vertex.effects:
+    def enter_vertex(self, vertex: str) -> None:
+        vertex_obj = self.graph.vertex_dict[vertex]
+        for effect in vertex_obj.effects:
             self.proc_effect(effect)
         self.current_vertex = vertex
 
-    def evaluate_edge_filters(self, edge: Edge) -> bool:
+    def evaluate_edge_filters(self, edge: str) -> bool:
+        edge_obj = self.graph.edge_dict[edge]
         is_valid_edge = True
-        for condition in edge.filters:
+        for condition in edge_obj.filters:
             match condition["type"]:
                 case "check_value":
                     operator_function = get_operator(condition["op"])
@@ -84,11 +86,10 @@ class GraphManager:
                 f"{self.graph=}, "
                 f"{self.game_state=}"
             )
-        edge = self.current_edges[edge_name]
-        for effect in edge.effects:
+        edge_obj = self.current_edges[edge_name]
+        for effect in edge_obj.effects:
             self.proc_effect(effect)
-        vertex = self.graph.vertex_dict[edge.to_vertex.vertex_name]
-        self.enter_vertex(vertex)
+        self.enter_vertex(edge_obj.to_vertex)
 
 
     

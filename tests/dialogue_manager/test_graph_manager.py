@@ -5,7 +5,7 @@ from dialogue_manager.graph_manager import GraphManager, InvalidEdgeError
 # GraphManager has a current vertex that starts with "begin"
 def test_starting_current_vertex(hello_world_graph, mock_game_state):
     graph_manager = GraphManager(hello_world_graph, mock_game_state)
-    assert graph_manager.current_vertex == hello_world_graph.vertex_dict["begin"]
+    assert graph_manager.current_vertex == "begin"
 
 # GraphManager keeps track of valid edge choices for your current vertex
 def test_has_valid_edges(hello_world_graph, mock_game_state):
@@ -32,7 +32,7 @@ def test_select_edge_to_cause_effects(hello_world_graph, mock_game_state):
 def test_select_edge_to_go_to_next_vertex(hello_world_graph, mock_game_state):
     graph_manager = GraphManager(hello_world_graph, mock_game_state)
     graph_manager.select("begin_to_buy_flower")
-    assert graph_manager.current_vertex == hello_world_graph.vertex_dict["buy_flower"]
+    assert graph_manager.current_vertex == "buy_flower"
 
 # If the game state changes mid conversation, the valid edges change to reflect that
 def test_error_when_selecting_invalid_edge_that_was_previously_valid(hello_world_graph, mock_game_state):
