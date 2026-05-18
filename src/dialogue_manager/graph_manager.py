@@ -39,8 +39,8 @@ class GraphManager:
                     current_value = get_nested_attr(
                         self.game_state, predicate["path"]
                     )
-                    filter_value = predicate["value"]
-                    if not(operator_function(current_value, filter_value)):
+                    predicate_value = predicate["value"]
+                    if not(operator_function(current_value, predicate_value)):
                         is_valid_edge = False
                 case "check_list":
                     operator_function = get_operator(predicate["op"])
