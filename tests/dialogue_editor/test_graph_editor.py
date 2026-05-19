@@ -85,6 +85,13 @@ def test_removing_edge():
     assert len(graph_editor.graph.edge_dict) == 0
 
 # You can remove a vertex 
+def test_removing_vertex():
+    graph_editor = GraphEditor()
+    assert len(graph_editor.graph.vertex_dict) == 0
+    graph_editor.add_vertex("Hello world.")
+    assert len(graph_editor.graph.vertex_dict) == 1
+    graph_editor.remove_vertex("vertex_0")
+    assert len(graph_editor.graph.vertex_dict) == 0
 
 # Removing a vertex removes all connected edges too
 
