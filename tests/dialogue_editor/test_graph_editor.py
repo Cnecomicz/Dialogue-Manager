@@ -69,7 +69,7 @@ def test_editing_edge():
     graph_editor.remove_effect("edge_0", "player.gold = player.gold-1")
     graph_editor.add_effect("edge_0", "player.inventory.append(Bomb)")
     assert graph_editor.graph.edge_dict["edge_0"] == Edge(
-        "edge_0", {"from_vertex": "vertex_1", "to_vertex": "vertex_0", "text": "Updated text.", "predicates": [{"type": "check_list", "path": "player.inventory", "op": "not in", "value": "Bomb"},], "effects": [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Bomb"}]}
+        "edge_0", {"from": "vertex_1", "to": "vertex_0", "text": "Updated text.", "predicates": [{"type": "check_list", "path": "player.inventory", "op": "not in", "value": "Bomb"},], "effects": [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Bomb"}]}
     )
 
 

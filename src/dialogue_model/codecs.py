@@ -42,4 +42,29 @@ def convert_text_to_effect(effect: str) -> dict[str, str]:
     match_list = match(r"^(\w+(?:\.\w+)*)\.(\w+)\((.+)\)$", effect)
     if match_list:
         target, method, value = match_list.groups()
-        return {"type": "modify_list", "target": target, "method": method, "value": value}
+        return {
+            "type": "modify_list", 
+            "target": target, 
+            "method": method, 
+            "value": value
+        }
+
+def convert_text_to_predicate(predicate: str) -> dict[str, str | int]:
+    match_value = match(
+        r"^(\w+(?:\.\w+)*)\s*(==|!=|>=|<=|>|<)\s*(.+)$", predicate
+    )
+    if match_value:
+        path, op, value = match_value.groups()
+        try:
+            value = int(value)
+        except:
+            value = value
+        return {"type": "check_value", "path": path, "op": op, "value": value}
+    match_list = match(r"^(.+?)\s+(not in|in)\s+(\w+(?:\.\w+)*)$", predicate)
+    if match_list:
+        value, op, path = match_list.groups()
+        try:
+            value = int(value)
+        except:
+            value = value
+        return {"type": "check_list", "path": path, "op": op, "value": value}

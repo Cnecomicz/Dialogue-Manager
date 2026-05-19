@@ -1,4 +1,6 @@
-from dialogue_model.codecs import convert_text_to_effect
+from dialogue_model.codecs import (
+    convert_text_to_effect, convert_text_to_predicate
+)
 from dialogue_model.edge import Edge
 from dialogue_model.graph import Graph
 from dialogue_model.vertex import Vertex
@@ -8,13 +10,6 @@ class GraphEditor:
         self.graph = Graph(yaml_file)
         self.next_vertex_index = 0
         self.next_edge_index = 0
-
-    def add_effect(self, vertex_or_edge_name: str, effect: str) -> None:
-        effect = convert_text_to_effect(effect)
-        if vertex_or_edge_name in self.graph.vertex_dict:
-            self.graph.vertex_dict[vertex_or_edge_name].effects.append(effect)
-        elif vertex_or_edge_name in self.graph.edge_dict:
-            self.graph.edge_dict[vertex_or_edge_name].effects.append(effect)
 
     def add_edge(
         self, 
@@ -43,6 +38,17 @@ class GraphEditor:
         )
         self.next_edge_index += 1
 
+    def add_effect(self, vertex_or_edge_name: str, effect: str) -> None:
+        effect = convert_text_to_effect(effect)
+        if vertex_or_edge_name in self.graph.vertex_dict:
+            self.graph.vertex_dict[vertex_or_edge_name].effects.append(effect)
+        elif vertex_or_edge_name in self.graph.edge_dict:
+            self.graph.edge_dict[vertex_or_edge_name].effects.append(effect)
+
+    def add_predicate(self, edge_name: str, predicate: str) -> None:
+        predicate = convert_text_to_predicate(predicate)
+        self.graph.edge_dict[edge_name].predicates.append(predicate)
+
     def add_vertex(
         self, text: str = "", effects: list[dict[str, str | int]] = None
     ) -> None:
@@ -54,6 +60,15 @@ class GraphEditor:
         )
         self.next_vertex_index += 1
 
+    def edit_edge_text(self, edge_name: str, text: str) -> None:
+        self.graph.edge_dict[edge_name].text = text
+
+    def edit_from_vertex(self, edge_name: str, from_vertex: str) -> None:
+        self.graph.edge_dict[edge_name].from_vertex = from_vertex
+
+    def edit_to_vertex(self, edge_name: str, to_vertex: str) -> None:
+        self.graph.edge_dict[edge_name].to_vertex = to_vertex
+
     def edit_vertex_text(self, vertex_name: str, text: str) -> None:
         self.graph.vertex_dict[vertex_name].text = text
 
@@ -63,3 +78,7 @@ class GraphEditor:
             self.graph.vertex_dict[vertex_or_edge_name].effects.remove(effect)
         elif vertex_or_edge_name in self.graph.edge_dict:
             self.graph.edge_dict[vertex_or_edge_name].effects.remove(effect)
+
+    def remove_predicate(self, edge_name: str, predicate: str) -> None:
+        predicate = convert_text_to_predicate(predicate)
+        self.graph.edge_dict[edge_name].predicates.remove(predicate)
