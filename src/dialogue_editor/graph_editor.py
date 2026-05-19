@@ -85,3 +85,6 @@ class GraphEditor:
     def remove_predicate(self, edge_name: str, predicate: str) -> None:
         predicate = convert_text_to_predicate(predicate)
         self.graph.edge_dict[edge_name].predicates.remove(predicate)
+
+    def remove_vertex(self, vertex_name: str) -> None:
+        del self.graph.vertex_dict[vertex_name]
