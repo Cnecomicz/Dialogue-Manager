@@ -6,6 +6,8 @@ from dialogue_model.vertex import Vertex
 class GraphEditor:
     def __init__(self, yaml_file: str = "") -> None:
         self.graph = Graph(yaml_file)
+        self.next_vertex_index = 0
+        self.next_edge_index = 0
 
     def add_effect(self, vertex_or_edge_name: str, effect: str) -> None:
         effect = convert_text_to_effect(effect)
@@ -17,8 +19,8 @@ class GraphEditor:
     def add_edge(
         self, 
         from_vertex: str, 
-        to_vertex: str, 
-        text: str, 
+        to_vertex: str = "", 
+        text: str = "", 
         predicates: list[dict[str, str | int]] = None, 
         effects: list[dict[str, str | int]] = None
     ) -> None:
@@ -26,7 +28,10 @@ class GraphEditor:
             predicates = []
         if effects is None:
             effects = []
-        edge_name = f"{from_vertex}_to_{to_vertex}"
+        if to_vertex == "":
+            self.add_vertex()
+            to_vertex = f"vertex_{self.next_vertex_index-1}"
+        edge_name = f"edge_{self.next_edge_index}"
         self.graph.edge_dict[edge_name] = Edge(
             edge_name, {
                 "from": from_vertex,
@@ -36,16 +41,20 @@ class GraphEditor:
                 "effects": effects
             }
         )
-        print(edge_name, self.graph.edge_dict[edge_name])
+        self.next_edge_index += 1
 
     def add_vertex(
-        self, vertex_name: str, text: str, effects: list[dict[str, str | int]] = None
+        self, 
+        text: str = "", 
+        effects: list[dict[str, str | int]] = None
     ) -> None:
         if effects is None:
             effects = []
+        vertex_name = f"vertex_{self.next_vertex_index}"
         self.graph.vertex_dict[vertex_name] = Vertex(
             vertex_name, {"text": text, "effects": effects}
         )
+        self.next_vertex_index += 1
 
     def edit_vertex_text(self, vertex_name: str, text: str) -> None:
         self.graph.vertex_dict[vertex_name].text = text

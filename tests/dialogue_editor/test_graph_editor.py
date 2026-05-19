@@ -19,39 +19,39 @@ def test_not_loading_graph():
 # You can add new vertices
 def test_add_new_vertex():
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("begin", "Hello world.")
+    graph_editor.add_vertex("Hello world.")
     assert len(graph_editor.graph.vertex_dict) == 1
-    assert graph_editor.graph.vertex_dict["begin"] == Vertex(
-        "begin", {"text": "Hello world.", "effects": []}
+    assert graph_editor.graph.vertex_dict["vertex_0"] == Vertex(
+        "vertex_0", {"text": "Hello world.", "effects": []}
     )
 
 # You can edit existing vertices
 def test_editing_vertex():
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("begin", "Hello world.", [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"},])
-    graph_editor.edit_vertex_text("begin", "Updated text.")
-    graph_editor.remove_effect("begin", "player.inventory.append(Flower)")
-    graph_editor.add_effect("begin", "player.gold = player.gold-1")
-    assert graph_editor.graph.vertex_dict["begin"] == Vertex(
-        "begin", {"text": "Updated text.", "effects": [{"type": "modify_value", "target": "player.gold", "delta": -1},]}
+    graph_editor.add_vertex("Hello world.", [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"},])
+    graph_editor.edit_vertex_text("vertex_0", "Updated text.")
+    graph_editor.remove_effect("vertex_0", "player.inventory.append(Flower)")
+    graph_editor.add_effect("vertex_0", "player.gold = player.gold-1")
+    assert graph_editor.graph.vertex_dict["vertex_0"] == Vertex(
+        "vertex_0", {"text": "Updated text.", "effects": [{"type": "modify_value", "target": "player.gold", "delta": -1},]}
     )
 
 # You can add new edges
 def test_add_new_edge():
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("begin", "Hello world.")
-    graph_editor.add_vertex("end", "Goodbye world.")
-    graph_editor.add_edge("begin", to_vertex="end", text="This is an edge.")
+    graph_editor.add_vertex("Hello world.")
+    graph_editor.add_vertex("Goodbye world.")
+    graph_editor.add_edge("vertex_0", to_vertex="vertex_1", text="This is an edge.")
     assert len(graph_editor.graph.edge_dict) == 1
-    assert graph_editor.graph.edge_dict["begin_to_end"] == Edge(
-        "begin_to_end", {"from": "begin", "to": "end", "text": "This is an edge.", "predicates": [], "effects": []}
+    assert graph_editor.graph.edge_dict["edge_0"] == Edge(
+        "edge_0", {"from": "vertex_0", "to": "vertex_1", "text": "This is an edge.", "predicates": [], "effects": []}
     )
 
 # If you don't add a to_vertex when creating an edge it makes a new one
 def test_add_new_edge_without_to_vertex():
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("begin", "Hello world.")
-    graph_editor.add_edge("begin", text="This is an edge without preexisting target.")
+    graph_editor.add_vertex("Hello world.")
+    graph_editor.add_edge("vertex_0", text="This is an edge without preexisting target.")
     assert len(graph_editor.graph.edge_dict) == 1
     assert len(graph_editor.graph.vertex_dict) == 2
 

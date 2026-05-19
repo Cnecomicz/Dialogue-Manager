@@ -1,7 +1,7 @@
 name: Alice
 
 vertices: 
-    begin:
+    vertex_0:
         text: "Hello. You have {player.gold} gold. Want to buy a flower?"
         effects: []
     buy_flower:
@@ -21,8 +21,8 @@ vertices:
         effects: []
 
 edges:
-    begin_to_buy_flower:
-        from: "begin"
+    vertex_0_to_buy_flower:
+        from: "vertex_0"
         to: "buy_flower"
         text: "Yes, I'll buy a flower."
         predicates: [
@@ -32,8 +32,8 @@ edges:
         effects: [
             {type: "modify_value", target: "player.gold", delta: -1},
         ]
-    begin_to_insufficient_flowers:
-        from: "begin"
+    vertex_0_to_insufficient_flowers:
+        from: "vertex_0"
         to: "insufficient_flowers"
         text: "Yes, I'll buy a flower."
         predicates: [
@@ -41,16 +41,16 @@ edges:
             {type: "check_list", path: "alice.inventory", op: "not in", value: "Flower"},
         ]
         effects: []
-    begin_to_insufficient_gold:
-        from: "begin"
+    vertex_0_to_insufficient_gold:
+        from: "vertex_0"
         to: "insufficient_gold"
         text: "Well, can I buy one with {player.gold} gold?"
         predicates: [
             {type: "check_value", path: "player.gold", op: "<", value: 1},
         ]
         effects: []
-    begin_to_end:
-        from: "begin"
+    vertex_0_to_end:
+        from: "vertex_0"
         to: "end"
         text: "No thanks."
         predicates: []

@@ -12,7 +12,7 @@ class GraphManager:
     def __init__(self, graph: Graph, game_state: "GameState") -> None:
         self.graph = graph
         self.game_state = game_state
-        self.current_vertex = "begin"
+        self.current_vertex = "vertex_0"
 
     @property
     def current_edges(self) -> dict[str, Edge]:

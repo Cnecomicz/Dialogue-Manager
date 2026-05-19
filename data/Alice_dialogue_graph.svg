@@ -8,16 +8,16 @@
  viewBox="0.00 0.00 1682.00 1026.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(36 990.08)">
 <polygon fill="#303841" stroke="none" points="-36,36 -36,-990.08 1645.61,-990.08 1645.61,36 -36,36"/>
-<!-- begin -->
+<!-- vertex_0 -->
 <g id="node1" class="node">
-<title>begin</title>
+<title>vertex_0</title>
 <path fill="#a36a2a" stroke="#aaaaaa" d="M854.14,-954.08C854.14,-954.08 501.64,-954.08 501.64,-954.08 495.64,-954.08 489.64,-948.08 489.64,-942.08 489.64,-942.08 489.64,-921.68 489.64,-921.68 489.64,-915.68 495.64,-909.68 501.64,-909.68 501.64,-909.68 854.14,-909.68 854.14,-909.68 860.14,-909.68 866.14,-915.68 866.14,-921.68 866.14,-921.68 866.14,-942.08 866.14,-942.08 866.14,-948.08 860.14,-954.08 854.14,-954.08"/>
 <text xml:space="preserve" text-anchor="middle" x="677.89" y="-933.58" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="677.89" y="-918.58" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Hello. You have {player.gold} gold. Want to buy a flower?</text>
 </g>
-<!-- begin_to_buy_flower -->
+<!-- vertex_0_to_buy_flower -->
 <g id="node6" class="node">
-<title>begin_to_buy_flower</title>
+<title>vertex_0_to_buy_flower</title>
 <ellipse fill="#336699" stroke="#aaaaaa" cx="829.89" cy="-730.63" rx="138.42" ry="107.06"/>
 <text xml:space="preserve" text-anchor="middle" x="829.89" y="-785.83" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="829.89" y="-770.83" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Yes, I&#39;ll buy a flower.</text>
@@ -27,15 +27,15 @@
 <text xml:space="preserve" text-anchor="middle" x="829.89" y="-678.83" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">EFFECTS:</text>
 <text xml:space="preserve" text-anchor="middle" x="829.89" y="-663.83" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">player.gold = player.gold&#45;1</text>
 </g>
-<!-- begin&#45;&gt;begin_to_buy_flower -->
+<!-- vertex_0&#45;&gt;vertex_0_to_buy_flower -->
 <g id="edge1" class="edge">
-<title>begin&#45;&gt;begin_to_buy_flower</title>
+<title>vertex_0&#45;&gt;vertex_0_to_buy_flower</title>
 <path fill="none" stroke="#cccccc" d="M694.16,-909.56C708.59,-890.63 730.8,-861.53 753.09,-832.3"/>
 <polygon fill="#cccccc" stroke="#cccccc" points="755.81,-834.51 759.09,-824.44 750.24,-830.27 755.81,-834.51"/>
 </g>
-<!-- begin_to_insufficient_flowers -->
+<!-- vertex_0_to_insufficient_flowers -->
 <g id="node7" class="node">
-<title>begin_to_insufficient_flowers</title>
+<title>vertex_0_to_insufficient_flowers</title>
 <ellipse fill="#336699" stroke="#aaaaaa" cx="1465.89" cy="-477.04" rx="143.72" ry="74.53"/>
 <text xml:space="preserve" text-anchor="middle" x="1465.89" y="-509.24" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="1465.89" y="-494.24" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Yes, I&#39;ll buy a flower.</text>
@@ -43,37 +43,37 @@
 <text xml:space="preserve" text-anchor="middle" x="1465.89" y="-448.24" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">player.gold &gt;= 1</text>
 <text xml:space="preserve" text-anchor="middle" x="1465.89" y="-433.24" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Flower not in alice.inventory</text>
 </g>
-<!-- begin&#45;&gt;begin_to_insufficient_flowers -->
+<!-- vertex_0&#45;&gt;vertex_0_to_insufficient_flowers -->
 <g id="edge3" class="edge">
-<title>begin&#45;&gt;begin_to_insufficient_flowers</title>
+<title>vertex_0&#45;&gt;vertex_0_to_insufficient_flowers</title>
 <path fill="none" stroke="#cccccc" d="M781.18,-909.2C842.67,-893.99 921.09,-870.47 985.89,-837.68 1140.7,-759.35 1297.34,-630.63 1387.83,-550.29"/>
 <polygon fill="#cccccc" stroke="#cccccc" points="1390.12,-552.95 1395.25,-543.68 1385.46,-547.72 1390.12,-552.95"/>
 </g>
-<!-- begin_to_insufficient_gold -->
+<!-- vertex_0_to_insufficient_gold -->
 <g id="node8" class="node">
-<title>begin_to_insufficient_gold</title>
+<title>vertex_0_to_insufficient_gold</title>
 <ellipse fill="#336699" stroke="#aaaaaa" cx="207.89" cy="-730.63" rx="207.89" ry="63.92"/>
 <text xml:space="preserve" text-anchor="middle" x="207.89" y="-755.33" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="207.89" y="-740.33" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Well, can I buy one with {player.gold} gold?</text>
 <text xml:space="preserve" text-anchor="middle" x="207.89" y="-709.33" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">PREDICATES:</text>
 <text xml:space="preserve" text-anchor="middle" x="207.89" y="-694.33" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">player.gold &lt; 1</text>
 </g>
-<!-- begin&#45;&gt;begin_to_insufficient_gold -->
+<!-- vertex_0&#45;&gt;vertex_0_to_insufficient_gold -->
 <g id="edge5" class="edge">
-<title>begin&#45;&gt;begin_to_insufficient_gold</title>
+<title>vertex_0&#45;&gt;vertex_0_to_insufficient_gold</title>
 <path fill="none" stroke="#cccccc" d="M627.14,-909.37C558.78,-880.39 434.67,-827.77 339.16,-787.28"/>
 <polygon fill="#cccccc" stroke="#cccccc" points="340.8,-784.17 330.23,-783.49 338.07,-790.62 340.8,-784.17"/>
 </g>
-<!-- begin_to_end -->
+<!-- vertex_0_to_end -->
 <g id="node9" class="node">
-<title>begin_to_end</title>
+<title>vertex_0_to_end</title>
 <ellipse fill="#336699" stroke="#aaaaaa" cx="423.89" cy="-477.04" rx="71.06" ry="31.4"/>
 <text xml:space="preserve" text-anchor="middle" x="423.89" y="-478.74" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="423.89" y="-463.74" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">No thanks.</text>
 </g>
-<!-- begin&#45;&gt;begin_to_end -->
+<!-- vertex_0&#45;&gt;vertex_0_to_end -->
 <g id="edge7" class="edge">
-<title>begin&#45;&gt;begin_to_end</title>
+<title>vertex_0&#45;&gt;vertex_0_to_end</title>
 <path fill="none" stroke="#cccccc" d="M665.81,-909.35C625.95,-838.27 498.17,-610.46 446.19,-517.8"/>
 <polygon fill="#cccccc" stroke="#cccccc" points="449.36,-516.3 441.42,-509.29 443.25,-519.72 449.36,-516.3"/>
 </g>
@@ -170,27 +170,27 @@
 <text xml:space="preserve" text-anchor="middle" x="594.89" y="-23.9" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">TEXT:</text>
 <text xml:space="preserve" text-anchor="middle" x="594.89" y="-8.9" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#e6e6e6">Okay, goodbye.</text>
 </g>
-<!-- begin_to_buy_flower&#45;&gt;buy_flower -->
+<!-- vertex_0_to_buy_flower&#45;&gt;buy_flower -->
 <g id="edge2" class="edge">
-<title>begin_to_buy_flower&#45;&gt;buy_flower</title>
+<title>vertex_0_to_buy_flower&#45;&gt;buy_flower</title>
 <path fill="none" stroke="#cccccc" d="M841.68,-623.66C844.81,-595.59 848.08,-566.18 850.86,-541.19"/>
 <polygon fill="#cccccc" stroke="#cccccc" points="854.31,-541.87 851.93,-531.55 847.35,-541.1 854.31,-541.87"/>
 </g>
-<!-- begin_to_insufficient_flowers&#45;&gt;insufficient_flowers -->
+<!-- vertex_0_to_insufficient_flowers&#45;&gt;insufficient_flowers -->
 <g id="edge4" class="edge">
-<title>begin_to_insufficient_flowers&#45;&gt;insufficient_flowers</title>
+<title>vertex_0_to_insufficient_flowers&#45;&gt;insufficient_flowers</title>
 <path fill="none" stroke="#cccccc" d="M1509.43,-405.66C1521.42,-382.57 1532.8,-356.23 1538.89,-330.51 1560.81,-237.91 1566.76,-207.39 1538.89,-116.4 1531.73,-93.02 1516.51,-70.22 1502.82,-53.03"/>
 <polygon fill="#cccccc" stroke="#cccccc" points="1505.88,-51.23 1496.82,-45.74 1500.47,-55.68 1505.88,-51.23"/>
 </g>
-<!-- begin_to_insufficient_gold&#45;&gt;insufficient_gold -->
+<!-- vertex_0_to_insufficient_gold&#45;&gt;insufficient_gold -->
 <g id="edge6" class="edge">
-<title>begin_to_insufficient_gold&#45;&gt;insufficient_gold</title>
+<title>vertex_0_to_insufficient_gold&#45;&gt;insufficient_gold</title>
 <path fill="none" stroke="#cccccc" d="M179.96,-667.11C133.2,-552.83 51.7,-304.66 131.89,-116.4 143.05,-90.2 165.59,-67.81 186.14,-51.55"/>
 <polygon fill="#cccccc" stroke="#cccccc" points="188.04,-54.5 193.88,-45.65 183.8,-48.93 188.04,-54.5"/>
 </g>
-<!-- begin_to_end&#45;&gt;end -->
+<!-- vertex_0_to_end&#45;&gt;end -->
 <g id="edge8" class="edge">
-<title>begin_to_end&#45;&gt;end</title>
+<title>vertex_0_to_end&#45;&gt;end</title>
 <path fill="none" stroke="#cccccc" d="M364.73,-459.34C306.24,-439.32 219.99,-399.5 180.89,-330.51 133.97,-247.72 121.45,-190.71 180.89,-116.4 222.34,-64.58 410.42,-39.54 518.27,-29.25"/>
 <polygon fill="#cccccc" stroke="#cccccc" points="518.27,-32.77 527.9,-28.36 517.62,-25.8 518.27,-32.77"/>
 </g>
