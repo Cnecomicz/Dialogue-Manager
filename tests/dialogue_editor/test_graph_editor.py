@@ -72,8 +72,17 @@ def test_editing_edge():
         "edge_0", {"from": "vertex_1", "to": "vertex_0", "text": "Updated text.", "predicates": [{"type": "check_list", "path": "player.inventory", "op": "not in", "value": "Bomb"},], "effects": [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Bomb"}]}
     )
 
-
 # You can remove an edge
+def test_removing_edge():
+    graph_editor = GraphEditor()
+    assert len(graph_editor.graph.vertex_dict) == 0
+    assert len(graph_editor.graph.edge_dict) == 0
+    graph_editor.add_vertex("Hello world.")
+    graph_editor.add_edge("vertex_0", "This is an edge.")
+    assert len(graph_editor.graph.edge_dict) == 1
+    graph_editor.remove_edge("edge_0")
+    assert len(graph_editor.graph.vertex_dict) == 2
+    assert len(graph_editor.graph.edge_dict) == 0
 
 # You can remove a vertex 
 
