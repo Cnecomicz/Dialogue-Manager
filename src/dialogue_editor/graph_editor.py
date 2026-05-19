@@ -72,6 +72,9 @@ class GraphEditor:
     def edit_vertex_text(self, vertex_name: str, text: str) -> None:
         self.graph.vertex_dict[vertex_name].text = text
 
+    def remove_edge(self, edge_name: str) -> None:
+        del self.graph.edge_dict[edge_name]
+
     def remove_effect(self, vertex_or_edge_name: str, effect: str) -> None:
         effect = convert_text_to_effect(effect)
         if vertex_or_edge_name in self.graph.vertex_dict:
