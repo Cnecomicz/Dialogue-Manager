@@ -24,13 +24,13 @@ class GraphEditor:
         predicates: list[dict[str, str | int]] = None, 
         effects: list[dict[str, str | int]] = None
     ) -> None:
+        if to_vertex == "":
+            self.add_vertex()
+            to_vertex = f"vertex_{self.next_vertex_index-1}"
         if predicates is None:
             predicates = []
         if effects is None:
             effects = []
-        if to_vertex == "":
-            self.add_vertex()
-            to_vertex = f"vertex_{self.next_vertex_index-1}"
         edge_name = f"edge_{self.next_edge_index}"
         self.graph.edge_dict[edge_name] = Edge(
             edge_name, {
@@ -44,9 +44,7 @@ class GraphEditor:
         self.next_edge_index += 1
 
     def add_vertex(
-        self, 
-        text: str = "", 
-        effects: list[dict[str, str | int]] = None
+        self, text: str = "", effects: list[dict[str, str | int]] = None
     ) -> None:
         if effects is None:
             effects = []
