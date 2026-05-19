@@ -79,6 +79,7 @@ def test_removing_edge():
     assert len(graph_editor.graph.edge_dict) == 0
     graph_editor.add_vertex("Hello world.")
     graph_editor.add_edge("vertex_0", text="This is an edge.")
+    assert len(graph_editor.graph.vertex_dict) == 2
     assert len(graph_editor.graph.edge_dict) == 1
     graph_editor.remove_edge("edge_0")
     assert len(graph_editor.graph.vertex_dict) == 2
@@ -93,6 +94,33 @@ def test_removing_vertex():
     graph_editor.remove_vertex("vertex_0")
     assert len(graph_editor.graph.vertex_dict) == 0
 
-# Removing a vertex removes all connected edges too
+# Removing a vertex removes the reference in all connected edges
+def test_removing_connected_vertex():
+    graph_editor = GraphEditor()
+    assert len(graph_editor.graph.vertex_dict) == 0
+    assert len(graph_editor.graph.edge_dict) == 0
+    graph_editor.add_vertex("Hello world.")
+    graph_editor.add_edge("vertex_0", text="This is an edge.")
+    assert len(graph_editor.graph.vertex_dict) == 2
+    assert len(graph_editor.graph.edge_dict) == 1
+    graph_editor.remove_vertex("vertex_0")
+    assert len(graph_editor.graph.vertex_dict) == 1
+    assert len(graph_editor.graph.edge_dict) == 1
+    assert graph_editor.graph.edge_dict["edge_0"].from_vertex == ""
+
+# Optionally, removing a vertex can remove all connected edges
+# def test_removing_connected_vertex_cascade_delete():
+#     graph_editor = GraphEditor()
+#     assert len(graph_editor.graph.vertex_dict) == 0
+#     assert len(graph_editor.graph.edge_dict) == 0
+#     graph_editor.add_vertex("Hello world.")
+#     graph_editor.add_edge("vertex_0", text="This is an edge.")
+#     assert len(graph_editor.graph.vertex_dict) == 2
+#     assert len(graph_editor.graph.edge_dict) == 1
+#     graph_editor.remove_vertex("vertex_0", True)
+#     assert len(graph_editor.graph.vertex_dict) == 1
+#     assert len(graph_editor.graph.edge_dict) == 0
+
+
 
 # You can save the Graph to yaml
