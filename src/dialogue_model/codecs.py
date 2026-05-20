@@ -38,7 +38,7 @@ def convert_text_to_effect(effect: str) -> dict[str, str]:
         target, delta = match_value.groups()
         try:
             delta = int(delta)
-        except:
+        except ValueError:
             delta = delta
         return {"type": "modify_value", "target": target, "delta": delta}
     match_list = match(r"^(\w+(?:\.\w+)*)\.(\w+)\((.+)\)$", effect)
