@@ -121,6 +121,38 @@ def test_removing_connected_vertex_cascade_delete():
     assert len(graph_editor.graph.vertex_dict) == 1
     assert len(graph_editor.graph.edge_dict) == 0
 
-
+# You can add and edit the NPC name
+def test_add_and_edit_name():
+    graph_editor = GraphEditor()
+    graph_editor.add_name("Bob")
+    assert graph_editor.graph.name == "Bob"
+    graph_editor.edit_name("Charlie")
+    assert graph_editor.graph.name == "Charlie"
 
 # You can save the Graph to yaml
+# def test_save_to_yaml(tmp_path):
+#     yaml_file = tmp_path / "graph.yaml"
+#     graph_editor = GraphEditor(yaml_file)
+#     graph_editor.add_name("Bob")
+#     graph_editor.add_vertex("Hello world.", [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}])
+#     graph_editor.add_vertex("Goodbye world.", [{"type": "modify_value", "target": "player.name", "value": "Bob"}])
+#     graph_editor.add_edge("vertex_0", "vertex_1", "This is an edge.", [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], [{"type": "modify_value", "target": "player.gold", "delta": -1}])
+#     graph_editor.save()
+#     assert yaml_file.exists()
+#     with open(yaml_file, 'r') as f:
+#         yaml_data = safe_load(f)
+#     assert "name" in yaml_data
+#     assert "vertices" in yaml_data
+#     assert "edges" in yaml_data
+#     assert yaml_data["name"] == "Bob"
+#     assert yaml_data["vertices"] == {
+#         "vertex_0": {"text": "Hello world.", "effects": [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}]},
+#         "vertex_1": {"text": "Goodbye world.", "effects":[{"type": "modify_value", "target": "player.name", "value": "Bob"}]}
+#     }
+#     assert yaml_data["edges"] == {
+#         "edge_0": {"from": "vertex_0", "to": "vertex_1":, "text": "This is an edge.", "predicates": [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], "effects": [{"type": "modify_value", "target": "player.gold", "delta": -1}]}
+#     }
+
+
+
+# Testing round trip save and load
