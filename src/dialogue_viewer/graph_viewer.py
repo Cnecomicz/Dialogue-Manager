@@ -5,6 +5,7 @@ from dialogue_model.codecs import (
     convert_effect_to_text, convert_predicate_to_text
 )
 
+# Deprecating after completing Dash Cytoscape
 class GraphViewer:
     def __init__(self, graph: Graph) -> None:
         self.graph = graph
