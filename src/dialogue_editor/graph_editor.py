@@ -6,7 +6,7 @@ from dialogue_model.graph import Graph
 from dialogue_model.vertex import Vertex
 
 class GraphEditor:
-    def __init__(self, yaml_file: str = "") -> None:
+    def __init__(self, yaml_file: str | None = None) -> None:
         self.yaml_file = yaml_file
         self.graph = Graph(self.yaml_file)
         self.next_vertex_index = 0
@@ -15,12 +15,12 @@ class GraphEditor:
     def add_edge(
         self, 
         from_vertex: str, 
-        to_vertex: str = "", 
-        text: str = "", 
+        to_vertex: str | None = None, 
+        text: str | None = None, 
         predicates: list[dict[str, str | int]] = None, 
         effects: list[dict[str, str | int]] = None
     ) -> None:
-        if to_vertex == "":
+        if to_vertex is None:
             self.add_vertex()
             to_vertex = f"vertex_{self.next_vertex_index-1}"
         if predicates is None:
@@ -51,7 +51,9 @@ class GraphEditor:
         self.graph.edge_dict[edge_name].predicates.append(predicate)
 
     def add_vertex(
-        self, text: str = "", effects: list[dict[str, str | int]] = None
+        self, 
+        text: str | None = None, 
+        effects: list[dict[str, str | int]] = None
     ) -> None:
         if effects is None:
             effects = []
@@ -109,7 +111,9 @@ class GraphEditor:
                 self.edit_to_vertex(edge_name, "")
         del self.graph.vertex_dict[vertex_name]
 
-    def save(self) -> None:
+    def save(self, yaml_file: str | None = None) -> None:
+        if yaml_file is None:
+            yaml_file = self.yaml_file
         tab = " " # yaml only accepts spaces as tabs, and 1 suffices
         yaml_data = ""
         yaml_data += f"name: {self.graph.name}\n\n"
@@ -126,5 +130,5 @@ class GraphEditor:
             yaml_data += f'{tab}{tab}text: "{edge.text}"\n'
             yaml_data += f"{tab}{tab}predicates: {edge.predicates}\n"
             yaml_data += f"{tab}{tab}effects: {edge.effects}\n"
-        with open(self.yaml_file, "w") as f:
+        with open(yaml_file, "w") as f:
             f.write(yaml_data)

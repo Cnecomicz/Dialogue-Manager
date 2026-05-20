@@ -9,7 +9,7 @@ class GraphViewer:
     def __init__(self, graph: Graph) -> None:
         self.graph = graph
 
-    def get_effects_text(self, effects: list[dict[str, str]]) -> str:
+    def get_effects_text(self, effects: list[dict[str, str | int]]) -> str:
         if effects:
             effects_text = r"EFFECTS:\n"
             for effect in effects:
@@ -18,7 +18,7 @@ class GraphViewer:
             effects_text = ""
         return effects_text
 
-    def get_predicates_text(self, predicates: list[dict[str, str]]) -> str:
+    def get_predicates_text(self, predicates: list[dict[str, str | int]]) -> str:
         if predicates:
             predicates_text = r"PREDICATES:\n"
             for predicate in predicates:

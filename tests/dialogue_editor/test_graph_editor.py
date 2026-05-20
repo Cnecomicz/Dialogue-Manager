@@ -165,14 +165,12 @@ def test_save_as():
     assert "name" in yaml_data
     assert "vertices" in yaml_data
     assert "edges" in yaml_data
-    assert yaml_data["name"] == ""
+    assert yaml_data["name"] is None
     assert yaml_data["vertices"] == {
         "vertex_0": {"text": "Hello world.", "effects": []}
     }
-    assert yaml_data["edges"] == {}
+    assert yaml_data["edges"] is None
     with open(yaml_file, "w") as f:
         f.write("")
-
-
 
 # Testing round trip save and load

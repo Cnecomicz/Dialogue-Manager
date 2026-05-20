@@ -55,7 +55,7 @@ class GraphManager:
     def get_current_edges(self) -> list[str]:
         return list(self.current_edges.keys())
 
-    def proc_effect(self, effect: dict[str, str]) -> None:
+    def proc_effect(self, effect: dict[str, str | int]) -> None:
         match effect["type"]:
             case "modify_value":
                 target_value = get_nested_attr(
