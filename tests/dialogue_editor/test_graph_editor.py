@@ -1,3 +1,5 @@
+from yaml import safe_load
+
 from dialogue_editor.graph_editor import GraphEditor
 from dialogue_model.edge import Edge
 from dialogue_model.vertex import Vertex
@@ -152,6 +154,6 @@ def test_save_to_yaml():
     with open(yaml_file, "w") as f:
         f.write("")
 
-
-
 # Testing round trip save and load
+
+# You can Save As if you pass an argument to save()

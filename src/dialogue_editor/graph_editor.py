@@ -7,7 +7,8 @@ from dialogue_model.vertex import Vertex
 
 class GraphEditor:
     def __init__(self, yaml_file: str = "") -> None:
-        self.graph = Graph(yaml_file)
+        self.yaml_file = yaml_file
+        self.graph = Graph(self.yaml_file)
         self.next_vertex_index = 0
         self.next_edge_index = 0
 
@@ -107,3 +108,23 @@ class GraphEditor:
             if edge.to_vertex == vertex_name:
                 self.edit_to_vertex(edge_name, "")
         del self.graph.vertex_dict[vertex_name]
+
+    def save(self) -> None:
+        tab = " " # yaml only accepts spaces as tabs, and 1 suffices
+        yaml_data = ""
+        yaml_data += f"name: {self.graph.name}\n\n"
+        yaml_data += "vertices:\n"
+        for vertex_name, vertex in self.graph.vertex_dict.items():
+            yaml_data += f"{tab}{vertex_name}:\n"
+            yaml_data += f'{tab}{tab}text: "{vertex.text}"\n'
+            yaml_data += f"{tab}{tab}effects: {vertex.effects}\n"
+        yaml_data += "edges:\n"
+        for edge_name, edge in self.graph.edge_dict.items():
+            yaml_data += f"{tab}{edge_name}:\n"
+            yaml_data += f'{tab}{tab}from: "{edge.from_vertex}"\n'
+            yaml_data += f'{tab}{tab}to: "{edge.to_vertex}"\n'
+            yaml_data += f'{tab}{tab}text: "{edge.text}"\n'
+            yaml_data += f"{tab}{tab}predicates: {edge.predicates}\n"
+            yaml_data += f"{tab}{tab}effects: {edge.effects}\n"
+        with open(self.yaml_file, "w") as f:
+            f.write(yaml_data)
