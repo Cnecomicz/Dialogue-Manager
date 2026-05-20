@@ -138,7 +138,7 @@ def test_save_to_yaml():
     graph_editor.add_vertex("Goodbye world.", [{"type": "modify_value", "target": "player.name", "value": "Bob"}])
     graph_editor.add_edge("vertex_0", "vertex_1", "This is an edge.", [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], [{"type": "modify_value", "target": "player.gold", "delta": -1}])
     graph_editor.save()
-    with open(yaml_file, 'r') as f:
+    with open(yaml_file, "r") as f:
         yaml_data = safe_load(f)
     assert "name" in yaml_data
     assert "vertices" in yaml_data
@@ -154,6 +154,25 @@ def test_save_to_yaml():
     with open(yaml_file, "w") as f:
         f.write("")
 
-# Testing round trip save and load
-
 # You can Save As if you pass an argument to save()
+def test_save_as():
+    graph_editor = GraphEditor()
+    graph_editor.add_vertex("Hello world.")
+    yaml_file = "data/this_file_intentionally_left_blank.yaml"
+    graph_editor.save(yaml_file)
+    with open(yaml_file, "r") as f:
+        yaml_data = safe_load(f)
+    assert "name" in yaml_data
+    assert "vertices" in yaml_data
+    assert "edges" in yaml_data
+    assert yaml_data["name"] == ""
+    assert yaml_data["vertices"] == {
+        "vertex_0": {"text": "Hello world.", "effects": []}
+    }
+    assert yaml_data["edges"] == {}
+    with open(yaml_file, "w") as f:
+        f.write("")
+
+
+
+# Testing round trip save and load

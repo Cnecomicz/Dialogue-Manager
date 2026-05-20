@@ -21,7 +21,7 @@ class Graph:
         if yaml_file == "":
             return {}
         else:
-            with open(yaml_file, 'r') as f:
+            with open(yaml_file, "r") as f:
                 return safe_load(f) or {}
 
     def normalize_yaml(self, data: dict) -> dict:
