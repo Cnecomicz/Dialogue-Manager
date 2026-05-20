@@ -174,3 +174,13 @@ def test_save_as():
         f.write("")
 
 # Testing round trip save and load
+def test_save_load_round_trip():
+    graph_editor_1 = GraphEditor()
+    graph_editor_1.edit_name("Bob")
+    graph_editor_1.add_vertex("Hello world.", [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}])
+    graph_editor_1.add_vertex("Goodbye world.", [{"type": "modify_value", "target": "player.name", "value": "Bob"}])
+    graph_editor_1.add_edge("vertex_0", "vertex_1", "This is an edge.", [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], [{"type": "modify_value", "target": "player.gold", "delta": -1}])
+    yaml_file = "data/this_file_intentionally_left_blank.yaml"
+    graph_editor_1.save(yaml_file)
+    graph_editor_2 = GraphEditor(yaml_file)
+    assert graph_editor_1 == graph_editor_2
