@@ -128,28 +128,29 @@ def test_edit_name():
     assert graph_editor.graph.name == "Bob"
 
 # You can save the Graph to yaml
-# def test_save_to_yaml(tmp_path):
-#     yaml_file = tmp_path / "graph.yaml"
-#     graph_editor = GraphEditor(yaml_file)
-#     graph_editor.add_name("Bob")
-#     graph_editor.add_vertex("Hello world.", [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}])
-#     graph_editor.add_vertex("Goodbye world.", [{"type": "modify_value", "target": "player.name", "value": "Bob"}])
-#     graph_editor.add_edge("vertex_0", "vertex_1", "This is an edge.", [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], [{"type": "modify_value", "target": "player.gold", "delta": -1}])
-#     graph_editor.save()
-#     assert yaml_file.exists()
-#     with open(yaml_file, 'r') as f:
-#         yaml_data = safe_load(f)
-#     assert "name" in yaml_data
-#     assert "vertices" in yaml_data
-#     assert "edges" in yaml_data
-#     assert yaml_data["name"] == "Bob"
-#     assert yaml_data["vertices"] == {
-#         "vertex_0": {"text": "Hello world.", "effects": [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}]},
-#         "vertex_1": {"text": "Goodbye world.", "effects":[{"type": "modify_value", "target": "player.name", "value": "Bob"}]}
-#     }
-#     assert yaml_data["edges"] == {
-#         "edge_0": {"from": "vertex_0", "to": "vertex_1":, "text": "This is an edge.", "predicates": [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], "effects": [{"type": "modify_value", "target": "player.gold", "delta": -1}]}
-#     }
+def test_save_to_yaml():
+    yaml_file = "data/this_file_intentionally_left_blank.yaml"
+    graph_editor = GraphEditor(yaml_file)
+    graph_editor.edit_name("Bob")
+    graph_editor.add_vertex("Hello world.", [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}])
+    graph_editor.add_vertex("Goodbye world.", [{"type": "modify_value", "target": "player.name", "value": "Bob"}])
+    graph_editor.add_edge("vertex_0", "vertex_1", "This is an edge.", [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], [{"type": "modify_value", "target": "player.gold", "delta": -1}])
+    graph_editor.save()
+    with open(yaml_file, 'r') as f:
+        yaml_data = safe_load(f)
+    assert "name" in yaml_data
+    assert "vertices" in yaml_data
+    assert "edges" in yaml_data
+    assert yaml_data["name"] == "Bob"
+    assert yaml_data["vertices"] == {
+        "vertex_0": {"text": "Hello world.", "effects": [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}]},
+        "vertex_1": {"text": "Goodbye world.", "effects":[{"type": "modify_value", "target": "player.name", "value": "Bob"}]}
+    }
+    assert yaml_data["edges"] == {
+        "edge_0": {"from": "vertex_0", "to": "vertex_1", "text": "This is an edge.", "predicates": [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], "effects": [{"type": "modify_value", "target": "player.gold", "delta": -1}]}
+    }
+    with open(yaml_file, "w") as f:
+        f.write("")
 
 
 
