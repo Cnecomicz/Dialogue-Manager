@@ -13,8 +13,8 @@ class GraphEditor:
     def __init__(self, yaml_file: str | PathLike | None = None) -> None:
         self.yaml_file = yaml_file
         self.graph = Graph(self.yaml_file)
-        self.next_vertex_index = 0
-        self.next_edge_index = 0
+        self.next_vertex_index = len(self.graph.vertex_dict)
+        self.next_edge_index = len(self.graph.edge_dict)
 
     def __repr__(self) -> str:
         return f'GraphEditor(yaml_file="{self.yaml_file}")'

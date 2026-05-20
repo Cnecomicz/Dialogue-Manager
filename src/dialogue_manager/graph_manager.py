@@ -17,22 +17,22 @@ class GraphManager:
     @property
     def current_edges(self) -> dict[str, Edge]:
         current_edges = {}
-        for edge_name, edge_obj in self.graph.edge_dict.items():
-            if (edge_obj.from_vertex == self.current_vertex 
+        for edge_name, edge in self.graph.edge_dict.items():
+            if (edge.from_vertex == self.current_vertex 
             and self.evaluate_edge_predicates(edge_name)):
-                current_edges[edge_name] = edge_obj
+                current_edges[edge_name] = edge
         return current_edges
 
-    def enter_vertex(self, vertex: str) -> None:
-        vertex_obj = self.graph.vertex_dict[vertex]
-        for effect in vertex_obj.effects:
+    def enter_vertex(self, vertex_name: str) -> None:
+        vertex = self.graph.vertex_dict[vertex_name]
+        for effect in vertex.effects:
             self.proc_effect(effect)
-        self.current_vertex = vertex
+        self.current_vertex = vertex_name
 
-    def evaluate_edge_predicates(self, edge: str) -> bool:
-        edge_obj = self.graph.edge_dict[edge]
+    def evaluate_edge_predicates(self, edge_name: str) -> bool:
+        edge = self.graph.edge_dict[edge_name]
         is_valid_edge = True
-        for predicate in edge_obj.predicates:
+        for predicate in edge.predicates:
             match predicate["type"]:
                 case "check_value":
                     operator_function = get_operator(predicate["op"])
@@ -86,10 +86,10 @@ class GraphManager:
                 f"{self.graph=}, "
                 f"{self.game_state=}"
             )
-        edge_obj = self.current_edges[edge_name]
-        for effect in edge_obj.effects:
+        edge = self.current_edges[edge_name]
+        for effect in edge.effects:
             self.proc_effect(effect)
-        self.enter_vertex(edge_obj.to_vertex)
+        self.enter_vertex(edge.to_vertex)
 
 
     

@@ -14,6 +14,7 @@ def convert_effect_to_text(effect: dict[str, str | int]) -> str:
                 + effect["method"] + "("
                 + effect["value"] + ")"
             )
+    raise ValueError(f"Unknown effect: {effect}")
 
 def convert_predicate_to_text(predicate: dict[str, str | int]) -> str:
     match predicate["type"]:
@@ -29,6 +30,7 @@ def convert_predicate_to_text(predicate: dict[str, str | int]) -> str:
                 + predicate["op"] + " "
                 + predicate["path"]
             )
+    raise ValueError(f"Unknown predicate: {predicate}")
 
 def convert_text_to_effect(effect: str) -> dict[str, str]:
     match_value = match(r"^(\w+(?:\.\w+)*) = \1(.+)$", effect)
@@ -48,6 +50,7 @@ def convert_text_to_effect(effect: str) -> dict[str, str]:
             "method": method, 
             "value": value
         }
+    raise ValueError(f"Unknown effect syntax: {effect}")
 
 def convert_text_to_predicate(predicate: str) -> dict[str, str | int]:
     match_value = match(
@@ -57,7 +60,7 @@ def convert_text_to_predicate(predicate: str) -> dict[str, str | int]:
         path, op, value = match_value.groups()
         try:
             value = int(value)
-        except:
+        except ValueError:
             value = value
         return {"type": "check_value", "path": path, "op": op, "value": value}
     match_list = match(r"^(.+?)\s+(not in|in)\s+(\w+(?:\.\w+)*)$", predicate)
@@ -65,6 +68,7 @@ def convert_text_to_predicate(predicate: str) -> dict[str, str | int]:
         value, op, path = match_list.groups()
         try:
             value = int(value)
-        except:
+        except ValueError:
             value = value
         return {"type": "check_list", "path": path, "op": op, "value": value}
+    raise ValueError(f"Unknown predicate syntax: {predicate}")
