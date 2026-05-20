@@ -13,8 +13,8 @@ def test_cytoscape_nodes(hello_world_graph):
 def test_cytoscape_edges(hello_world_graph):
     cytoscape_adapter = CytoscapeAdapter(hello_world_graph)
     assert len(cytoscape_adapter.nodes) == len(hello_world_graph.vertex_dict) + len(hello_world_graph.edge_dict)
+    assert {"data": {"id": "vertex_0_to_buy_flower", "label": "TEXT:\nYes, I'll buy a flower.\n\nPREDICATES:\nplayer.gold >= 1\nFlower in alice.inventory\n\nEFFECTS:\nplayer.gold = player.gold-1"}} in cytoscape_adapter.nodes
     assert len(cytoscape_adapter.edges) == 2*len(hello_world_graph.edge_dict)
     assert {"data": {"source": "vertex_0", "target": "vertex_0_to_buy_flower"}}, {"data": {"source": "vertex_0_to_buy_flower", "target": "buy_flower"}} in cytoscape_adapter.edges
 
-# The Cytoscape nodes have all the text and data from the Graph vertices/edges
 

@@ -41,6 +41,7 @@ class CytoscapeAdapter:
                 text += f"\n{predicates_text}"
             if effects_text:
                 text += f"\n{effects_text}"
+                text = text[:-1]
             nodes.append({"data": {"id": edge_name, "label": text}})
         return nodes
 
