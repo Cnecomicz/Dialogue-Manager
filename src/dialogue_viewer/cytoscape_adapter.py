@@ -1,2 +1,5 @@
+from dialogue_model.graph import Graph
+
 class CytoscapeAdapter:
-    pass
+    def __init__(self, graph: Graph) -> None:
+        self.graph = graph
