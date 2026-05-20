@@ -1,0 +1,2 @@
+class CytoscapeAdapter:
+    pass
