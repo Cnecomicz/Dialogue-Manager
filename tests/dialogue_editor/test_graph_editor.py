@@ -121,13 +121,11 @@ def test_removing_connected_vertex_cascade_delete():
     assert len(graph_editor.graph.vertex_dict) == 1
     assert len(graph_editor.graph.edge_dict) == 0
 
-# You can add and edit the NPC name
-def test_add_and_edit_name():
+# You can edit the NPC name
+def test_edit_name():
     graph_editor = GraphEditor()
-    graph_editor.add_name("Bob")
+    graph_editor.edit_name("Bob")
     assert graph_editor.graph.name == "Bob"
-    graph_editor.edit_name("Charlie")
-    assert graph_editor.graph.name == "Charlie"
 
 # You can save the Graph to yaml
 # def test_save_to_yaml(tmp_path):

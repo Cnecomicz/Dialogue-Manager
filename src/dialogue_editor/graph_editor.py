@@ -66,6 +66,9 @@ class GraphEditor:
     def edit_from_vertex(self, edge_name: str, from_vertex: str) -> None:
         self.graph.edge_dict[edge_name].from_vertex = from_vertex
 
+    def edit_name(self, name: str) -> None:
+        self.graph.name = name
+
     def edit_to_vertex(self, edge_name: str, to_vertex: str) -> None:
         self.graph.edge_dict[edge_name].to_vertex = to_vertex
 
