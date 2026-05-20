@@ -13,8 +13,8 @@ class GraphEditor:
     def __init__(self, yaml_file: str | PathLike | None = None) -> None:
         self.yaml_file = yaml_file
         self.graph = Graph(self.yaml_file)
-        self.next_vertex_index = len(self.graph.vertex_dict)
-        self.next_edge_index = len(self.graph.edge_dict)
+        self.next_vertex_index = self.get_next_vertex_index()
+        self.next_edge_index = self.get_next_edge_index()
 
     def __repr__(self) -> str:
         return f'GraphEditor(yaml_file="{self.yaml_file}")'
@@ -35,6 +35,8 @@ class GraphEditor:
         if to_vertex is None:
             self.add_vertex()
             to_vertex = f"vertex_{self.next_vertex_index-1}"
+        if text is None:
+            text = ""
         if predicates is None:
             predicates = []
         if effects is None:
@@ -67,6 +69,8 @@ class GraphEditor:
         text: str | None = None, 
         effects: list[dict[str, str | int]] = None
     ) -> None:
+        if text is None:
+            text = ""
         if effects is None:
             effects = []
         vertex_name = f"vertex_{self.next_vertex_index}"
@@ -89,6 +93,30 @@ class GraphEditor:
 
     def edit_vertex_text(self, vertex_name: str, text: str) -> None:
         self.graph.vertex_dict[vertex_name].text = text
+
+    def get_next_edge_index(self) -> int:
+        if not self.graph.edge_dict:
+            return 0
+        indices = []
+        for edge_name in self.graph.edge_dict.keys():
+            if edge_name.startswith("edge_"):
+                indices.append(int(edge_name.split("_")[1]))
+        return (
+            max(max(indices)+1, len(self.graph.edge_dict))
+            if indices else len(self.graph.edge_dict)
+        )
+
+    def get_next_vertex_index(self) -> int:
+        if not self.graph.vertex_dict:
+            return 0
+        indices = []
+        for vertex_name in self.graph.vertex_dict.keys():
+            if vertex_name.startswith("vertex_"):
+                indices.append(int(vertex_name.split("_")[1]))
+        return (
+            max(max(indices)+1, len(self.graph.vertex_dict)) 
+            if indices else len(self.graph.vertex_dict)
+        )
 
     def remove_edge(self, edge_name: str) -> None:
         del self.graph.edge_dict[edge_name]
