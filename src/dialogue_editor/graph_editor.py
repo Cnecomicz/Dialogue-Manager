@@ -1,3 +1,7 @@
+from os import PathLike
+from typing import Any
+from yaml import safe_dump
+
 from dialogue_model.codecs import (
     convert_text_to_effect, convert_text_to_predicate
 )
@@ -6,11 +10,19 @@ from dialogue_model.graph import Graph
 from dialogue_model.vertex import Vertex
 
 class GraphEditor:
-    def __init__(self, yaml_file: str | None = None) -> None:
+    def __init__(self, yaml_file: str | PathLike | None = None) -> None:
         self.yaml_file = yaml_file
         self.graph = Graph(self.yaml_file)
         self.next_vertex_index = 0
         self.next_edge_index = 0
+
+    def __repr__(self) -> str:
+        return f'GraphEditor(yaml_file="{self.yaml_file}")'
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, GraphEditor):
+            return NotImplemented
+        return self.graph == other.graph
 
     def add_edge(
         self, 
@@ -111,24 +123,28 @@ class GraphEditor:
                 self.edit_to_vertex(edge_name, "")
         del self.graph.vertex_dict[vertex_name]
 
-    def save(self, yaml_file: str | None = None) -> None:
+    def save(self, yaml_file: str | PathLike | None = None) -> None:
         if yaml_file is None:
             yaml_file = self.yaml_file
-        tab = " " # yaml only accepts spaces as tabs, and 1 suffices
-        yaml_data = ""
-        yaml_data += f"name: {self.graph.name}\n\n"
-        yaml_data += "vertices:\n"
-        for vertex_name, vertex in self.graph.vertex_dict.items():
-            yaml_data += f"{tab}{vertex_name}:\n"
-            yaml_data += f'{tab}{tab}text: "{vertex.text}"\n'
-            yaml_data += f"{tab}{tab}effects: {vertex.effects}\n"
-        yaml_data += "edges:\n"
-        for edge_name, edge in self.graph.edge_dict.items():
-            yaml_data += f"{tab}{edge_name}:\n"
-            yaml_data += f'{tab}{tab}from: "{edge.from_vertex}"\n'
-            yaml_data += f'{tab}{tab}to: "{edge.to_vertex}"\n'
-            yaml_data += f'{tab}{tab}text: "{edge.text}"\n'
-            yaml_data += f"{tab}{tab}predicates: {edge.predicates}\n"
-            yaml_data += f"{tab}{tab}effects: {edge.effects}\n"
+        yaml_data = {
+            "name": self.graph.name,
+            "vertices": {
+                vertex_name: {
+                    "text": vertex.text, 
+                    "effects": vertex.effects
+                }
+                for vertex_name, vertex in self.graph.vertex_dict.items()
+            },
+            "edges": {
+                edge_name: {
+                    "from": edge.from_vertex, 
+                    "to": edge.to_vertex,
+                    "text": edge.text,
+                    "predicates": edge.predicates,
+                    "effects": edge.effects
+                }
+                for edge_name, edge in self.graph.edge_dict.items()
+            },
+        }
         with open(yaml_file, "w") as f:
-            f.write(yaml_data)
+            safe_dump(yaml_data, f)

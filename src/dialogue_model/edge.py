@@ -8,8 +8,8 @@ class Edge:
         self.from_vertex = data["from"]
         self.to_vertex = data["to"]
         self.text = data["text"]
-        self.predicates = data["predicates"]
-        self.effects = data["effects"]
+        self.predicates = data["predicates"] or []
+        self.effects = data["effects"] or []
 
     def __repr__(self) -> str:
         return (
@@ -24,4 +24,11 @@ class Edge:
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Edge):
             return NotImplemented
-        return self.__dict__ == other.__dict__
+        return (
+            self.edge_name == other.edge_name
+            and self.from_vertex == other.from_vertex
+            and self.to_vertex == other.to_vertex
+            and self.text == other.text
+            and self.predicates == other.predicates
+            and self.effects == other.effects
+        )
