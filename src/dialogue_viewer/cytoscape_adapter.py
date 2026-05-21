@@ -42,7 +42,13 @@ class CytoscapeAdapter:
             if effects_text:
                 text += f"\n{effects_text}"
                 text = text[:-1]
-            nodes.append({"data": {"id": edge_name, "label": text}})
+            nodes.append(
+                {
+                    "data": {
+                        "id": edge_name, "label": text, 'is_edge_node': True
+                    }
+                }
+            )
         return nodes
 
     def get_effects_text(self, effects: list[dict[str, str | int]]) -> str:
@@ -54,7 +60,9 @@ class CytoscapeAdapter:
             effects_text = ""
         return effects_text
 
-    def get_predicates_text(self, predicates: list[dict[str, str | int]]) -> str:
+    def get_predicates_text(
+        self, predicates: list[dict[str, str | int]]
+    ) -> str:
         if predicates:
             predicates_text = "PREDICATES:\n"
             for predicate in predicates:

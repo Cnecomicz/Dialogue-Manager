@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "dialogue"
 version = "0.1"
 authors = [
-  { name="Eric", email="eric@locallyringed.space" }
+  {name="Eric", email="eric@locallyringed.space"}
 ]
 description = "An engine and library for handling dialogue graphs in video games."
 readme = "README.md"
@@ -16,7 +16,10 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-  "graphviz",
+  "dash", 
+  "dash-cytoscape", 
+  "graphviz", 
+  "PyYAML",
 ]
 
 [project.optional-dependencies]
@@ -39,8 +42,9 @@ src-layout = true
 
 [tool.hatch.build.targets.wheel]
 packages = [
+  "src/dash_app",
   "src/dialogue_editor",
-  "src/dialogue_manager", 
   "src/dialogue_model",
+  "src/dialogue_navigator",
   "src/dialogue_viewer",
 ]
