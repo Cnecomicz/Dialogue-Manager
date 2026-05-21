@@ -1,4 +1,4 @@
-from dialogue_manager.helper_functions import (
+from dialogue_navigator.helper_functions import (
     get_operator, get_nested_attr, set_nested_attr
 )
 from dialogue_model.edge import Edge
@@ -8,7 +8,7 @@ from dialogue_model.vertex import Vertex
 class InvalidEdgeError(Exception):
     pass
 
-class GraphManager:
+class GraphNavigator:
     def __init__(self, graph: Graph, game_state: "GameState") -> None:
         self.graph = graph
         self.game_state = game_state
