@@ -4,7 +4,7 @@ from dash_cytoscape import Cytoscape, load_extra_layouts
 from os import PathLike
 from webbrowser import open as open_url
 
-from dash_app.helper_functions import (
+from dash_app.layout import (
     get_add_vertex_button, get_cytoscape_stylesheet, get_edit_button, get_log
 )
 from dialogue_editor.graph_editor import GraphEditor
@@ -18,32 +18,41 @@ class App(Dash):
         self.layout = html.Div(
             [
                 html.Div(
-                    get_edit_button() 
-                    + [html.Hr()] 
-                    + get_add_vertex_button() 
+                    get_log()
                     + [html.Hr()]
-                    + get_log(),
+                    + get_edit_button() 
+                    + [html.Hr()] 
+                    + get_add_vertex_button() ,
                     style={
                         "width": "320px",
+                        "flexShrink": 0,
                         "padding": "12px",
                         "backgroundColor": "#1f252b",
                         "color": "#e6e6e6",
                         "borderRight": "1px solid #444"
                     }
                 ),
-                Cytoscape(
-                    id=f"dialogue-graph",
-                    layout={"name": "dagre", "rankDir": "TB"},
-                    style={
-                        "width": "100%", 
-                        "height": "100%", 
-                        "backgroundColor": "#303841"
-                    },
-                    elements=self.get_elements(),
-                    stylesheet=get_cytoscape_stylesheet()
+                html.Div(
+                    Cytoscape(
+                        id=f"dialogue-graph",
+                        layout={"name": "dagre", "rankDir": "TB"},
+                        style={
+                            "width": "100%", 
+                            "height": "100%", 
+                            "backgroundColor": "#303841"
+                        },
+                        elements=self.get_elements(),
+                        stylesheet=get_cytoscape_stylesheet()
+                    ),
+                    style={"flex": "1", "minWidth": 0, "height": "100%"}
                 )
             ],
-            style={"width": "100%", "height": "100vh"}
+            style={
+                "display": "flex", 
+                "width": "100vw", 
+                "height": "100vh", 
+                "overflow": "hidden"
+            }
         )
         self.register_callbacks()
 

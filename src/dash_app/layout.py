@@ -109,7 +109,7 @@ def get_log() -> list:
             readOnly=True,
             style={
                 "width": "100%",
-                "height": "160px",
+                "height": "70px",
                 "marginTop": "12px",
                 "fontSize": "14px",
                 "backgroundColor": "#111827",
