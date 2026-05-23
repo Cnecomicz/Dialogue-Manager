@@ -195,7 +195,7 @@ class App(Dash):
             selected_nodes: list[dict] | None,
             new_text: str | None,
             new_vertex_text: str | None
-        ) -> tuple[list[dict], str]:
+        ) -> tuple[list[dict], str, str]:
             triggered_id = ctx.triggered_id
             if triggered_id == "add-vertex":
                 if not new_vertex_text:
