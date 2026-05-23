@@ -4,6 +4,9 @@ from dash_cytoscape import Cytoscape, load_extra_layouts
 from os import PathLike
 from webbrowser import open as open_url
 
+from dash_app.helper_functions import (
+    get_add_vertex_button, get_cytoscape_stylesheet, get_edit_button, get_log
+)
 from dialogue_editor.graph_editor import GraphEditor
 from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 
@@ -15,53 +18,11 @@ class App(Dash):
         self.layout = html.Div(
             [
                 html.Div(
-                    [
-                        html.H3("Edit selected node text"),
-                        html.P("1) Click a node in the graph"),
-                        html.P("2) Type new text"),
-                        html.P("3) Click Save"),
-                        html.Div(
-                            "Selected node: None",
-                            id="selected-node-display"
-                        ),
-                        dcc.Input(
-                            id="edit-text",
-                            type="text",
-                            placeholder="Enter new text for selected node",
-                            style={
-                                "width": "100%",
-                                "backgroundColor": "#ffffff",
-                                "color": "#111827",
-                                "caretColor": "#111827",
-                                "border": "1px solid #9ca3af",
-                                # "padding": "8px 10px",
-                                "fontSize": "14px",
-                                "opacity": 1
-                            }
-                        ),
-                        html.Button("Save text", id="save-text", n_clicks=0),
-                        html.Hr(),
-                        html.H3("Add vertex"),
-                        dcc.Input(
-                            id="new-vertex-text",
-                            type="text",
-                            placeholder="Text for the new vertex",
-                            style={
-                                "width": "100%",
-                                "backgroundColor": "#ffffff",
-                                "color": "#111827",
-                                "caretColor": "#111827",
-                                "border": "1px solid #9ca3af",
-                                # "padding": "8px 10px",
-                                "fontSize": "14px",
-                                "opacity": 1
-                            }
-                        ),
-                        html.Button("Add vertex", id="add-vertex", n_clicks=0),
-                        html.Hr(),
-                        html.H3("Log"),
-                        html.Div("Ready.",id="action-status")
-                    ],
+                    get_edit_button() 
+                    + [html.Hr()] 
+                    + get_add_vertex_button() 
+                    + [html.Hr()]
+                    + get_log(),
                     style={
                         "width": "320px",
                         "padding": "12px",
@@ -79,7 +40,7 @@ class App(Dash):
                         "backgroundColor": "#303841"
                     },
                     elements=self.get_elements(),
-                    stylesheet=self.get_stylesheet()
+                    stylesheet=get_cytoscape_stylesheet()
                 )
             ],
             style={"width": "100%", "height": "100vh"}
@@ -89,6 +50,13 @@ class App(Dash):
     def add_vertex(self, text: str | None) -> str:
         self.graph_editor.add_vertex(text)
         return f"vertex_{self.graph_editor.next_vertex_index-1}"
+
+    def append_action_status(
+        self, current_log: str | None, new_message: str
+    ) -> str:
+        if not current_log:
+            return new_message
+        return f"{current_log}\n{new_message}"
 
     def get_elements(self) -> list[dict[str, dict[str, str]]]:
         cytoscape_adapter = CytoscapeAdapter(self.graph_editor.graph)
@@ -101,58 +69,23 @@ class App(Dash):
             return self.graph_editor.graph.edge_dict[node_id].text
         return None
 
-    def get_stylesheet(self) -> list[dict[str, str | dict[str, str | int]]]:
-        return [
-            {
-                "selector": "node",
-                "style": {
-                    "shape": "round-rectangle",
-                    "background-color": "#a36a2a",
-                    "border-color": "#aaaaaa",
-                    "border-width": 2,
-                    "color": "#e6e6e6",
-                    "font-family": "Helvetica",
-                    "font-size": "12px",
-                    "label": "data(label)",
-                    "text-valign": "center",
-                    "text-halign": "center",
-                    "text-wrap": "wrap",
-                    "text-max-width": 240,
-                    "min-width": 80,
-                    "min-height": 40,
-                    "width": "label",
-                    "height": "label",
-                    "padding": "20px"
-                }
-            },
-            {
-                "selector": "edge",
-                "style": {
-                    "line-color": "#cccccc",
-                    "target-arrow-color": "#cccccc",
-                    "target-arrow-shape": "triangle",
-                    "color": "#e6e6e6",
-                    "curve-style": "bezier"
-                }
-            },
-            {
-                "selector": "node:selected",
-                "style": {
-                    "border-color": "#fbbf24",
-                    "border-width": 4
-                }
-            },
-            {
-                "selector": "[?is_edge_node]",
-                "style": {
-                    "shape": "ellipse",
-                    "background-color": "#336699",
-                    "padding": "30px"
-                }
-            }
-        ]
-
     def register_callbacks(self) -> None:
+        self.clientside_callback(
+            """
+            function(actionLog) {
+                const logBox = document.getElementById("action-status");
+                if (logBox) {
+                    window.requestAnimationFrame(function() {
+                        logBox.scrollTop = logBox.scrollHeight;
+                    });
+                }
+                return "";
+            }
+            """,
+            Output("action-status-scroll-trigger", "children"),
+            Input("action-status", "value")
+        )
+
         @self.callback(
             Output("edit-text", "value"),
             Input("dialogue-graph", "selectedNodeData")
@@ -180,13 +113,14 @@ class App(Dash):
 
         @self.callback(
             Output("dialogue-graph", "elements"),
-            Output("action-status", "children"),
+            Output("action-status", "value"),
             Output("new-vertex-text", "value"),
             Input("save-text", "n_clicks"),
             Input("add-vertex", "n_clicks"),
             State("dialogue-graph", "selectedNodeData"),
             State("edit-text", "value"),
             State("new-vertex-text", "value"),
+            State("action-status", "value"),
             prevent_initial_call=True
         )
         def handle_graph_updates(
@@ -194,14 +128,21 @@ class App(Dash):
             add_vertex_clicks: int,
             selected_nodes: list[dict] | None,
             new_text: str | None,
-            new_vertex_text: str | None
+            new_vertex_text: str | None,
+            current_log: str | None
         ) -> tuple[list[dict], str, str]:
             triggered_id = ctx.triggered_id
             if triggered_id == "add-vertex":
                 if not new_vertex_text:
                     raise PreventUpdate
                 new_vertex_name = self.add_vertex(new_vertex_text)
-                return (self.get_elements(), f"Added {new_vertex_name}.", "")
+                return (
+                    self.get_elements(), 
+                    self.append_action_status(
+                        current_log, f"Added {new_vertex_name}."
+                    ),
+                    ""
+                )
             if triggered_id == "save-text":
                 if not selected_nodes:
                     raise PreventUpdate
@@ -215,16 +156,22 @@ class App(Dash):
                     raise PreventUpdate
                 return (
                     self.get_elements(), 
-                    f"Saved text for {node_id}.", 
+                    self.append_action_status(
+                        current_log, f"Saved text for {node_id}."
+                    ),
                     no_update
                 )
             raise PreventUpdate
 
     def update_node_text(self, node_id: str, new_text: str) -> bool:
         if node_id in self.graph_editor.graph.vertex_dict:
+            if self.graph_editor.graph.vertex_dict[node_id].text == new_text:
+                return False
             self.graph_editor.edit_vertex_text(node_id, new_text)
             return True
         if node_id in self.graph_editor.graph.edge_dict:
+            if self.graph_editor.graph.edge_dict[node_id].text == new_text:
+                return False
             self.graph_editor.edit_edge_text(node_id, new_text)
             return True
         return False
