@@ -2,9 +2,6 @@ from os import PathLike
 from typing import Any
 from yaml import safe_dump
 
-from dialogue_model.codecs import (
-    convert_text_to_effect, convert_text_to_predicate
-)
 from dialogue_model.edge import Edge
 from dialogue_model.graph import Graph
 from dialogue_model.vertex import Vertex
@@ -53,15 +50,17 @@ class GraphEditor:
         )
         self.next_edge_index += 1
 
-    def add_effect(self, vertex_or_edge_name: str, effect: str) -> None:
-        effect = convert_text_to_effect(effect)
+    def add_effect(
+        self, vertex_or_edge_name: str, effect: dict[str, str | int]
+    ) -> None:
         if vertex_or_edge_name in self.graph.vertex_dict:
             self.graph.vertex_dict[vertex_or_edge_name].effects.append(effect)
         elif vertex_or_edge_name in self.graph.edge_dict:
             self.graph.edge_dict[vertex_or_edge_name].effects.append(effect)
 
-    def add_predicate(self, edge_name: str, predicate: str) -> None:
-        predicate = convert_text_to_predicate(predicate)
+    def add_predicate(
+        self, edge_name: str, predicate: dict[str, str | int]
+    ) -> None:
         self.graph.edge_dict[edge_name].predicates.append(predicate)
 
     def add_vertex(
@@ -121,15 +120,17 @@ class GraphEditor:
     def remove_edge(self, edge_name: str) -> None:
         del self.graph.edge_dict[edge_name]
 
-    def remove_effect(self, vertex_or_edge_name: str, effect: str) -> None:
-        effect = convert_text_to_effect(effect)
+    def remove_effect(
+        self, vertex_or_edge_name: str, effect: dict[str, str | int]
+    ) -> None:
         if vertex_or_edge_name in self.graph.vertex_dict:
             self.graph.vertex_dict[vertex_or_edge_name].effects.remove(effect)
         elif vertex_or_edge_name in self.graph.edge_dict:
             self.graph.edge_dict[vertex_or_edge_name].effects.remove(effect)
 
-    def remove_predicate(self, edge_name: str, predicate: str) -> None:
-        predicate = convert_text_to_predicate(predicate)
+    def remove_predicate(
+        self, edge_name: str, predicate: dict[str, str | int]
+    ) -> None:
         self.graph.edge_dict[edge_name].predicates.remove(predicate)
 
     def remove_vertex(

@@ -1,6 +1,11 @@
 from pytest import fixture
 
+from dash_app.app import App
 from dialogue_model.graph import Graph
+
+@fixture
+def app():
+    return App("data/hello_world.yaml")
 
 @fixture
 def hello_world_graph():
