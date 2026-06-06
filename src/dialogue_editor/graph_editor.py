@@ -78,6 +78,16 @@ class GraphEditor:
         )
         self.next_vertex_index += 1
 
+    def edit_edge_effects(
+        self, edge_name: str, effects: list[dict[str, str | int]]
+    ) -> None:
+        self.graph.edge_dict[edge_name].effects = effects
+
+    def edit_edge_predicates(
+        self, edge_name: str, predicates: list[dict[str, str | int]]
+    ) -> None:
+        self.graph.edge_dict[edge_name].predicates = predicates
+
     def edit_edge_text(self, edge_name: str, text: str) -> None:
         self.graph.edge_dict[edge_name].text = text
 
@@ -89,6 +99,11 @@ class GraphEditor:
 
     def edit_to_vertex(self, edge_name: str, to_vertex: str) -> None:
         self.graph.edge_dict[edge_name].to_vertex = to_vertex
+
+    def edit_vertex_effects(
+        self, vertex_name: str, effects: list[dict[str, str | int]]
+    ) -> None:
+        self.graph.vertex_dict[vertex_name].effects = effects
 
     def edit_vertex_text(self, vertex_name: str, text: str) -> None:
         self.graph.vertex_dict[vertex_name].text = text
