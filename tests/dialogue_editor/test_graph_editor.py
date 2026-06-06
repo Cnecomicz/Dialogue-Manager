@@ -38,6 +38,16 @@ def test_editing_vertex():
         "vertex_0", {"text": "Updated text.", "effects": [{"type": "modify_value", "target": "player.gold", "delta": -1},]}
     )
 
+# You can edit existing vertices (directly changing effects)
+def test_editing_vertex_effects():
+    graph_editor = GraphEditor()
+    graph_editor.add_vertex("Hello world.")
+    new_effects = [
+        {"type": "modify_value", "target": "player.gold", "delta": -1}
+    ]
+    graph_editor.edit_vertex_effects("vertex_0", new_effects)
+    assert graph_editor.graph.vertex_dict["vertex_0"].effects == new_effects
+
 # You can add new edges
 def test_add_new_edge():
     graph_editor = GraphEditor()
@@ -73,6 +83,23 @@ def test_editing_edge():
     assert graph_editor.graph.edge_dict["edge_0"] == Edge(
         "edge_0", {"from": "vertex_1", "to": "vertex_0", "text": "Updated text.", "predicates": [{"type": "check_list", "path": "player.inventory", "op": "not in", "value": "Bomb"},], "effects": [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Bomb"}]}
     )
+
+# You can edit existing edges (directly changing predicates/effects)
+def test_editing_edge_predicates_and_effects():
+    graph_editor = GraphEditor()
+    graph_editor.add_vertex("Hello world.")
+    graph_editor.add_vertex("Goodbye world.")
+    graph_editor.add_edge("vertex_0", "vertex_1", "This is an edge.")
+    new_predicates = [
+        {"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}
+    ]
+    new_effects = [
+        {"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}
+    ]
+    graph_editor.edit_edge_predicates("edge_0", new_predicates)
+    graph_editor.edit_edge_effects("edge_0", new_effects)
+    assert graph_editor.graph.edge_dict["edge_0"].predicates == new_predicates
+    assert graph_editor.graph.edge_dict["edge_0"].effects == new_effects
 
 # You can remove an edge
 def test_removing_edge():
