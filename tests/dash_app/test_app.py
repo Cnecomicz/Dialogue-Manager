@@ -13,17 +13,23 @@ def test_get_elements_from_graph(app):
         {"data": {"id": element["data"]["id"]}} for element in elements if "id" in element["data"]
     ]
 
-# Updating a vertex node text changes the underlying graph
-def test_update_vertex_node_text(app):
-    was_updated = app.update_node_text("vertex_0", "Edited vertex text.")
+# Updating a vertex node changes the underlying graph
+def test_update_vertex_node(app):
+    new_effects = [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}]
+    was_updated = app.update_node("vertex_0", "Edited vertex text.", [], new_effects)
     assert was_updated is True
     assert app.graph_editor.graph.vertex_dict["vertex_0"].text == "Edited vertex text."
+    assert app.graph_editor.graph.vertex_dict["vertex_0"].effects == new_effects
 
-# Updating an edge node text changes the underlying graph
-def test_update_edge_node_text(app):
-    was_updated = app.update_node_text("vertex_0_to_buy_flower", "Edited edge text.")
+# Updating an edge node changes the underlying graph
+def test_update_edge_node(app):
+    new_predicates = [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}] 
+    new_effects = [{"type": "modify_value", "target": "player.gold", "delta": -1}]
+    was_updated = app.update_node("vertex_0_to_buy_flower", "Edited edge text.", new_predicates, new_effects)
     assert was_updated is True
     assert app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].text == "Edited edge text."
+    assert app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].predicates == new_predicates
+    assert app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].effects == new_effects
 
 # Updating an unknown node is rejected
 def test_update_unknown_node_text(app):
