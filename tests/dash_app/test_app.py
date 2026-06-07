@@ -53,3 +53,22 @@ def test_add_vertex_via_app(app):
 def test_added_vertex_appears_in_elements(app):
     new_vertex_name = app.add_vertex("Brand new vertex.")
     assert {"data": {"id": new_vertex_name, "label": "TEXT:\nBrand new vertex."}} in app.get_elements()
+
+# Adding an edge creates a new graph edge with the provided from_vertex, to_vertex, text, predicates, and effects
+def test_add_edge_via_app(app):
+    new_predicates = [
+        {"type": "check_value", "path": "player.gold", "op": "==", "value": 100}
+    ]
+    new_effects = [
+        {"type": "modify_value", "target": "player.gold", delta: 100}
+    ]
+    before_length = len(app.graph_editor.graph.edge_dict)
+    new_edge_name = app.add_edge(
+        "vertex_0", "vertex_1", "A new edge", new_predicates, new_effects
+    )
+    after_length = len(app.graph_editor.graph.edge_dict)
+    assert before_length + 1 == after_length
+    assert new_edge_name in app.graph_editor.graph.edge_dict
+    assert app.graph_editor.graph.edge_dict[new_edge_name].text == "A new edge"
+    assert app.graph_editor.graph.edge_dict[new_edge_name].predicates == new_predicates
+    assert app.graph_editor.graph.edge_dict[new_edge_name].effects == new_effects
