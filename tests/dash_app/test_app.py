@@ -25,11 +25,11 @@ def test_update_vertex_node(app):
 def test_update_edge_node(app):
     new_predicates = [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}] 
     new_effects = [{"type": "modify_value", "target": "player.gold", "delta": -1}]
-    was_updated = app.update_node("vertex_0_to_buy_flower", "Edited edge text.", new_predicates, new_effects)
+    was_updated = app.update_node("edge_0", "Edited edge text.", new_predicates, new_effects)
     assert was_updated is True
-    assert app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].text == "Edited edge text."
-    assert app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].predicates == new_predicates
-    assert app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].effects == new_effects
+    assert app.graph_editor.graph.edge_dict["edge_0"].text == "Edited edge text."
+    assert app.graph_editor.graph.edge_dict["edge_0"].predicates == new_predicates
+    assert app.graph_editor.graph.edge_dict["edge_0"].effects == new_effects
 
 # Updating an unknown node is rejected
 def test_update_unknown_node_text(app):
@@ -75,10 +75,10 @@ def test_add_edge_via_app(app):
 
 # Removing a selected edge removes it from the graph
 def test_remove_edge_via_app(app):
-    assert "vertex_0_to_buy_flower" in app.graph_editor.graph.edge_dict
-    was_removed = app.remove_node("vertex_0_to_buy_flower")
+    assert "edge_0" in app.graph_editor.graph.edge_dict
+    was_removed = app.remove_node("edge_0")
     assert was_removed is True
-    assert "vertex_0_to_buy_flower" not in app.graph_editor.graph.edge_dict
+    assert "edge_0" not in app.graph_editor.graph.edge_dict
 
 # Removing a selected vertex without cascade keeps connected edges
 def test_remove_vertex_without_cascade(app):
@@ -100,9 +100,9 @@ def test_remove_vertex_with_cascade(app):
 # Cascade is disabled when edge is selected
 def test_cascade_disabled_for_edges(app):
     selected_node_text, options, value = app.get_delete_section_state(
-        [{"id": "vertex_0_to_buy_flower"}], ["cascade"]
+        [{"id": "edge_0"}], ["cascade"]
     )
-    assert selected_node_text == "Selected node: vertex_0_to_buy_flower"
+    assert selected_node_text == "Selected node: edge_0"
     assert options == [{"label": "Cascade delete", "value": "cascade", "disabled": True}]
     assert value == []
 
@@ -117,13 +117,13 @@ def test_cascade_enabled_for_vertices(app):
 
 # Editing an edge only saves from/to fields if they are valid
 def test_update_edge_endpoints_does_not_save_invalid_endpoint(app):
-    original_to = app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].to_vertex
+    original_to = app.graph_editor.graph.edge_dict["edge_0"].to_vertex
     was_updated, warnings = app.update_edge_endpoints(
-        "vertex_0_to_buy_flower", "vertex_1", "not_a_vertex"
+        "edge_0", "vertex_1", "not_a_vertex"
     )
     assert was_updated is True
-    assert app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].from_vertex == "vertex_1"
-    assert app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].to_vertex == original_to
+    assert app.graph_editor.graph.edge_dict["edge_0"].from_vertex == "vertex_1"
+    assert app.graph_editor.graph.edge_dict["edge_0"].to_vertex == original_to
     assert warnings == ["Invalid to vertex: not_a_vertex"]
 
 # Unresolved count is based on how many fixes to be made

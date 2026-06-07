@@ -99,6 +99,13 @@ class App(Dash):
             return new_message
         return f"{current_log}\n{new_message}"
 
+    def count_unresolved_connections(self, vertex_name: str) -> int:
+        unresolved_count = 0
+        for edge in self.graph_editor.graph.edge_dict.values():
+            unresolved_count += int(edge.from_vertex == vertex_name)
+            unresolved_count += int(edge.to_vertex == vertex_name)
+        return unresolved_count
+
     def get_delete_section_state(
         self, 
         selected_nodes: list[dict] | None, 
@@ -127,6 +134,18 @@ class App(Dash):
         ]
         value = [] if is_edge else (current_delete_cascade or [])
         return f"Selected node: {node_id}", options, value
+
+    def get_edge_endpoints_for_edit(self, node_id: str) -> tuple[str, str]:
+        if node_id not in self.graph_editor.graph.edge_dict:
+            return "", ""
+        edge = self.graph_editor.graph.edge_dict[node_id]
+        from_vertex = (
+            "" if edge.from_vertex == "__MISSING__" else edge.from_vertex
+        )
+        to_vertex = (
+            "" if edge.to_vertex == "__MISSING__" else edge.to_vertex
+        )
+        return from_vertex, to_vertex
 
     def get_elements(self) -> list[dict[str, dict[str, str]]]:
         cytoscape_adapter = CytoscapeAdapter(self.graph_editor.graph)
@@ -222,29 +241,41 @@ class App(Dash):
             Output("edit-predicates", "disabled"),
             Output("edit-effects", "value"),
             Output("new-edge-from", "value"),
+            Output("edit-from-vertex", "value"),
+            Output("edit-to-vertex", "value"),
+            Output("edit-from-vertex", "disabled"),
+            Output("edit-to-vertex", "disabled"),
             Input("dialogue-graph", "selectedNodeData")
         )
         def autofill_edit_fields(
             selected_nodes: list[dict] | None
-        ) -> tuple[str, str, bool, str, str]:
+        ) -> tuple[str, str, bool, str, str, str, str, bool, bool]:
             if not selected_nodes:
-                return "", "", True, "", ""
+                return "", "", True, "", "", "", "", True, True
             node_id = selected_nodes[0].get("id")
             if not node_id:
-                return "", "", True, "", ""
+                return "", "", True, "", "", "", "", True, True
             node_text = self.get_node_text(node_id)
             if node_text is None:
-                return "", "", True, "", ""
+                return "", "", True, "", "", "", "", True, True
             is_vertex = node_id in self.graph_editor.graph.vertex_dict
             predicates_text = self.get_node_predicates(node_id)
             effects_text = self.get_node_effects(node_id)
             new_edge_from = node_id if is_vertex else ""
+            edit_from_vertex, edit_to_vertex = (
+                self.get_edge_endpoints_for_edit(node_id)
+            )
+            disable_edge_endpoint_edit = is_vertex
             return (
                 node_text, 
                 predicates_text, 
                 is_vertex, 
                 effects_text, 
-                new_edge_from
+                new_edge_from,
+                edit_from_vertex,
+                edit_to_vertex,
+                disable_edge_endpoint_edit,
+                disable_edge_endpoint_edit
             )
 
         @self.callback(
@@ -286,6 +317,8 @@ class App(Dash):
             State("edit-text", "value"),
             State("edit-predicates", "value"),
             State("edit-effects", "value"),
+            State("edit-from-vertex", "value"),
+            State("edit-to-vertex", "value"),
             State("new-vertex-text", "value"),
             State("new-vertex-effects", "value"),
             State("new-edge-from", "value"),
@@ -307,6 +340,8 @@ class App(Dash):
             new_text: str | None,
             new_predicates_text: str | None,
             new_effects_text: str | None,
+            new_from_vertex: str | None,
+            new_to_vertex: str | None,
             new_vertex_text: str | None,
             new_vertex_effects_text: str | None,
             new_edge_from: str | None,
@@ -469,9 +504,17 @@ class App(Dash):
                 node_id = selected_nodes[0].get("id")
                 if not node_id:
                     raise PreventUpdate
-                was_removed = self.remove_node(
-                    node_id, "cascade" in (delete_cascade or [])
+                was_edge_delete = node_id in self.graph_editor.graph.edge_dict
+                was_vertex_delete = (
+                    node_id in self.graph_editor.graph.vertex_dict
                 )
+                cascade_delete_enabled = "cascade" in (delete_cascade or [])
+                unresolved_connections_created = (
+                    self.count_unresolved_connections(node_id)
+                    if was_vertex_delete and not cascade_delete_enabled 
+                    else 0
+                )
+                was_removed = self.remove_node(node_id, cascade_delete_enabled)
                 if not was_removed:
                     return (
                         no_update,
@@ -491,7 +534,16 @@ class App(Dash):
                 return (
                     self.get_elements(),
                     self.append_action_status(
-                        current_log, f"Deleted {node_id}."
+                        current_log, 
+                        (
+                            f"Deleted {node_id}."
+                            if was_edge_delete or cascade_delete_enabled
+                            else (
+                                f"Deleted {node_id}. "
+                                f"{unresolved_connections_created} unresolved "
+                                "connections created."
+                            )
+                        )
                     ),
                     no_update,
                     no_update,
@@ -529,13 +581,27 @@ class App(Dash):
                 was_updated = self.update_node(
                     node_id, new_text or "", predicates, effects
                 )
-                if not was_updated:
+                endpoint_warnings = []
+                endpoint_updated = False
+                if node_id in self.graph_editor.graph.edge_dict:
+                    endpoint_updated, endpoint_warnings = (
+                        self.update_edge_endpoints(
+                            node_id, new_from_vertex, new_to_vertex
+                        )
+                    )
+                was_anything_updated = was_updated or endpoint_updated
+                if not was_anything_updated and not endpoint_warnings:
                     raise PreventUpdate
+                new_log = current_log
+                if was_anything_updated:
+                    new_log = self.append_action_status(
+                        new_log, f"Saved node data for {node_id}."
+                    )
+                for warning in endpoint_warnings:
+                    new_log = self.append_action_status(new_log, warning)
                 return (
-                    self.get_elements(), 
-                    self.append_action_status(
-                        current_log, f"Saved node data for {node_id}."
-                    ),
+                    self.get_elements() if was_anything_updated else no_update, 
+                    new_log,
                     no_update,
                     no_update,
                     no_update,
@@ -555,6 +621,49 @@ class App(Dash):
             self.graph_editor.remove_edge(node_id)
             return True
         return False
+
+    def update_edge_endpoints(
+        self, 
+        node_id: str, 
+        new_from_vertex: str | None, 
+        new_to_vertex: str | None
+    ) -> tuple[bool, list[str]]:
+        if node_id not in self.graph_editor.graph.edge_dict:
+            return False, []
+        edge = self.graph_editor.graph.edge_dict[node_id]
+        warnings = []
+        was_updated = False
+        candidate_from_vertex = (new_from_vertex or "").strip()
+        candidate_to_vertex = (new_to_vertex or "").strip()
+        if candidate_from_vertex:
+            if candidate_from_vertex in self.graph_editor.graph.vertex_dict:
+                if edge.from_vertex != candidate_from_vertex:
+                    self.graph_editor.edit_from_vertex(
+                        node_id, candidate_from_vertex
+                    )
+                    was_updated = True
+            else:
+                warnings.append(
+                    f"Invalid from vertex: {candidate_from_vertex}"
+                )
+        elif edge.from_vertex == "__MISSING__":
+            pass
+        else:
+            warnings.append("Invalid from vertex: (empty)")
+        if candidate_to_vertex:
+            if candidate_to_vertex in self.graph_editor.graph.vertex_dict:
+                if edge.to_vertex != candidate_to_vertex:
+                    self.graph_editor.edit_to_vertex(
+                        node_id, candidate_to_vertex
+                    )
+                    was_updated = True
+            else:
+                warnings.append(f"Invalid to vertex: {candidate_to_vertex}")
+        elif edge.to_vertex == "__MISSING__":
+            pass
+        else:
+            warnings.append("Invalid to vertex: (empty)")
+        return was_updated, warnings
 
     def update_node(
         self, 

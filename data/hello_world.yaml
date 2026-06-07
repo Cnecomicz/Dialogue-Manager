@@ -4,26 +4,26 @@ vertices:
     vertex_0:
         text: "Hello. You have {player.gold} gold. Want to buy a flower?"
         effects: []
-    buy_flower:
+    vertex_1:
         text: "Thanks. You now have {player.gold} gold. Want to buy another?"
         effects: [
             {type: "modify_list", target: "player.inventory", method: "append", value: "Flower"},
             {type: "modify_list", target: "alice.inventory", method: "remove", value: "Flower"},
         ]
-    insufficient_gold:
+    vertex_2:
         text: "You don't have enough money."
         effects: []
-    insufficient_flowers:
+    vertex_3:
         text: "I'm sorry. I'm all out of flowers."
         effects: []
-    end:
+    vertex_4:
         text: "Okay, goodbye."
         effects: []
 
 edges:
-    vertex_0_to_buy_flower:
+    edge_0:
         from: "vertex_0"
-        to: "buy_flower"
+        to: "vertex_1"
         text: "Yes, I'll buy a flower."
         predicates: [
             {type: "check_value", path: "player.gold", op: ">=", value: 1},
@@ -32,32 +32,32 @@ edges:
         effects: [
             {type: "modify_value", target: "player.gold", delta: -1},
         ]
-    vertex_0_to_insufficient_flowers:
+    edge_1:
         from: "vertex_0"
-        to: "insufficient_flowers"
+        to: "vertex_3"
         text: "Yes, I'll buy a flower."
         predicates: [
             {type: "check_value", path: "player.gold", op: ">=", value: 1},
             {type: "check_list", path: "alice.inventory", op: "not in", value: "Flower"},
         ]
         effects: []
-    vertex_0_to_insufficient_gold:
+    edge_2:
         from: "vertex_0"
-        to: "insufficient_gold"
+        to: "vertex_2"
         text: "Well, can I buy one with {player.gold} gold?"
         predicates: [
             {type: "check_value", path: "player.gold", op: "<", value: 1},
         ]
         effects: []
-    vertex_0_to_end:
+    edge_3:
         from: "vertex_0"
-        to: "end"
+        to: "vertex_4"
         text: "No thanks."
         predicates: []
         effects: []
-    buy_flower_to_buy_flower:
-        from: "buy_flower"
-        to: "buy_flower"
+    edge_4:
+        from: "vertex_1"
+        to: "vertex_1"
         text: "Yes, I'll buy another."
         predicates: [
             {type: "check_value", path: "player.gold", op: ">=", value: 1},
@@ -66,26 +66,26 @@ edges:
         effects: [
             {type: "modify_value", target: "player.gold", delta: -1},
         ]
-    buy_flower_to_insufficient_flowers:
-        from: "buy_flower"
-        to: "insufficient_flowers"
+    edge_5:
+        from: "vertex_1"
+        to: "vertex_3"
         text: "Yes, I'll buy another."
         predicates: [
             {type: "check_value", path: "player.gold", op: ">=", value: 1},
             {type: "check_list", path: "alice.inventory", op: "not in", value: "Flower"},
         ]
         effects: []
-    buy_flower_to_insufficient_gold:
-        from: "buy_flower"
-        to: "insufficient_gold"
+    edge_6:
+        from: "vertex_1"
+        to: "vertex_2"
         text: "I'm a little short. Can we make a deal?"
         predicates: [
             {type: "check_value", path: "player.gold", op: "<", value: 1},
         ]
         effects: []
-    buy_flower_to_end:
-        from: "buy_flower"
-        to: "end"
+    edge_7:
+        from: "vertex_1"
+        to: "vertex_4"
         text: "No thanks, I have enough."
         predicates: []
         effects: []

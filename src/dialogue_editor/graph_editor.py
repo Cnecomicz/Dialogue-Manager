@@ -162,9 +162,9 @@ class GraphEditor:
                 self.remove_edge(edge_name)
         for edge_name, edge in self.graph.edge_dict.items():
             if edge.from_vertex == vertex_name:
-                self.edit_from_vertex(edge_name, "")
+                self.edit_from_vertex(edge_name, "__MISSING__")
             if edge.to_vertex == vertex_name:
-                self.edit_to_vertex(edge_name, "")
+                self.edit_to_vertex(edge_name, "__MISSING__")
         del self.graph.vertex_dict[vertex_name]
 
     def save(self, yaml_file: str | PathLike | None = None) -> None:

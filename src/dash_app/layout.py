@@ -160,6 +160,14 @@ def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
                 "background-color": "#336699",
                 "padding": "30px"
             }
+        },
+        {
+            "selector": "[?has_missing_endpoint]",
+            "style": {
+                "border-color": "#ef4444",
+                "border-width": 4,
+                "background-color": "#7f1d1d"
+            }
         }
     ]
 
@@ -232,6 +240,36 @@ def get_edit_section() -> list:
                 "color": "#111827",
                 "border": "1px solid #9ca3af",
                 "resize": "vertical"
+            }
+        ),
+        dcc.Input(
+            id="edit-from-vertex",
+            type="text",
+            placeholder="Edit from vertex",
+            style={
+                "width": "100%",
+                "marginTop": "12px",
+                "backgroundColor": "#ffffff",
+                "color": "#111827",
+                "caretColor": "#111827",
+                "border": "1px solid #9ca3af",
+                "fontSize": "14px",
+                "opacity": 1
+            }
+        ),
+        dcc.Input(
+            id="edit-to-vertex",
+            type="text",
+            placeholder="Edit to vertex",
+            style={
+                "width": "100%",
+                "marginTop": "12px",
+                "backgroundColor": "#ffffff",
+                "color": "#111827",
+                "caretColor": "#111827",
+                "border": "1px solid #9ca3af",
+                "fontSize": "14px",
+                "opacity": 1
             }
         ),
         html.Button("Save", id="save-text", n_clicks=0)

@@ -11,12 +11,22 @@ class CytoscapeAdapter:
     def edges(self) -> list[dict[str, dict[str, str]]]:
         edges = []
         for edge_name, edge in self.graph.edge_dict.items():
-            edges.append(
-                {"data": {"source": edge.from_vertex, "target": edge_name}}
-            )
-            edges.append(
-                {"data": {"source": edge_name, "target": edge.to_vertex}}
-            )
+            if (
+                edge.from_vertex 
+                and edge.from_vertex != "__MISSING__" 
+                and edge.from_vertex in self.graph.vertex_dict
+            ):
+                edges.append(
+                    {"data": {"source": edge.from_vertex, "target": edge_name}}
+                )
+            if (
+                edge.to_vertex
+                and edge.to_vertex != "__MISSING__"
+                and edge.to_vertex in self.graph.vertex_dict
+            ):
+                edges.append(
+                    {"data": {"source": edge_name, "target": edge.to_vertex}}
+                )
         return edges
 
     @property
@@ -33,10 +43,17 @@ class CytoscapeAdapter:
             nodes.append({"data": {"id": vertex_name, "label": text}})
         # Nodes from edges
         for edge_name, edge in self.graph.edge_dict.items():
+            has_missing_from = edge.from_vertex == "__MISSING__"
+            has_missing_to = edge.to_vertex == "__MISSING__"
+            unresolved_text = ""
+            if has_missing_from:
+                unresolved_text += "FROM: missing\n"
+            if has_missing_to:
+                unresolved_text += "TO: missing\n"
             dialogue_text = f"TEXT:\n{edge.text}\n"
             predicates_text = self.get_predicates_text(edge.predicates)
             effects_text = self.get_effects_text(edge.effects)
-            text = dialogue_text
+            text = unresolved_text + dialogue_text
             if predicates_text:
                 text += f"\n{predicates_text}"
             if effects_text:
@@ -45,7 +62,12 @@ class CytoscapeAdapter:
             nodes.append(
                 {
                     "data": {
-                        "id": edge_name, "label": text, 'is_edge_node': True
+                        "id": edge_name, 
+                        "label": text, 
+                        "is_edge_node": True,
+                        "has_missing_endpoint": (
+                            has_missing_from or has_missing_to
+                        )
                     }
                 }
             )
