@@ -5,7 +5,11 @@ from os import PathLike
 from webbrowser import open as open_url
 
 from dash_app.layout import (
-    get_add_vertex_button, get_cytoscape_stylesheet, get_edit_button, get_log
+    get_add_edge_button, 
+    get_add_vertex_button, 
+    get_cytoscape_stylesheet, 
+    get_edit_button, 
+    get_log
 )
 from dialogue_editor.graph_editor import GraphEditor
 from dialogue_model.codecs import (
@@ -28,7 +32,9 @@ class App(Dash):
                     + [html.Hr()]
                     + get_edit_button() 
                     + [html.Hr()] 
-                    + get_add_vertex_button() ,
+                    + get_add_vertex_button()
+                    + [html.Hr()]
+                    + get_add_edge_button(),
                     style={
                         "width": "320px",
                         "flexShrink": 0,
@@ -61,6 +67,19 @@ class App(Dash):
             }
         )
         self.register_callbacks()
+
+    def add_edge(
+        self, 
+        from_vertex: str, 
+        to_vertex: str | None, 
+        text: str | None, 
+        predicates: list[dict[str, str | int]] | None = None,
+        effects: list[dict[str, str | int]] | None = None
+    ) -> str:
+        self.graph_editor.add_edge(
+            from_vertex, to_vertex, text, predicates, effects
+        )
+        return f"edge_{self.graph_editor.next_edge_index-1}"
 
     def add_vertex(
         self, 
@@ -203,28 +222,45 @@ class App(Dash):
             Output("action-status", "value"),
             Output("new-vertex-text", "value"),
             Output("new-vertex-effects", "value"),
+            Output("new-edge-from", "value"),
+            Output("new-edge-to", "value"),
+            Output("new-edge-text", "value"),
+            Output("new-edge-predicates", "value"),
+            Output("new-edge-effects", "value"),
             Input("save-text", "n_clicks"),
             Input("add-vertex", "n_clicks"),
+            Input("add-edge", "n_clicks"),
             State("dialogue-graph", "selectedNodeData"),
             State("edit-text", "value"),
             State("edit-predicates", "value"),
             State("edit-effects", "value"),
             State("new-vertex-text", "value"),
             State("new-vertex-effects", "value"),
+            State("new-edge-from", "value"),
+            State("new-edge-to", "value"),
+            State("new-edge-text", "value"),
+            State("new-edge-predicates", "value"),
+            State("new-edge-effects", "value"),
             State("action-status", "value"),
             prevent_initial_call=True
         )
         def handle_graph_updates(
             save_clicks: int,
             add_vertex_clicks: int,
+            add_edge_clicks: int,
             selected_nodes: list[dict] | None,
             new_text: str | None,
             new_predicates_text: str | None,
             new_effects_text: str | None,
             new_vertex_text: str | None,
             new_vertex_effects_text: str | None,
+            new_edge_from: str | None,
+            new_edge_to: str | None,
+            new_edge_text: str | None,
+            new_edge_predicates_text: str | None,
+            new_edge_effects_text: str | None,
             current_log: str | None
-        ) -> tuple[list[dict], str, str, str]:
+        ) -> tuple[list[dict], str, str, str, str, str, str, str, str]:
             triggered_id = ctx.triggered_id
             if triggered_id == "add-vertex":
                 if not new_vertex_text:
@@ -240,6 +276,11 @@ class App(Dash):
                             current_log, f"Add vertex failed: {exception}"
                         ),
                         no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
                         no_update
                     )
                 new_vertex_name = self.add_vertex(
@@ -250,6 +291,73 @@ class App(Dash):
                     self.append_action_status(
                         current_log, f"Added {new_vertex_name}."
                     ),
+                    "",
+                    "",
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update
+                )
+            if triggered_id == "add-edge":
+                if not new_edge_from or not new_edge_from.strip():
+                    return (
+                        no_update,
+                        self.append_action_status(
+                            current_log, 
+                            "Add edge failed: from vertex is required."
+                        ),
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update
+                    )
+                try: 
+                    new_edge_predicates = self.parse_predicates(
+                        new_edge_predicates_text
+                    )
+                    new_edge_effects = self.parse_effects(
+                        new_edge_effects_text
+                    )
+                except ValueError as exception:
+                    return (
+                        no_update,
+                        self.append_action_status(
+                            current_log, f"Add edge failed: {exception}"
+                        ),
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update
+                    )
+                normalized_to_vertex = (
+                    new_edge_to.strip() 
+                    if new_edge_to and new_edge_to.strip()
+                    else None
+                )
+                new_edge_name = self.add_edge(
+                    new_edge_from.strip(),
+                    normalized_to_vertex,
+                    new_edge_text,
+                    new_edge_predicates,
+                    new_edge_effects
+                )
+                return (
+                    self.get_elements(),
+                    self.append_action_status(
+                        current_log, f"Added {new_edge_name}."
+                    ),
+                    no_update,
+                    no_update,
+                    "",
+                    "",
+                    "",
                     "",
                     ""
                 )
@@ -269,6 +377,11 @@ class App(Dash):
                             current_log, f"Save failed: {exception}"
                         ), 
                         no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
                         no_update
                     )
                 was_updated = self.update_node(
@@ -281,6 +394,11 @@ class App(Dash):
                     self.append_action_status(
                         current_log, f"Saved node data for {node_id}."
                     ),
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
                     no_update,
                     no_update
                 )

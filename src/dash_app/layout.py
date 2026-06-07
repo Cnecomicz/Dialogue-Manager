@@ -1,12 +1,90 @@
 from dash import dcc, html
 
+def get_add_edge_button() -> list:
+    return [
+        html.H3("Add edge"),
+        dcc.Input(
+            id="new-edge-from",
+            type="text",
+            placeholder="From vertex (required)",
+            style={
+                "width": "100%",
+                "backgroundColor": "#ffffff",
+                "color": "#111827",
+                "caretColor": "#111827",
+                "border": "1px solid #9ca3af",
+                "fontSize": "14px",
+                "opacity": 1
+            }
+        ),
+        dcc.Input(
+            id="new-edge-to",
+            type="text",
+            placeholder="To vertex",
+            style={
+                "width": "100%",
+                "marginTop": "12px",
+                "backgroundColor": "#ffffff",
+                "color": "#111827",
+                "caretColor": "#111827",
+                "border": "1px solid #9ca3af",
+                "fontSize": "14px",
+                "opacity": 1
+            }
+        ),
+        dcc.Input(
+            id="new-edge-text",
+            type="text",
+            placeholder="Edge text",
+            style={
+                "width": "100%",
+                "marginTop": "12px",
+                "backgroundColor": "#ffffff",
+                "color": "#111827",
+                "caretColor": "#111827",
+                "border": "1px solid #9ca3af",
+                "fontSize": "14px",
+                "opacity": 1
+            }
+        ),
+        dcc.Textarea(
+            id="new-edge-predicates",
+            placeholder="Predicates (optional, one per line)",
+            style={
+                "width": "100%",
+                "height": "70px",
+                "marginTop": "12px",
+                "fontSize": "14px",
+                "backgroundColor": "#ffffff",
+                "color": "#111827",
+                "border": "1px solid #9ca3af",
+                "resize": "vertical"
+            }
+        ),
+        dcc.Textarea(
+            id="new-edge-effects",
+            placeholder="Effects (optional, one per line)",
+            style={
+                "width": "100%",
+                "height": "70px",
+                "marginTop": "12px",
+                "fontSize": "14px",
+                "backgroundColor": "#ffffff",
+                "color": "#111827",
+                "border": "1px solid #9ca3af",
+                "resize": "vertical"
+            }
+        ),
+        html.Button("Add edge", id="add-edge", n_clicks=0)
+    ]
+
 def get_add_vertex_button() -> list:
     return [
         html.H3("Add vertex"),
         dcc.Input(
             id="new-vertex-text",
             type="text",
-            placeholder="Text for the new vertex",
+            placeholder="Vertex text",
             style={
                 "width": "100%",
                 "backgroundColor": "#ffffff",

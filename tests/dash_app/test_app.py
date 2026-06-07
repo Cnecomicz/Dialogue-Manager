@@ -60,7 +60,7 @@ def test_add_edge_via_app(app):
         {"type": "check_value", "path": "player.gold", "op": "==", "value": 100}
     ]
     new_effects = [
-        {"type": "modify_value", "target": "player.gold", delta: 100}
+        {"type": "modify_value", "target": "player.gold", "delta": 100}
     ]
     before_length = len(app.graph_editor.graph.edge_dict)
     new_edge_name = app.add_edge(
