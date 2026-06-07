@@ -36,14 +36,18 @@ def test_update_unknown_node_text(app):
     was_updated = app.update_node("not_a_node", "Edited text.", [], [])
     assert was_updated is False
 
-# Adding a vertex creates a new graph vertex with the provided text
+# Adding a vertex creates a new graph vertex with the provided text and effects
 def test_add_vertex_via_app(app):
+    new_effects = [
+        {"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}
+    ]
     before_length = len(app.graph_editor.graph.vertex_dict)
-    new_vertex_name = app.add_vertex("Brand new vertex.")
+    new_vertex_name = app.add_vertex("Brand new vertex.", new_effects)
     after_length = len(app.graph_editor.graph.vertex_dict)
     assert before_length + 1 == after_length
     assert new_vertex_name in app.graph_editor.graph.vertex_dict
     assert app.graph_editor.graph.vertex_dict[new_vertex_name].text == "Brand new vertex."
+    assert app.graph_editor.graph.vertex_dict[new_vertex_name].effects == new_effects
 
 # Adding a vertex appears in the Cytoscape elements
 def test_added_vertex_appears_in_elements(app):

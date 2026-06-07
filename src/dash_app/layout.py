@@ -74,9 +74,6 @@ def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
 def get_edit_button() -> list:
     return [
         html.H3("Edit selected node"),
-        html.P("1) Click a node in the graph"),
-        html.P("2) Edit text, predicates, and effects"),
-        html.P("3) Click Save"),
         html.Div(
             "Selected node: None",
             id="selected-node-display"
