@@ -33,7 +33,7 @@ def test_update_edge_node(app):
 
 # Updating an unknown node is rejected
 def test_update_unknown_node_text(app):
-    was_updated = app.update_node_text("not_a_node", "Edited text.")
+    was_updated = app.update_node("not_a_node", "Edited text.", [], [])
     assert was_updated is False
 
 # Adding a vertex creates a new graph vertex with the provided text

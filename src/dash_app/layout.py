@@ -13,7 +13,6 @@ def get_add_vertex_button() -> list:
                 "color": "#111827",
                 "caretColor": "#111827",
                 "border": "1px solid #9ca3af",
-                # "padding": "8px 10px",
                 "fontSize": "14px",
                 "opacity": 1
             }
@@ -74,9 +73,9 @@ def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
 
 def get_edit_button() -> list:
     return [
-        html.H3("Edit selected node text"),
+        html.H3("Edit selected node"),
         html.P("1) Click a node in the graph"),
-        html.P("2) Type new text"),
+        html.P("2) Edit text, predicates, and effects"),
         html.P("3) Click Save"),
         html.Div(
             "Selected node: None",
@@ -92,12 +91,39 @@ def get_edit_button() -> list:
                 "color": "#111827",
                 "caretColor": "#111827",
                 "border": "1px solid #9ca3af",
-                # "padding": "8px 10px",
                 "fontSize": "14px",
                 "opacity": 1
             }
         ),
-        html.Button("Save text", id="save-text", n_clicks=0)
+        dcc.Textarea(
+            id="edit-predicates",
+            placeholder="Enter predicates, one per line",
+            style={
+                "width": "100%",
+                "height": "70px",
+                "marginTop": "12px",
+                "fontSize": "14px",
+                "backgroundColor": "#ffffff",
+                "color": "#111827",
+                "border": "1px solid #9ca3af",
+                "resize": "vertical"
+            }
+        ),
+        dcc.Textarea(
+            id="edit-effects",
+            placeholder="Enter effects, one per line",
+            style={
+                "width": "100%",
+                "height": "70px",
+                "marginTop": "12px",
+                "fontSize": "14px",
+                "backgroundColor": "#ffffff",
+                "color": "#111827",
+                "border": "1px solid #9ca3af",
+                "resize": "vertical"
+            }
+        ),
+        html.Button("Save", id="save-text", n_clicks=0)
     ]
 
 def get_log() -> list:
