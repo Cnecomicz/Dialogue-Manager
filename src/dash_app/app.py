@@ -189,23 +189,31 @@ class App(Dash):
             Output("edit-predicates", "value"),
             Output("edit-predicates", "disabled"),
             Output("edit-effects", "value"),
+            Output("new-edge-from", "value"),
             Input("dialogue-graph", "selectedNodeData")
         )
         def autofill_edit_fields(
             selected_nodes: list[dict] | None
-        ) -> tuple[str, str, bool, str]:
+        ) -> tuple[str, str, bool, str, str]:
             if not selected_nodes:
-                return "", "", True, ""
+                return "", "", True, "", ""
             node_id = selected_nodes[0].get("id")
             if not node_id:
-                return "", "", True, ""
+                return "", "", True, "", ""
             node_text = self.get_node_text(node_id)
             if node_text is None:
-                return "", "", True, ""
+                return "", "", True, "", ""
             is_vertex = node_id in self.graph_editor.graph.vertex_dict
             predicates_text = self.get_node_predicates(node_id)
             effects_text = self.get_node_effects(node_id)
-            return node_text, predicates_text, is_vertex, effects_text
+            new_edge_from = node_id if is_vertex else ""
+            return (
+                node_text, 
+                predicates_text, 
+                is_vertex, 
+                effects_text, 
+                new_edge_from
+            )
 
         @self.callback(
             Output("selected-node-display", "children"),
@@ -222,7 +230,6 @@ class App(Dash):
             Output("action-status", "value"),
             Output("new-vertex-text", "value"),
             Output("new-vertex-effects", "value"),
-            Output("new-edge-from", "value"),
             Output("new-edge-to", "value"),
             Output("new-edge-text", "value"),
             Output("new-edge-predicates", "value"),
@@ -260,7 +267,7 @@ class App(Dash):
             new_edge_predicates_text: str | None,
             new_edge_effects_text: str | None,
             current_log: str | None
-        ) -> tuple[list[dict], str, str, str, str, str, str, str, str]:
+        ) -> tuple[list[dict], str, str, str, str, str, str, str]:
             triggered_id = ctx.triggered_id
             if triggered_id == "add-vertex":
                 if not new_vertex_text:
@@ -275,7 +282,6 @@ class App(Dash):
                         self.append_action_status(
                             current_log, f"Add vertex failed: {exception}"
                         ),
-                        no_update,
                         no_update,
                         no_update,
                         no_update,
@@ -296,7 +302,6 @@ class App(Dash):
                     no_update,
                     no_update,
                     no_update,
-                    no_update,
                     no_update
                 )
             if triggered_id == "add-edge":
@@ -307,7 +312,6 @@ class App(Dash):
                             current_log, 
                             "Add edge failed: from vertex is required."
                         ),
-                        no_update,
                         no_update,
                         no_update,
                         no_update,
@@ -328,7 +332,6 @@ class App(Dash):
                         self.append_action_status(
                             current_log, f"Add edge failed: {exception}"
                         ),
-                        no_update,
                         no_update,
                         no_update,
                         no_update,
@@ -358,7 +361,6 @@ class App(Dash):
                     "",
                     "",
                     "",
-                    "",
                     ""
                 )
             if triggered_id == "save-text":
@@ -375,8 +377,7 @@ class App(Dash):
                         no_update, 
                         self.append_action_status(
                             current_log, f"Save failed: {exception}"
-                        ), 
-                        no_update,
+                        ),
                         no_update,
                         no_update,
                         no_update,
@@ -394,7 +395,6 @@ class App(Dash):
                     self.append_action_status(
                         current_log, f"Saved node data for {node_id}."
                     ),
-                    no_update,
                     no_update,
                     no_update,
                     no_update,

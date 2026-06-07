@@ -2,11 +2,11 @@ from dash import dcc, html
 
 def get_add_edge_button() -> list:
     return [
-        html.H3("Add edge"),
+        html.H3("Add player node"),
         dcc.Input(
             id="new-edge-from",
             type="text",
-            placeholder="From vertex (required)",
+            placeholder="Prior NPC node (required)",
             style={
                 "width": "100%",
                 "backgroundColor": "#ffffff",
@@ -20,7 +20,7 @@ def get_add_edge_button() -> list:
         dcc.Input(
             id="new-edge-to",
             type="text",
-            placeholder="To vertex",
+            placeholder="Next NPC node",
             style={
                 "width": "100%",
                 "marginTop": "12px",
@@ -35,7 +35,7 @@ def get_add_edge_button() -> list:
         dcc.Input(
             id="new-edge-text",
             type="text",
-            placeholder="Edge text",
+            placeholder="Player dialogue",
             style={
                 "width": "100%",
                 "marginTop": "12px",
@@ -49,7 +49,7 @@ def get_add_edge_button() -> list:
         ),
         dcc.Textarea(
             id="new-edge-predicates",
-            placeholder="Predicates (optional, one per line)",
+            placeholder="Predicates (one per line)",
             style={
                 "width": "100%",
                 "height": "70px",
@@ -63,7 +63,7 @@ def get_add_edge_button() -> list:
         ),
         dcc.Textarea(
             id="new-edge-effects",
-            placeholder="Effects (optional, one per line)",
+            placeholder="Effects (one per line)",
             style={
                 "width": "100%",
                 "height": "70px",
@@ -75,16 +75,16 @@ def get_add_edge_button() -> list:
                 "resize": "vertical"
             }
         ),
-        html.Button("Add edge", id="add-edge", n_clicks=0)
+        html.Button("Save", id="add-edge", n_clicks=0)
     ]
 
 def get_add_vertex_button() -> list:
     return [
-        html.H3("Add vertex"),
+        html.H3("Add NPC node"),
         dcc.Input(
             id="new-vertex-text",
             type="text",
-            placeholder="Vertex text",
+            placeholder="NPC dialogue",
             style={
                 "width": "100%",
                 "backgroundColor": "#ffffff",
@@ -97,7 +97,7 @@ def get_add_vertex_button() -> list:
         ),
         dcc.Textarea(
             id="new-vertex-effects",
-            placeholder="Effects (optional, one per line)",
+            placeholder="Effects (one per line)",
             style={
                 "width": "100%",
                 "height": "70px",
@@ -109,7 +109,7 @@ def get_add_vertex_button() -> list:
                 "resize": "vertical"
             }
         ),
-        html.Button("Add vertex", id="add-vertex", n_clicks=0)
+        html.Button("Save", id="add-vertex", n_clicks=0)
     ]
 
 def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
@@ -173,7 +173,7 @@ def get_edit_button() -> list:
         dcc.Input(
             id="edit-text",
             type="text",
-            placeholder="Enter new text for selected node",
+            placeholder="Edit dialogue",
             style={
                 "width": "100%",
                 "backgroundColor": "#ffffff",
@@ -186,7 +186,7 @@ def get_edit_button() -> list:
         ),
         dcc.Textarea(
             id="edit-predicates",
-            placeholder="Enter predicates, one per line",
+            placeholder="Edit predicates (one per line)",
             style={
                 "width": "100%",
                 "height": "70px",
@@ -200,7 +200,7 @@ def get_edit_button() -> list:
         ),
         dcc.Textarea(
             id="edit-effects",
-            placeholder="Enter effects, one per line",
+            placeholder="Edit effects (one per line)",
             style={
                 "width": "100%",
                 "height": "70px",
