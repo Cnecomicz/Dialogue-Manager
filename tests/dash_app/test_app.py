@@ -114,3 +114,21 @@ def test_cascade_enabled_for_vertices(app):
     assert selected_node_text == "Selected node: vertex_0"
     assert options == [{"label": "Cascade delete", "value": "cascade", "disabled": False}]
     assert value == ["cascade"]
+
+# Editing an edge only saves from/to fields if they are valid
+def test_update_edge_endpoints_does_not_save_invalid_endpoint(app):
+    original_to = app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].to_vertex
+    was_updated, warnings = app.update_edge_endpoints(
+        "vertex_0_to_buy_flower", "vertex_1", "not_a_vertex"
+    )
+    assert was_updated is True
+    assert app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].from_vertex == "vertex_1"
+    assert app.graph_editor.graph.edge_dict["vertex_0_to_buy_flower"].to_vertex == original_to
+    assert warnings == ["Invalid to vertex: not_a_vertex"]
+
+# Unresolved count is based on how many fixes to be made
+def test_count_unresolved_connections_for_vertex_delete(app):
+    app.graph_editor.add_edge("vertex_0", "vertex_1", "Edge 1")
+    app.graph_editor.add_edge("vertex_1", "vertex_0", "Edge 2")
+    unresolved_count = app.count_unresolved_connections("vertex_0")
+    assert unresolved_count >= 2

@@ -1,3 +1,4 @@
+from dialogue_editor.graph_editor import GraphEditor
 from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 
 # The adapter takes as input a Graph
@@ -18,4 +19,24 @@ def test_cytoscape_edges(hello_world_graph):
     assert {"data": {"source": "vertex_0", "target": "vertex_0_to_buy_flower"}} in cytoscape_adapter.edges
     assert {"data": {"source": "vertex_0_to_buy_flower", "target": "buy_flower"}} in cytoscape_adapter.edges
 
-
+# Unresolved endpoints are shown on edge nodes and invalid connectors are hidden
+def test_cytoscape_unresolved_edge_after_non_cascade_delete():
+    graph_editor = GraphEditor("data/hello_world.yaml")
+    graph_editor.remove_vertex("vertex_0", cascade_delete=False)
+    cytoscape_adapter = CytoscapeAdapter(graph_editor.graph)
+    assert not any(
+        edge["data"].get("source", "") == ""
+        or edge["data"].get("target", "") == ""
+        for edge in cytoscape_adapter.edges
+    )
+    unresolved_edge_nodes = [
+        node for node in cytoscape_adapter.nodes
+        if node["data"].get("is_edge_node")
+        and node["data"].get("has_missing_endpoint")
+    ]
+    assert unresolved_edge_nodes
+    assert any(
+        "FROM: missing" in node["data"]["label"]
+        or "TO: missing" in node["data"]["label"]
+        for node in unresolved_edge_nodes
+    )

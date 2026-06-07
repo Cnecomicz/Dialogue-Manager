@@ -1,6 +1,6 @@
 from dash import dcc, html
 
-def get_add_edge_button() -> list:
+def get_add_edge_section() -> list:
     return [
         html.H3("Add player node"),
         dcc.Input(
@@ -78,7 +78,7 @@ def get_add_edge_button() -> list:
         html.Button("Save", id="add-edge", n_clicks=0)
     ]
 
-def get_add_vertex_button() -> list:
+def get_add_vertex_section() -> list:
     return [
         html.H3("Add NPC node"),
         dcc.Input(
@@ -163,7 +163,29 @@ def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
         }
     ]
 
-def get_edit_button() -> list:
+def get_delete_section() -> list:
+    return [
+        html.H3("Delete selected node"),
+        html.Div(
+            "Selected node: None", 
+            id="delete-selected-node-display"
+        ),
+        dcc.Checklist(
+            id="delete-cascade",
+            options=[{"label": "Cascade delete", "value": "cascade"}],
+            value=[],
+            style={
+                "marginTop": "12px"
+            }
+        ),
+        html.Button("Delete", id="delete-node", n_clicks=0),
+        dcc.ConfirmDialog(
+            id="confirm-delete-node",
+            message="Are you sure you want to delete the selected node?"
+        )
+    ]
+
+def get_edit_section() -> list:
     return [
         html.H3("Edit selected node"),
         html.Div(

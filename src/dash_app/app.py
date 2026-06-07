@@ -5,10 +5,11 @@ from os import PathLike
 from webbrowser import open as open_url
 
 from dash_app.layout import (
-    get_add_edge_button, 
-    get_add_vertex_button, 
+    get_add_edge_section, 
+    get_add_vertex_section, 
     get_cytoscape_stylesheet, 
-    get_edit_button, 
+    get_delete_section,
+    get_edit_section, 
     get_log
 )
 from dialogue_editor.graph_editor import GraphEditor
@@ -30,11 +31,13 @@ class App(Dash):
                 html.Div(
                     get_log()
                     + [html.Hr()]
-                    + get_edit_button() 
+                    + get_edit_section() 
                     + [html.Hr()] 
-                    + get_add_vertex_button()
+                    + get_add_vertex_section()
                     + [html.Hr()]
-                    + get_add_edge_button(),
+                    + get_add_edge_section()
+                    + [html.Hr()]
+                    + get_delete_section(),
                     style={
                         "width": "320px",
                         "flexShrink": 0,
@@ -95,6 +98,35 @@ class App(Dash):
         if not current_log:
             return new_message
         return f"{current_log}\n{new_message}"
+
+    def get_delete_section_state(
+        self, 
+        selected_nodes: list[dict] | None, 
+        current_delete_cascade: list[str] | None
+    ) -> tuple[str, list[dict[str, str | bool]], list[str]]:
+        if not selected_nodes:
+            return (
+                "Selected node: None",
+                [
+                    {
+                        "label": "Cascade delete", 
+                        "value": "cascade", 
+                        "disabled": False
+                    }
+                ],
+                current_delete_cascade or []
+            )
+        node_id = selected_nodes[0].get("id", "None")
+        is_edge = node_id in self.graph_editor.graph.edge_dict
+        options = [
+            {
+                "label": "Cascade delete", 
+                "value": "cascade", 
+                "disabled": is_edge
+            }
+        ]
+        value = [] if is_edge else (current_delete_cascade or [])
+        return f"Selected node: {node_id}", options, value
 
     def get_elements(self) -> list[dict[str, dict[str, str]]]:
         cytoscape_adapter = CytoscapeAdapter(self.graph_editor.graph)
@@ -217,13 +249,22 @@ class App(Dash):
 
         @self.callback(
             Output("selected-node-display", "children"),
-            Input("dialogue-graph", "selectedNodeData")
+            Output("delete-selected-node-display", "children"),
+            Output("delete-cascade", "options"),
+            Output("delete-cascade", "value"),
+            Input("dialogue-graph", "selectedNodeData"),
+            State("delete-cascade", "value")
         )
-        def display_selected_node(selected_nodes: list[dict] | None) -> str:
-            if not selected_nodes:
-                return "Selected node: None"
-            node_id = selected_nodes[0].get("id", "None")
-            return f"Selected node: {node_id}"
+        def display_selected_node(
+            selected_nodes: list[dict] | None, 
+            current_delete_cascade: list[str] | None
+        ) -> tuple[str, str, list[dict[str, str | bool]], list[str]]:
+            delete_text, delete_options, delete_value = (
+                self.get_delete_section_state(
+                    selected_nodes, current_delete_cascade
+                )
+            )
+            return delete_text, delete_text, delete_options, delete_value
 
         @self.callback(
             Output("dialogue-graph", "elements"),
@@ -234,9 +275,13 @@ class App(Dash):
             Output("new-edge-text", "value"),
             Output("new-edge-predicates", "value"),
             Output("new-edge-effects", "value"),
+            Output("confirm-delete-node", "displayed"),
+            Output("dialogue-graph", "selectedNodeData"),
             Input("save-text", "n_clicks"),
             Input("add-vertex", "n_clicks"),
             Input("add-edge", "n_clicks"),
+            Input("delete-node", "n_clicks"),
+            Input("confirm-delete-node", "submit_n_clicks"),
             State("dialogue-graph", "selectedNodeData"),
             State("edit-text", "value"),
             State("edit-predicates", "value"),
@@ -248,6 +293,7 @@ class App(Dash):
             State("new-edge-text", "value"),
             State("new-edge-predicates", "value"),
             State("new-edge-effects", "value"),
+            State("delete-cascade", "value"),
             State("action-status", "value"),
             prevent_initial_call=True
         )
@@ -255,6 +301,8 @@ class App(Dash):
             save_clicks: int,
             add_vertex_clicks: int,
             add_edge_clicks: int,
+            delete_node_clicks: int,
+            confirm_delete_submit_clicks: int,
             selected_nodes: list[dict] | None,
             new_text: str | None,
             new_predicates_text: str | None,
@@ -266,8 +314,9 @@ class App(Dash):
             new_edge_text: str | None,
             new_edge_predicates_text: str | None,
             new_edge_effects_text: str | None,
+            delete_cascade: list[str] | None,
             current_log: str | None
-        ) -> tuple[list[dict], str, str, str, str, str, str, str]:
+        ) -> tuple[list[dict], str, str, str, str, str, str, str, bool, list]:
             triggered_id = ctx.triggered_id
             if triggered_id == "add-vertex":
                 if not new_vertex_text:
@@ -287,6 +336,8 @@ class App(Dash):
                         no_update,
                         no_update,
                         no_update,
+                        no_update,
+                        False,
                         no_update
                     )
                 new_vertex_name = self.add_vertex(
@@ -302,6 +353,8 @@ class App(Dash):
                     no_update,
                     no_update,
                     no_update,
+                    no_update,
+                    False,
                     no_update
                 )
             if triggered_id == "add-edge":
@@ -317,6 +370,8 @@ class App(Dash):
                         no_update,
                         no_update,
                         no_update,
+                        no_update,
+                        False,
                         no_update
                     )
                 try: 
@@ -337,6 +392,8 @@ class App(Dash):
                         no_update,
                         no_update,
                         no_update,
+                        no_update,
+                        False,
                         no_update
                     )
                 normalized_to_vertex = (
@@ -361,7 +418,89 @@ class App(Dash):
                     "",
                     "",
                     "",
-                    ""
+                    "",
+                    False,
+                    no_update
+                )
+            if triggered_id == "delete-node":
+                if not selected_nodes:
+                    return (
+                        no_update,
+                        self.append_action_status(
+                            current_log, "Delete failed: no node selected."
+                        ),
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update
+                    )
+                return (
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    True,
+                    no_update
+                )
+            if triggered_id == "confirm-delete-node":
+                if not selected_nodes:
+                    return (
+                        no_update,
+                        self.append_action_status(
+                            current_log, "Delete failed: no node selected."
+                        ),
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update
+                    )
+                node_id = selected_nodes[0].get("id")
+                if not node_id:
+                    raise PreventUpdate
+                was_removed = self.remove_node(
+                    node_id, "cascade" in (delete_cascade or [])
+                )
+                if not was_removed:
+                    return (
+                        no_update,
+                        self.append_action_status(
+                            current_log, 
+                            f"Delete failed: unknown node {node_id}."
+                        ),
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update
+                    )
+                return (
+                    self.get_elements(),
+                    self.append_action_status(
+                        current_log, f"Deleted {node_id}."
+                    ),
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    []
                 )
             if triggered_id == "save-text":
                 if not selected_nodes:
@@ -383,6 +522,8 @@ class App(Dash):
                         no_update,
                         no_update,
                         no_update,
+                        no_update,
+                        False,
                         no_update
                     )
                 was_updated = self.update_node(
@@ -400,9 +541,20 @@ class App(Dash):
                     no_update,
                     no_update,
                     no_update,
+                    no_update,
+                    False,
                     no_update
                 )
             raise PreventUpdate
+
+    def remove_node(self, node_id: str, cascade_delete: bool = False) -> bool:
+        if node_id in self.graph_editor.graph.vertex_dict:
+            self.graph_editor.remove_vertex(node_id, cascade_delete)
+            return True
+        if node_id in self.graph_editor.graph.edge_dict:
+            self.graph_editor.remove_edge(node_id)
+            return True
+        return False
 
     def update_node(
         self, 

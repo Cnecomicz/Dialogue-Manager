@@ -135,7 +135,7 @@ def test_removing_connected_vertex():
     graph_editor.remove_vertex("vertex_0")
     assert len(graph_editor.graph.vertex_dict) == 1
     assert len(graph_editor.graph.edge_dict) == 1
-    assert graph_editor.graph.edge_dict["edge_0"].from_vertex == ""
+    assert graph_editor.graph.edge_dict["edge_0"].from_vertex == "__MISSING__"
 
 # Optionally, removing a vertex can remove all connected edges
 def test_removing_connected_vertex_cascade_delete():
