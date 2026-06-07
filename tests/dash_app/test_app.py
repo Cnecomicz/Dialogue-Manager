@@ -72,3 +72,45 @@ def test_add_edge_via_app(app):
     assert app.graph_editor.graph.edge_dict[new_edge_name].text == "A new edge"
     assert app.graph_editor.graph.edge_dict[new_edge_name].predicates == new_predicates
     assert app.graph_editor.graph.edge_dict[new_edge_name].effects == new_effects
+
+# Removing a selected edge removes it from the graph
+def test_remove_edge_via_app(app):
+    assert "vertex_0_to_buy_flower" in app.graph_editor.graph.edge_dict
+    was_removed = app.remove_node("vertex_0_to_buy_flower")
+    assert was_removed is True
+    assert "vertex_0_to_buy_flower" not in app.graph_editor.graph.edge_dict
+
+# Removing a selected vertex without cascade keeps connected edges
+def test_remove_vertex_without_cascade(app):
+    app.graph_editor.add_edge("vertex_0", "vertex_1", "Temporary edge")
+    edge_name = f"edge_{app.graph_editor.next_edge_index-1}"
+    was_removed = app.remove_node("vertex_0", cascade_delete=False)
+    assert "vertex_0" not in app.graph_editor.graph.vertex_dict
+    assert edge_name in app.graph_editor.graph.edge_dict
+
+# Removing a selected vertex with cascade removes selected edges
+def test_remove_vertex_with_cascade(app):
+    app.graph_editor.add_edge("vertex_0", "vertex_1", "Temporary edge")
+    edge_name = f"edge_{app.graph_editor.next_edge_index-1}"
+    was_removed = app.remove_node("vertex_0", cascade_delete=True)
+    assert "vertex_0" not in app.graph_editor.graph.vertex_dict
+    assert edge_name not in app.graph_editor.graph.edge_dict
+
+
+# Cascade is disabled when edge is selected
+def test_cascade_disabled_for_edges(app):
+    selected_node_text, options, value = app.get_delete_section_state(
+        [{"id": "vertex_0_to_buy_flower"}], ["cascade"]
+    )
+    assert selected_node_text == "Selected node: vertex_0_to_buy_flower"
+    assert options == [{"label": "Cascade delete", "value": "cascade", "disabled": True}]
+    assert value == []
+
+# Cascade is enabled when vertex is selected
+def test_cascade_enabled_for_vertices(app):
+    selected_node_text, options, value = app.get_delete_section_state(
+        [{"id": "vertex_0"}], ["cascade"]
+    )
+    assert selected_node_text == "Selected node: vertex_0"
+    assert options == [{"label": "Cascade delete", "value": "cascade", "disabled": False}]
+    assert value == ["cascade"]
