@@ -62,8 +62,12 @@ class App(Dash):
         )
         self.register_callbacks()
 
-    def add_vertex(self, text: str | None) -> str:
-        self.graph_editor.add_vertex(text)
+    def add_vertex(
+        self, 
+        text: str | None, 
+        effects: list[dict[str, str | int]] | None = None
+    ) -> str:
+        self.graph_editor.add_vertex(text, effects)
         return f"vertex_{self.graph_editor.next_vertex_index-1}"
 
     def append_action_status(
@@ -106,7 +110,11 @@ class App(Dash):
             return self.graph_editor.graph.edge_dict[node_id].text
         return ""
 
-    def parse_effects(self, effects_text: str) -> list[dict[str, str | int]]:
+    def parse_effects(
+        self, effects_text: str | None
+    ) -> list[dict[str, str | int]]:
+        if not effects_text:
+            return []
         effects = []
         for line_number, line in enumerate(effects_text.split("\n"), start=1):
             stripped_line = line.strip()
@@ -121,8 +129,10 @@ class App(Dash):
         return effects
 
     def parse_predicates(
-        self, predicates_text: str
+        self, predicates_text: str | None
     ) -> list[dict[str, str | int]]:
+        if not predicates_text:
+            return []
         predicates = []
         for line_number, line in enumerate(
             predicates_text.split("\n"), start=1
@@ -192,6 +202,7 @@ class App(Dash):
             Output("dialogue-graph", "elements"),
             Output("action-status", "value"),
             Output("new-vertex-text", "value"),
+            Output("new-vertex-effects", "value"),
             Input("save-text", "n_clicks"),
             Input("add-vertex", "n_clicks"),
             State("dialogue-graph", "selectedNodeData"),
@@ -199,6 +210,7 @@ class App(Dash):
             State("edit-predicates", "value"),
             State("edit-effects", "value"),
             State("new-vertex-text", "value"),
+            State("new-vertex-effects", "value"),
             State("action-status", "value"),
             prevent_initial_call=True
         )
@@ -210,18 +222,35 @@ class App(Dash):
             new_predicates_text: str | None,
             new_effects_text: str | None,
             new_vertex_text: str | None,
+            new_vertex_effects_text: str | None,
             current_log: str | None
-        ) -> tuple[list[dict], str, str]:
+        ) -> tuple[list[dict], str, str, str]:
             triggered_id = ctx.triggered_id
             if triggered_id == "add-vertex":
                 if not new_vertex_text:
                     raise PreventUpdate
-                new_vertex_name = self.add_vertex(new_vertex_text)
+                try:
+                    new_vertex_effects = self.parse_effects(
+                        new_vertex_effects_text
+                    )
+                except ValueError as exception:
+                    return (
+                        no_update,
+                        self.append_action_status(
+                            current_log, f"Add vertex failed: {exception}"
+                        ),
+                        no_update,
+                        no_update
+                    )
+                new_vertex_name = self.add_vertex(
+                    new_vertex_text, new_vertex_effects
+                )
                 return (
                     self.get_elements(), 
                     self.append_action_status(
                         current_log, f"Added {new_vertex_name}."
                     ),
+                    "",
                     ""
                 )
             if triggered_id == "save-text":
@@ -239,6 +268,7 @@ class App(Dash):
                         self.append_action_status(
                             current_log, f"Save failed: {exception}"
                         ), 
+                        no_update,
                         no_update
                     )
                 was_updated = self.update_node(
@@ -251,6 +281,7 @@ class App(Dash):
                     self.append_action_status(
                         current_log, f"Saved node data for {node_id}."
                     ),
+                    no_update,
                     no_update
                 )
             raise PreventUpdate

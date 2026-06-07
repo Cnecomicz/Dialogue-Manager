@@ -17,6 +17,20 @@ def get_add_vertex_button() -> list:
                 "opacity": 1
             }
         ),
+        dcc.Textarea(
+            id="new-vertex-effects",
+            placeholder="Effects (optional, one per line)",
+            style={
+                "width": "100%",
+                "height": "70px",
+                "marginTop": "12px",
+                "fontSize": "14px",
+                "backgroundColor": "#ffffff",
+                "color": "#111827",
+                "border": "1px solid #9ca3af",
+                "resize": "vertical"
+            }
+        ),
         html.Button("Add vertex", id="add-vertex", n_clicks=0)
     ]
 
