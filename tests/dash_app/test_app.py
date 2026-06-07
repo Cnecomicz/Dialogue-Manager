@@ -1,3 +1,6 @@
+from base64 import b64encode
+from pytest import raises
+
 # The app can be created from an existing yaml graph
 def test_creating_app_from_yaml(app):
     assert app.graph_editor.graph.name == "Alice"
@@ -132,3 +135,31 @@ def test_count_unresolved_connections_for_vertex_delete(app):
     app.graph_editor.add_edge("vertex_1", "vertex_0", "Edge 2")
     unresolved_count = app.count_unresolved_connections("vertex_0")
     assert unresolved_count >= 2
+
+# Uploaded yaml can be decoded into dict data
+def test_parse_uploaded_yaml(app):
+    yaml_text = "name: Bob\nvertices: {}\nedges: {}\n"
+    payload = "data:text/yaml;base64," + b64encode(yaml_text.encode("utf-8")).decode("ascii")
+    parsed_data = app.parse_uploaded_yaml(payload)
+    assert parsed_data["name"] == "Bob"
+    assert parsed_data["vertices"] == {}
+    assert parsed_data["edges"] == {}
+
+# Error if file has invalid encoding
+def test_parse_uploaded_yaml_invalid_encoding(app):
+    with raises(ValueError, match="invalid file encoding"):
+        app.parse_uploaded_yaml("data:text/yaml;base64,***")
+
+# Error if yaml has invalid syntax
+def test_parse_uploaded_yaml_invalid_syntax(app):
+    invalid_yaml = "name: [Not terminated"
+    payload = "data:text/yaml;base64," + b64encode(invalid_yaml.encode("utf-8")).decode("ascii")
+    with raises(ValueError, match="invalid yaml format"):
+        app.parse_uploaded_yaml(payload)
+
+# Error if yaml doesn't at least start with the right format
+def test_parse_uploaded_yaml_requires_mapping_root(app):
+    list_yaml = "-one\n- two\n"
+    payload = "data:text/yaml;base64," + b64encode(list_yaml.encode("utf-8")).decode("ascii")
+    with raises(ValueError, match="root must be a dictionary"):
+        app.parse_uploaded_yaml(payload)

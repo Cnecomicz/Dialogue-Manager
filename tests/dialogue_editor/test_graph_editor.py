@@ -1,3 +1,4 @@
+from pytest import raises
 from yaml import safe_load
 
 from dialogue_editor.graph_editor import GraphEditor
@@ -207,3 +208,48 @@ def test_save_load_round_trip(tmp_path):
     graph_editor_1.save(yaml_file)
     graph_editor_2 = GraphEditor(yaml_file)
     assert graph_editor_1 == graph_editor_2
+
+# Loading graph data from yaml
+def test_load_from_yaml_data():
+    graph_editor = GraphEditor()
+    graph_editor.load(
+        yaml_data={
+            "name": "Bob",
+            "vertices": {
+                "vertex_0": {
+                    "text": "Hello world.",
+                    "effects": []
+                }
+            },
+            "edges": {
+                "edge_0": {
+                    "from": "vertex_0",
+                    "to": "vertex_0",
+                    "text": "Loop.",
+                    "predicates": [],
+                    "effects": []
+                }
+            }
+        }
+    )
+    assert graph_editor.graph.name == "Bob"
+    assert "vertex_0" in graph_editor.graph.vertex_dict
+    assert "edge_0" in graph_editor.graph.edge_dict
+
+# Exporting yaml can be reconverted back into a graph
+def test_export_yaml_text_round_trip():
+    graph_editor = GraphEditor()
+    graph_editor.edit_name("Carol")
+    graph_editor.add_vertex("Hello.")
+    exported_text = graph_editor.export_yaml_text()
+    parsed_data = safe_load(exported_text)
+    assert parsed_data["name"] == "Carol"
+    assert "vertices" in parsed_data
+    assert "edges" in parsed_data
+    assert parsed_data["vertices"]["vertex_0"]["text"] == "Hello."
+
+# You error if you save without a file path
+def test_save_without_path_raises_error():
+    graph_editor = GraphEditor()
+    with raises(ValueError, match="No yaml file path is set for save \(\)\."):
+        graph_editor.save()
