@@ -278,45 +278,43 @@ def get_edit_section() -> list:
 def get_header() -> html.Div:
     return html.Div(
         [
-            html.Div(
-                [
-                    html.Button(
-                        "New",
-                        id="new-graph",
-                        n_clicks=0,
-                        style={"marginRight": "8px"}
-                    ),
-                    html.Button(
-                        "Download",
-                        id="download-graph",
-                        n_clicks=0,
-                        style={"marginRight": "8px"}
-                    ),
-                    dcc.Upload(
-                        id="upload-graph",
-                        children=html.Button(
-                            "Upload",
-                            id="upload-graph-button",
-                            n_clicks=0
-                        ),
-                        multiple=False,
-                        style={"display": "inline-block"}
-                    )
-                ]
+            html.Button(
+                "New",
+                id="new-graph",
+                n_clicks=0
+            ),
+            html.Button(
+                "Download",
+                id="download-graph",
+                n_clicks=0
+            ),
+            dcc.Upload(
+                id="upload-graph",
+                children=html.Button(
+                    "Upload",
+                    id="upload-graph-button",
+                    n_clicks=0
+                ),
+                multiple=False,
+                style={"display": "inline-block"}
             ),
             html.Div(
                 "Document: Untitled",
                 id="current-document-label",
                 style={
                     "fontSize": "14px",
-                    "color": "#d1d5db"
+                    "color": "#d1d5db",
+                    "marginLeft": "8px"
                 }
             )
         ],
         style={
             "display": "flex",
-            "justifyContent": "space-between",
+            "justifyContent": "flex-start",
             "alignItems": "center",
+            "gap": "8px",
+            "whiteSpace": "nowrap",
+            "overflow": "hidden",
             "backgroundColor": "#1f252b",
             "borderBottom": "1px solid #444",
             "flexShrink": 0
