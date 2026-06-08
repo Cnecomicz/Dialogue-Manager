@@ -1,8 +1,11 @@
+from base64 import b64decode
+from binascii import Error as BinasciiError
 from dash import Dash, Input, Output, State, ctx, dcc, html, no_update
 from dash.exceptions import PreventUpdate
 from dash_cytoscape import Cytoscape, load_extra_layouts
 from os import PathLike
 from webbrowser import open as open_url
+from yaml import YAMLError, safe_load
 
 from dash_app.layout import (
     get_add_edge_section, 
@@ -10,6 +13,7 @@ from dash_app.layout import (
     get_cytoscape_stylesheet, 
     get_delete_section,
     get_edit_section, 
+    get_header,
     get_log
 )
 from dialogue_editor.graph_editor import GraphEditor
@@ -24,7 +28,9 @@ from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 class App(Dash):
     def __init__(self, yaml_file: str | PathLike | None = None) -> None:
         super().__init__()
-        self.graph_editor = GraphEditor(yaml_file)
+        self.graph_editor = GraphEditor()
+        if yaml_file is not None:
+            self.graph_editor.load(yaml_file=yaml_file)
         load_extra_layouts()
         self.layout = html.Div(
             [
@@ -44,22 +50,45 @@ class App(Dash):
                         "padding": "12px",
                         "backgroundColor": "#1f252b",
                         "color": "#e6e6e6",
-                        "borderRight": "1px solid #444"
+                        "borderRight": "1px solid #444",
+                        "overflowY": "auto",
+                        "height": "100vh"
                     }
                 ),
                 html.Div(
-                    Cytoscape(
-                        id=f"dialogue-graph",
-                        layout={"name": "dagre", "rankDir": "TB"},
-                        style={
-                            "width": "100%", 
-                            "height": "100%", 
-                            "backgroundColor": "#303841"
-                        },
-                        elements=self.get_elements(),
-                        stylesheet=get_cytoscape_stylesheet()
-                    ),
-                    style={"flex": "1", "minWidth": 0, "height": "100%"}
+                    [
+                        get_header(),
+                        html.Div(
+                            Cytoscape(
+                                id=f"dialogue-graph",
+                                layout={"name": "dagre", "rankDir": "TB"},
+                                style={
+                                    "width": "100%", 
+                                    "height": "100%", 
+                                    "backgroundColor": "#303841"
+                                },
+                                elements=self.get_elements(),
+                                stylesheet=get_cytoscape_stylesheet()
+                            ),
+                            style={"flex": "1", "minHeight": 0}
+                        )
+                    ],
+                    style={
+                        "flex": "1",
+                        "minWidth": 0,
+                        "height": "100%",
+                        "display": "flex",
+                        "flexDirection": "column"
+                    }
+                ),
+                dcc.Store(id="unsaved-changes", data=False),
+                dcc.Store(id="current-document", data="Untitled"),
+                dcc.Store(id="pending-action", data=""),
+                dcc.Store(id="pending-upload", data={}),
+                dcc.Download(id="download-yaml"),
+                dcc.ConfirmDialog(
+                    id="confirm-unsaved-work", 
+                    message="You have unsaved changes. Continue?"
                 )
             ],
             style={
@@ -218,6 +247,26 @@ class App(Dash):
                 ) from exception
         return predicates
 
+    def parse_uploaded_yaml(self, upload_contents: str | None) -> dict:
+        if not upload_contents or "," not in upload_contents:
+            raise ValueError("Upload failed: missing file contents.")
+        _, encoded_content = upload_contents.split(",", 1)
+        try:
+            raw_bytes = b64decode(encoded_content, validate=True)
+        except BinasciiError as e:
+            raise ValueError("Upload failed: invalid file encoding.") from e
+        try:
+            decoded_text = raw_bytes.decode("utf-8")
+        except UnicodeDecodeError as e:
+            raise ValueError("Upload failed: file must be UTF-8 text.") from e
+        try:
+            parsed_yaml = safe_load(decoded_text) or {}
+        except YAMLError as e:
+            raise ValueError("Upload failed: invalid yaml format.") from e
+        if not isinstance(parsed_yaml, dict):
+            raise ValueError("Upload failed: yaml root must be a dictionary.")
+        return parsed_yaml
+
     def register_callbacks(self) -> None:
         self.clientside_callback(
             """
@@ -308,11 +357,23 @@ class App(Dash):
             Output("new-edge-effects", "value"),
             Output("confirm-delete-node", "displayed"),
             Output("dialogue-graph", "selectedNodeData"),
+            Output("unsaved-changes", "data"),
+            Output("current-document", "data"),
+            Output("confirm-unsaved-work", "displayed"),
+            Output("confirm-unsaved-work", "message"),
+            Output("pending-action", "data"),
+            Output("pending-upload", "data"),
+            Output("download-yaml", "data"),
             Input("save-text", "n_clicks"),
             Input("add-vertex", "n_clicks"),
             Input("add-edge", "n_clicks"),
             Input("delete-node", "n_clicks"),
             Input("confirm-delete-node", "submit_n_clicks"),
+            Input("new-graph", "n_clicks"),
+            Input("download-graph", "n_clicks"),
+            Input("upload-graph", "contents"),
+            Input("confirm-unsaved-work", "submit_n_clicks"),
+            Input("confirm-unsaved-work", "cancel_n_clicks"),
             State("dialogue-graph", "selectedNodeData"),
             State("edit-text", "value"),
             State("edit-predicates", "value"),
@@ -328,6 +389,11 @@ class App(Dash):
             State("new-edge-effects", "value"),
             State("delete-cascade", "value"),
             State("action-status", "value"),
+            State("upload-graph", "filename"),
+            State("unsaved-changes", "data"),
+            State("current-document", "data"),
+            State("pending-action", "data"),
+            State("pending-upload", "data"),
             prevent_initial_call=True
         )
         def handle_graph_updates(
@@ -336,6 +402,11 @@ class App(Dash):
             add_edge_clicks: int,
             delete_node_clicks: int,
             confirm_delete_submit_clicks: int,
+            new_graph_clicks: int,
+            download_graph_clicks: int,
+            upload_contents: str | None,
+            confirm_unsaved_submit_clicks: int,
+            confirm_unsaved_cancel_clicks: int,
             selected_nodes: list[dict] | None,
             new_text: str | None,
             new_predicates_text: str | None,
@@ -350,9 +421,326 @@ class App(Dash):
             new_edge_predicates_text: str | None,
             new_edge_effects_text: str | None,
             delete_cascade: list[str] | None,
-            current_log: str | None
-        ) -> tuple[list[dict], str, str, str, str, str, str, str, bool, list]:
+            current_log: str | None,
+            upload_filename: str | None,
+            unsaved_changes: bool,
+            current_document: str | None,
+            pending_action: str | None,
+            pending_upload: dict | None
+        ) -> tuple[
+            list[dict], 
+            str, 
+            str, 
+            str, 
+            str, 
+            str, 
+            str, 
+            str, 
+            bool, 
+            list,
+            bool,
+            str,
+            bool,
+            str,
+            str,
+            dict,
+            dict
+        ]:
+            def default_result() -> tuple:
+                return (
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update
+                )
             triggered_id = ctx.triggered_id
+            triggered_prop_id = (
+                ctx.triggered[0]["prop_id"] if ctx.triggered else ""
+            )
+            if triggered_id == "download-graph":
+                download_name = (current_document or "").strip()
+                if not download_name or download_name == "Untitled":
+                    download_name = "dialogue_graph.yaml"
+                elif not (
+                    download_name.endswith(".yaml") 
+                    or download_name.endswith(".yml")
+                ):
+                    download_name = f"{download_name}.yaml"
+                return (
+                    no_update,
+                    self.append_action_status(
+                        current_log, f"Downloaded {download_name}."
+                    ),
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    no_update,
+                    "",
+                    {},
+                    dcc.send_string(
+                        self.graph_editor.export_yaml_text(), download_name
+                    )
+                )
+            if triggered_id == "new-graph":
+                if unsaved_changes:
+                    return (
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        no_update,
+                        no_update,
+                        True,
+                        "You have unsaved changes. Start a new graph anyway?",
+                        "new",
+                        {},
+                        no_update
+                    )
+                self.graph_editor.load()
+                return (
+                    self.get_elements(),
+                    self.append_action_status(
+                        current_log, "Started a new graph."
+                    ),
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    [],
+                    False,
+                    "Untitled",
+                    False,
+                    no_update,
+                    "",
+                    {},
+                    no_update
+                )
+            if triggered_id == "upload-graph":
+                if not upload_contents:
+                    raise PreventUpdate
+                if unsaved_changes:
+                    return (
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        no_update,
+                        no_update,
+                        True,
+                        "You have unsaved changes. Upload and replace anyway?",
+                        "upload",
+                        {
+                            "contents": upload_contents, 
+                            "filename": upload_filename or "Untitled"
+                        },
+                        no_update
+                    )
+                try:
+                    parsed_yaml = self.parse_uploaded_yaml(upload_contents)
+                except ValueError as exception:
+                    return (
+                        no_update,
+                        self.append_action_status(current_log, str(exception)),
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        "",
+                        {},
+                        no_update
+                    )
+                self.graph_editor.load(yaml_data=parsed_yaml)
+                loaded_filename = upload_filename or "Untitled"
+                return (
+                    self.get_elements(),
+                    self.append_action_status(
+                        current_log, f"Uploaded {loaded_filename}."
+                    ),
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    [],
+                    False,
+                    loaded_filename,
+                    False,
+                    no_update,
+                    "",
+                    {},
+                    no_update
+                )
+            if triggered_prop_id == "confirm-unsaved-work.submit_n_clicks":
+                if pending_action == "new":
+                    self.graph_editor.load()
+                    return (
+                        self.get_elements(),
+                        self.append_action_status(
+                            current_log, 
+                            "Discarded changes and started a new graph."
+                        ),
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        [],
+                        False,
+                        "Untitled",
+                        False,
+                        no_update,
+                        "",
+                        {},
+                        no_update
+                    )
+                if pending_action == "upload":
+                    queued_upload = pending_upload or {}
+                    queued_contents = queued_upload.get("contents")
+                    queued_filename = (
+                        queued_upload.get("filename") or "Untitled"
+                    )
+                    if not queued_contents:
+                        return (
+                            no_update,
+                            self.append_action_status(
+                                current_log, 
+                                "Uploaded failed: no pending upload data."
+                            ),
+                            no_update,
+                            no_update,
+                            no_update,
+                            no_update,
+                            no_update,
+                            no_update,
+                            False,
+                            no_update,
+                            no_update,
+                            no_update,
+                            False,
+                            no_update,
+                            "",
+                            {},
+                            no_update
+                        )
+                    try:
+                        parsed_yaml = self.parse_uploaded_yaml(queued_contents)
+                    except ValueError as exception:
+                        return (
+                            no_update,
+                            self.append_action_status(
+                                current_log, str(exception)
+                            ),
+                            no_update,
+                            no_update,
+                            no_update,
+                            no_update,
+                            no_update,
+                            no_update,
+                            False,
+                            no_update,
+                            no_update,
+                            no_update,
+                            False,
+                            no_update,
+                            "",
+                            {},
+                            no_update
+                        )
+                    self.graph_editor.load(yaml_data=parsed_yaml)
+                    return (
+                        self.get_elements(),
+                        self.append_action_status(
+                            current_log,
+                            "Discarded changes and uploaded "
+                            f"{queued_filename}."
+                        ),
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        [],
+                        False,
+                        queued_filename,
+                        False,
+                        no_update,
+                        "",
+                        {},
+                        no_update
+                    )
+                return default_result()
+            if triggered_prop_id == "confirm-unsaved-work.cancel_n_clicks":
+                return (
+                    no_update,
+                    self.append_action_status(
+                        current_log, "Cancelled action."
+                    ),
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    no_update,
+                    "",
+                    {},
+                    no_update
+                )
             if triggered_id == "add-vertex":
                 if not new_vertex_text:
                     raise PreventUpdate
@@ -373,6 +761,13 @@ class App(Dash):
                         no_update,
                         no_update,
                         False,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        "",
+                        {},
                         no_update
                     )
                 new_vertex_name = self.add_vertex(
@@ -390,6 +785,13 @@ class App(Dash):
                     no_update,
                     no_update,
                     False,
+                    no_update,
+                    True,
+                    no_update,
+                    False,
+                    no_update,
+                    "",
+                    {},
                     no_update
                 )
             if triggered_id == "add-edge":
@@ -407,6 +809,13 @@ class App(Dash):
                         no_update,
                         no_update,
                         False,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        "",
+                        {},
                         no_update
                     )
                 try: 
@@ -429,6 +838,13 @@ class App(Dash):
                         no_update,
                         no_update,
                         False,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        "",
+                        {},
                         no_update
                     )
                 normalized_to_vertex = (
@@ -455,6 +871,13 @@ class App(Dash):
                     "",
                     "",
                     False,
+                    no_update,
+                    True,
+                    no_update,
+                    False,
+                    no_update,
+                    "",
+                    {},
                     no_update
                 )
             if triggered_id == "delete-node":
@@ -471,6 +894,13 @@ class App(Dash):
                         no_update,
                         no_update,
                         False,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        "",
+                        {},
                         no_update
                     )
                 return (
@@ -483,6 +913,13 @@ class App(Dash):
                     no_update,
                     no_update,
                     True,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    no_update,
+                    "",
+                    {},
                     no_update
                 )
             if triggered_id == "confirm-delete-node":
@@ -499,6 +936,13 @@ class App(Dash):
                         no_update,
                         no_update,
                         False,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        "",
+                        {},
                         no_update
                     )
                 node_id = selected_nodes[0].get("id")
@@ -529,6 +973,13 @@ class App(Dash):
                         no_update,
                         no_update,
                         False,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        "",
+                        {},
                         no_update
                     )
                 return (
@@ -552,7 +1003,14 @@ class App(Dash):
                     no_update,
                     no_update,
                     False,
-                    []
+                    [],
+                    True,
+                    no_update,
+                    False,
+                    no_update,
+                    "",
+                    {},
+                    no_update
                 )
             if triggered_id == "save-text":
                 if not selected_nodes:
@@ -576,6 +1034,13 @@ class App(Dash):
                         no_update,
                         no_update,
                         False,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        "",
+                        {},
                         no_update
                     )
                 was_updated = self.update_node(
@@ -609,9 +1074,29 @@ class App(Dash):
                     no_update,
                     no_update,
                     False,
+                    no_update,
+                    True if was_anything_updated else no_update,
+                    no_update,
+                    False,
+                    no_update,
+                    "",
+                    {},
                     no_update
                 )
             raise PreventUpdate
+
+        @self.callback(
+            Output("current-document-label", "children"),
+            Input("current-document", "data"),
+            Input("unsaved-changes", "data")
+        )
+        def render_document_label(
+            current_document: str | None,
+            unsaved_changes: bool
+        ) -> str:
+            document_name = current_document or "Untitled"
+            dirty_marker = " *" if unsaved_changes else ""
+            return f"Document: {document_name}{dirty_marker}"
 
     def remove_node(self, node_id: str, cascade_delete: bool = False) -> bool:
         if node_id in self.graph_editor.graph.vertex_dict:
@@ -696,7 +1181,7 @@ class App(Dash):
 
 def main():
     open_url("http://localhost:8050")
-    app = App("data/hello_world.yaml")
+    app = App()
     app.run(debug=True, use_reloader=False)
 
 if __name__ == "__main__":

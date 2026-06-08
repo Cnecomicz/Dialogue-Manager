@@ -251,5 +251,5 @@ def test_export_yaml_text_round_trip():
 # You error if you save without a file path
 def test_save_without_path_raises_error():
     graph_editor = GraphEditor()
-    with raises(ValueError, match="No yaml file path is set for save \(\)\."):
+    with raises(ValueError, match=r"No yaml file path is set for save\(\)\."):
         graph_editor.save()

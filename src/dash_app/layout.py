@@ -275,6 +275,54 @@ def get_edit_section() -> list:
         html.Button("Save", id="save-text", n_clicks=0)
     ]
 
+def get_header() -> html.Div:
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Button(
+                        "New",
+                        id="new-graph",
+                        n_clicks=0,
+                        style={"marginRight": "8px"}
+                    ),
+                    html.Button(
+                        "Download",
+                        id="download-graph",
+                        n_clicks=0,
+                        style={"marginRight": "8px"}
+                    ),
+                    dcc.Upload(
+                        id="upload-graph",
+                        children=html.Button(
+                            "Upload",
+                            id="upload-graph-button",
+                            n_clicks=0
+                        ),
+                        multiple=False,
+                        style={"display": "inline-block"}
+                    )
+                ]
+            ),
+            html.Div(
+                "Document: Untitled",
+                id="current-document-label",
+                style={
+                    "fontSize": "14px",
+                    "color": "#d1d5db"
+                }
+            )
+        ],
+        style={
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "backgroundColor": "#1f252b",
+            "borderBottom": "1px solid #444",
+            "flexShrink": 0
+        }
+    )
+
 def get_log() -> list:
     return [
         html.H3("Log"),

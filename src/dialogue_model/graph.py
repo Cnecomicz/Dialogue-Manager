@@ -7,10 +7,18 @@ from dialogue_model.edge import Edge
 from dialogue_model.vertex import Vertex
 
 class Graph:
-    def __init__(self, yaml_file: str | PathLike | None = None) -> None:
+    def __init__(
+        self, 
+        yaml_file: str | PathLike | None = None, 
+        yaml_data: dict | None = None
+    ) -> None:
         self.yaml_file = yaml_file
-        yaml_data = self.get_yaml(self.yaml_file)
-        normalized_data = self.normalize_yaml(yaml_data)
+        loaded_yaml_data = (
+            yaml_data 
+            if yaml_data is not None 
+            else self.get_yaml(self.yaml_file)
+        )
+        normalized_data = self.normalize_yaml(loaded_yaml_data)
         self.name = normalized_data["name"]
         self.vertex_dict = {
             vertex_name: Vertex(vertex_name, data)

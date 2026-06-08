@@ -8,10 +8,12 @@ from dialogue_model.vertex import Vertex
 
 class GraphEditor:
     def __init__(self, yaml_file: str | PathLike | None = None) -> None:
-        self.yaml_file = yaml_file
-        self.graph = Graph(self.yaml_file)
-        self.next_vertex_index = self.get_next_vertex_index()
-        self.next_edge_index = self.get_next_edge_index()
+        self.yaml_file = None
+        self.graph = Graph()
+        self.next_vertex_index = 0
+        self.next_edge_index = 0
+        if yaml_file is not None:
+            self.load(yaml_file=yaml_file)
 
     def __repr__(self) -> str:
         return f'GraphEditor(yaml_file="{self.yaml_file}")'
@@ -108,6 +110,29 @@ class GraphEditor:
     def edit_vertex_text(self, vertex_name: str, text: str) -> None:
         self.graph.vertex_dict[vertex_name].text = text
 
+    def export_yaml_text(self) -> str:
+        yaml_data = {
+            "name": self.graph.name,
+            "vertices": {
+                vertex_name: {
+                    "text": vertex.text, 
+                    "effects": vertex.effects
+                }
+                for vertex_name, vertex in self.graph.vertex_dict.items()
+            },
+            "edges": {
+                edge_name: {
+                    "from": edge.from_vertex,
+                    "to": edge.to_vertex,
+                    "text": edge.text,
+                    "predicates": edge.predicates,
+                    "effects": edge.effects
+                }
+                for edge_name, edge in self.graph.edge_dict.items()
+            }
+        }
+        return safe_dump(yaml_data, sort_keys=False)
+
     def get_next_edge_index(self) -> int:
         if not self.graph.edge_dict:
             return 0
@@ -131,6 +156,16 @@ class GraphEditor:
             max(max(indices)+1, len(self.graph.vertex_dict)) 
             if indices else len(self.graph.vertex_dict)
         )
+
+    def load(
+        self, 
+        yaml_file: str | PathLike | None = None, 
+        yaml_data: dict | None = None
+    ) -> None:
+        self.yaml_file = yaml_file
+        self.graph = Graph(yaml_file=yaml_file, yaml_data=yaml_data)
+        self.next_vertex_index = self.get_next_vertex_index()
+        self.next_edge_index = self.get_next_edge_index()
 
     def remove_edge(self, edge_name: str) -> None:
         del self.graph.edge_dict[edge_name]
@@ -170,25 +205,8 @@ class GraphEditor:
     def save(self, yaml_file: str | PathLike | None = None) -> None:
         if yaml_file is None:
             yaml_file = self.yaml_file
-        yaml_data = {
-            "name": self.graph.name,
-            "vertices": {
-                vertex_name: {
-                    "text": vertex.text, 
-                    "effects": vertex.effects
-                }
-                for vertex_name, vertex in self.graph.vertex_dict.items()
-            },
-            "edges": {
-                edge_name: {
-                    "from": edge.from_vertex, 
-                    "to": edge.to_vertex,
-                    "text": edge.text,
-                    "predicates": edge.predicates,
-                    "effects": edge.effects
-                }
-                for edge_name, edge in self.graph.edge_dict.items()
-            },
-        }
+        if yaml_file is None:
+            raise ValueError("No yaml file path is set for save().")
+        yaml_data = self.export_yaml_text()
         with open(yaml_file, "w") as f:
-            safe_dump(yaml_data, f)
+            f.write(yaml_data)
