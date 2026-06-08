@@ -1098,6 +1098,16 @@ class App(Dash):
             dirty_marker = " *" if unsaved_changes else ""
             return f"Document: {document_name}{dirty_marker}"
 
+        @self.callback(
+            Output("upload-graph", "contents"),
+            Input("action-status", "value"),
+            prevent_initial_call=True
+        )
+        def reset_upload_contents_after_actions(
+            _action_log: str | None
+        ) -> None:
+            return None
+
     def remove_node(self, node_id: str, cascade_delete: bool = False) -> bool:
         if node_id in self.graph_editor.graph.vertex_dict:
             self.graph_editor.remove_vertex(node_id, cascade_delete)
