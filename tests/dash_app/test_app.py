@@ -163,3 +163,10 @@ def test_parse_uploaded_yaml_requires_mapping_root(app):
     payload = "data:text/yaml;base64," + b64encode(list_yaml.encode("utf-8")).decode("ascii")
     with raises(ValueError, match="root must be a dictionary"):
         app.parse_uploaded_yaml(payload)
+
+# You can reupload the same file
+def test_upload_reset_callback_registered(app):
+    callback_key = "upload-graph.contents"
+    assert callback_key in app.callback_map
+    callback_inputs = app.callback_map[callback_key]["inputs"]
+    assert {"id": "action-status", "property": "value"} in callback_inputs
