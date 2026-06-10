@@ -6,6 +6,7 @@ def test_creating_app_from_yaml(app):
     assert app.graph_editor.graph.name == "Alice"
     assert len(app.graph_editor.graph.vertex_dict) == 5
     assert len(app.graph_editor.graph.edge_dict) == 8
+    assert app.get_filename(app.graph_editor.graph.name) == "alice_dialogue_graph.yaml"
 
 # The app can turn the current graph into Cytoscape elements
 def test_get_elements_from_graph(app):
