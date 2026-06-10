@@ -7,7 +7,7 @@ from dialogue_model.vertex import Vertex
 
 # You can load an existing yaml
 def test_loading_graph():
-    graph_editor = GraphEditor("data/hello_world.yaml")
+    graph_editor = GraphEditor("data/alice_dialogue_graph.yaml")
     assert graph_editor.graph.name == "Alice"
     assert len(graph_editor.graph.vertex_dict) == 5
     assert len(graph_editor.graph.edge_dict) == 8

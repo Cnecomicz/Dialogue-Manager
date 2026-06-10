@@ -5,11 +5,11 @@ from dialogue_model.graph import Graph
 
 @fixture
 def app():
-    return App("data/hello_world.yaml")
+    return App("data/alice_dialogue_graph.yaml")
 
 @fixture
-def hello_world_graph():
-    return Graph("data/hello_world.yaml")
+def alice_graph():
+    return Graph("data/alice_dialogue_graph.yaml")
 
 @fixture
 def mock_game_state():

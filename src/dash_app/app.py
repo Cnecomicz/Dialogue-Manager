@@ -473,7 +473,9 @@ class App(Dash):
             if triggered_id == "download-graph":
                 download_name = (current_document or "").strip()
                 if not download_name or download_name == "Untitled":
-                    download_name = "dialogue_graph.yaml"
+                    download_name = (
+                        f"{self.graph_editor.graph.name}_dialogue_graph.yaml"
+                    )
                 elif not (
                     download_name.endswith(".yaml") 
                     or download_name.endswith(".yml")
