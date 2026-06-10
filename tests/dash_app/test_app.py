@@ -167,7 +167,7 @@ def test_parse_uploaded_yaml_requires_mapping_root(app):
 
 # You can reupload the same file
 def test_upload_reset_callback_registered(app):
-    callback_key = "upload-graph.contents"
+    callback_key = "upload-graph-container.children"
     assert callback_key in app.callback_map
     callback_inputs = app.callback_map[callback_key]["inputs"]
     assert {"id": "action-status", "property": "value"} in callback_inputs

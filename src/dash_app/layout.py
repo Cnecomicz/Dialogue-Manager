@@ -288,14 +288,9 @@ def get_header() -> html.Div:
                 id="download-graph",
                 n_clicks=0
             ),
-            dcc.Upload(
-                id="upload-graph",
-                children=html.Button(
-                    "Upload",
-                    id="upload-graph-button",
-                    n_clicks=0
-                ),
-                multiple=False,
+            html.Div(
+                get_upload_graph(),
+                id="upload-graph-container",
                 style={"display": "inline-block"}
             ),
             html.Div(
@@ -347,3 +342,36 @@ def get_log() -> list:
             style={"display": "none"}
         )
     ]
+
+def get_name_section(initial_value: str = "Untitled") -> list:
+    return [
+        html.H3("NPC name"),
+        dcc.Input(
+            id="document-name",
+            type="text",
+            value=initial_value,
+            placeholder="NPC name",
+            style={
+                "width": "100%",
+                "backgroundColor": "#ffffff",
+                "color": "#111827",
+                "caretColor": "#111827",
+                "border": "1px solid #9ca3af",
+                "fontSize": "14px",
+                "opacity": 1
+            }
+        ),
+        html.Button("Save", id="save-name", n_clicks=0)
+    ]
+
+def get_upload_graph() -> dcc.Upload:
+    return dcc.Upload(
+        id="upload-graph",
+        children=html.Button(
+            "Upload",
+            id="upload-graph-button",
+            n_clicks=0
+        ),
+        multiple=False,
+        style={"display": "inline-block"}
+    )

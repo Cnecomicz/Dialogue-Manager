@@ -4,6 +4,7 @@ from dash import Dash, Input, Output, State, ctx, dcc, html, no_update
 from dash.exceptions import PreventUpdate
 from dash_cytoscape import Cytoscape, load_extra_layouts
 from os import PathLike
+from re import sub
 from webbrowser import open as open_url
 from yaml import YAMLError, safe_load
 
@@ -14,7 +15,9 @@ from dash_app.layout import (
     get_delete_section,
     get_edit_section, 
     get_header,
-    get_log
+    get_log,
+    get_name_section,
+    get_upload_graph
 )
 from dialogue_editor.graph_editor import GraphEditor
 from dialogue_model.codecs import (
@@ -36,6 +39,10 @@ class App(Dash):
             [
                 html.Div(
                     get_log()
+                    + [html.Hr()]
+                    + get_name_section(
+                        self.normalize_name(self.graph_editor.graph.name)
+                    )
                     + [html.Hr()]
                     + get_edit_section() 
                     + [html.Hr()] 
@@ -82,7 +89,10 @@ class App(Dash):
                     }
                 ),
                 dcc.Store(id="unsaved-changes", data=False),
-                dcc.Store(id="current-document", data="Untitled"),
+                dcc.Store(
+                    id="current-document", 
+                    data=self.normalize_name(self.graph_editor.graph.name)
+                ),
                 dcc.Store(id="pending-action", data=""),
                 dcc.Store(id="pending-upload", data={}),
                 dcc.Download(id="download-yaml"),
@@ -180,6 +190,13 @@ class App(Dash):
         cytoscape_adapter = CytoscapeAdapter(self.graph_editor.graph)
         return cytoscape_adapter.nodes + cytoscape_adapter.edges
 
+    def get_filename(self, name: str | None) -> str:
+        normalized = self.normalize_name(name)
+        slug = sub(r"[^a-z0-9]+", "_", normalized.lower()).strip("_")
+        if not slug:
+            slug = "untitled"
+        return f"{slug}_dialogue_graph.yaml"
+
     def get_node_effects(self, node_id: str) -> str:
         if node_id in self.graph_editor.graph.vertex_dict:
             effects = self.graph_editor.graph.vertex_dict[node_id].effects
@@ -208,6 +225,10 @@ class App(Dash):
         if node_id in self.graph_editor.graph.edge_dict:
             return self.graph_editor.graph.edge_dict[node_id].text
         return ""
+
+    def normalize_name(self, name: str | None) -> str:
+        normalized = (name or "").strip()
+        return normalized if normalized else "Untitled"
 
     def parse_effects(
         self, effects_text: str | None
@@ -364,6 +385,7 @@ class App(Dash):
             Output("pending-action", "data"),
             Output("pending-upload", "data"),
             Output("download-yaml", "data"),
+            Input("save-name", "n_clicks"),
             Input("save-text", "n_clicks"),
             Input("add-vertex", "n_clicks"),
             Input("add-edge", "n_clicks"),
@@ -389,6 +411,7 @@ class App(Dash):
             State("new-edge-effects", "value"),
             State("delete-cascade", "value"),
             State("action-status", "value"),
+            State("document-name", "value"),
             State("upload-graph", "filename"),
             State("unsaved-changes", "data"),
             State("current-document", "data"),
@@ -397,6 +420,7 @@ class App(Dash):
             prevent_initial_call=True
         )
         def handle_graph_updates(
+            save_name_clicks: int,
             save_clicks: int,
             add_vertex_clicks: int,
             add_edge_clicks: int,
@@ -422,6 +446,7 @@ class App(Dash):
             new_edge_effects_text: str | None,
             delete_cascade: list[str] | None,
             current_log: str | None,
+            document_name: str | None,
             upload_filename: str | None,
             unsaved_changes: bool,
             current_document: str | None,
@@ -470,17 +495,32 @@ class App(Dash):
             triggered_prop_id = (
                 ctx.triggered[0]["prop_id"] if ctx.triggered else ""
             )
+            if triggered_id == "save-name":
+                normalized = self.normalize_name(document_name)
+                self.graph_editor.edit_name(normalized)
+                return (
+                    no_update,
+                    self.append_action_status(
+                        current_log, f"Saved NPC name as {normalized}."
+                    ),
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    no_update,
+                    True,
+                    normalized,
+                    False,
+                    no_update,
+                    "",
+                    {},
+                    no_update
+                )
             if triggered_id == "download-graph":
-                download_name = (current_document or "").strip()
-                if not download_name or download_name == "Untitled":
-                    download_name = (
-                        f"{self.graph_editor.graph.name}_dialogue_graph.yaml"
-                    )
-                elif not (
-                    download_name.endswith(".yaml") 
-                    or download_name.endswith(".yml")
-                ):
-                    download_name = f"{download_name}.yaml"
+                download_name = self.get_filename(current_document)
                 return (
                     no_update,
                     self.append_action_status(
@@ -540,7 +580,7 @@ class App(Dash):
                     False,
                     [],
                     False,
-                    "Untitled",
+                    self.normalize_name(self.graph_editor.graph.name),
                     False,
                     no_update,
                     "",
@@ -596,11 +636,12 @@ class App(Dash):
                         no_update
                     )
                 self.graph_editor.load(yaml_data=parsed_yaml)
-                loaded_filename = upload_filename or "Untitled"
+                loaded_name = self.normalize_name(self.graph_editor.graph.name)
                 return (
                     self.get_elements(),
                     self.append_action_status(
-                        current_log, f"Uploaded {loaded_filename}."
+                        current_log, 
+                        f"Uploaded {upload_filename or loaded_name}."
                     ),
                     no_update,
                     no_update,
@@ -611,7 +652,7 @@ class App(Dash):
                     False,
                     [],
                     False,
-                    loaded_filename,
+                    loaded_name,
                     False,
                     no_update,
                     "",
@@ -636,7 +677,7 @@ class App(Dash):
                         False,
                         [],
                         False,
-                        "Untitled",
+                        self.normalize_name(self.graph_editor.graph.name),
                         False,
                         no_update,
                         "",
@@ -697,6 +738,9 @@ class App(Dash):
                             no_update
                         )
                     self.graph_editor.load(yaml_data=parsed_yaml)
+                    loaded_name = self.normalize_name(
+                        self.graph_editor.graph.name
+                    )
                     return (
                         self.get_elements(),
                         self.append_action_status(
@@ -713,7 +757,7 @@ class App(Dash):
                         False,
                         [],
                         False,
-                        queued_filename,
+                        loaded_name,
                         False,
                         no_update,
                         "",
@@ -1096,19 +1140,26 @@ class App(Dash):
             current_document: str | None,
             unsaved_changes: bool
         ) -> str:
-            document_name = current_document or "Untitled"
+            document_name = self.get_filename(current_document)
             dirty_marker = " *" if unsaved_changes else ""
             return f"Document: {document_name}{dirty_marker}"
 
         @self.callback(
-            Output("upload-graph", "contents"),
+            Output("upload-graph-container", "children"),
             Input("action-status", "value"),
             prevent_initial_call=True
         )
         def reset_upload_contents_after_actions(
-            _action_log: str | None
-        ) -> None:
-            return None
+            action_log: str | None
+        ) -> dcc.Upload:
+            return get_upload_graph()
+
+        @self.callback(
+            Output("document-name", "value"),
+            Input("current-document", "data")
+        )
+        def sync_document_name(current_document: str | None) -> str:
+            return self.normalize_name(current_document)
 
     def remove_node(self, node_id: str, cascade_delete: bool = False) -> bool:
         if node_id in self.graph_editor.graph.vertex_dict:
