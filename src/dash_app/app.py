@@ -15,6 +15,7 @@ from dash_app.layout import (
     get_delete_section,
     get_edit_section, 
     get_header,
+    get_index_string,
     get_log,
     get_name_section,
     get_upload_graph
@@ -31,6 +32,7 @@ from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 class App(Dash):
     def __init__(self, yaml_file: str | PathLike | None = None) -> None:
         super().__init__()
+        self.index_string = get_index_string()
         self.graph_editor = GraphEditor()
         if yaml_file is not None:
             self.graph_editor.load(yaml_file=yaml_file)
@@ -54,7 +56,9 @@ class App(Dash):
                     style={
                         "width": "320px",
                         "flexShrink": 0,
+                        "boxSizing": "border-box",
                         "padding": "12px",
+                        "paddingBottom": "24px",
                         "backgroundColor": "#1f252b",
                         "color": "#e6e6e6",
                         "borderRight": "1px solid #444",
@@ -641,7 +645,7 @@ class App(Dash):
                     self.get_elements(),
                     self.append_action_status(
                         current_log, 
-                        f"Uploaded {upload_filename or loaded_name}."
+                        f"Opened {upload_filename or loaded_name}."
                     ),
                     no_update,
                     no_update,
@@ -695,7 +699,7 @@ class App(Dash):
                             no_update,
                             self.append_action_status(
                                 current_log, 
-                                "Uploaded failed: no pending upload data."
+                                "Open failed: no pending upload data."
                             ),
                             no_update,
                             no_update,
@@ -745,7 +749,7 @@ class App(Dash):
                         self.get_elements(),
                         self.append_action_status(
                             current_log,
-                            "Discarded changes and uploaded "
+                            "Discarded changes and opened "
                             f"{queued_filename}."
                         ),
                         no_update,

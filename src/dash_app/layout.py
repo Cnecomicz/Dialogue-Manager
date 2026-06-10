@@ -32,9 +32,8 @@ def get_add_edge_section() -> list:
                 "opacity": 1
             }
         ),
-        dcc.Input(
+        dcc.Textarea(
             id="new-edge-text",
-            type="text",
             placeholder="Player dialogue",
             style={
                 "width": "100%",
@@ -68,6 +67,7 @@ def get_add_edge_section() -> list:
                 "width": "100%",
                 "height": "70px",
                 "marginTop": "12px",
+                "marginBottom": "12px",
                 "fontSize": "14px",
                 "backgroundColor": "#ffffff",
                 "color": "#111827",
@@ -81,9 +81,8 @@ def get_add_edge_section() -> list:
 def get_add_vertex_section() -> list:
     return [
         html.H3("Add NPC node"),
-        dcc.Input(
+        dcc.Textarea(
             id="new-vertex-text",
-            type="text",
             placeholder="NPC dialogue",
             style={
                 "width": "100%",
@@ -102,6 +101,7 @@ def get_add_vertex_section() -> list:
                 "width": "100%",
                 "height": "70px",
                 "marginTop": "12px",
+                "marginBottom": "12px",
                 "fontSize": "14px",
                 "backgroundColor": "#ffffff",
                 "color": "#111827",
@@ -168,6 +168,13 @@ def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
                 "border-width": 4,
                 "background-color": "#7f1d1d"
             }
+        },
+        {
+            "selector": "[?has_missing_endpoint]:selected",
+            "style": {
+                "border-color": "#fbbf24",
+                "border-width": 6
+            }
         }
     ]
 
@@ -182,8 +189,11 @@ def get_delete_section() -> list:
             id="delete-cascade",
             options=[{"label": "Cascade delete", "value": "cascade"}],
             value=[],
+            labelStyle={"color": "#e5e7eb"},
             style={
-                "marginTop": "12px"
+                "marginTop": "12px",
+                "marginBottom": "12px",
+                "color": "#e5e7eb"
             }
         ),
         html.Button("Delete", id="delete-node", n_clicks=0),
@@ -200,9 +210,8 @@ def get_edit_section() -> list:
             "Selected node: None",
             id="selected-node-display"
         ),
-        dcc.Input(
+        dcc.Textarea(
             id="edit-text",
-            type="text",
             placeholder="Edit dialogue",
             style={
                 "width": "100%",
@@ -264,6 +273,7 @@ def get_edit_section() -> list:
             style={
                 "width": "100%",
                 "marginTop": "12px",
+                "marginBottom": "12px",
                 "backgroundColor": "#ffffff",
                 "color": "#111827",
                 "caretColor": "#111827",
@@ -283,15 +293,15 @@ def get_header() -> html.Div:
                 id="new-graph",
                 n_clicks=0
             ),
-            html.Button(
-                "Download",
-                id="download-graph",
-                n_clicks=0
-            ),
             html.Div(
                 get_upload_graph(),
                 id="upload-graph-container",
                 style={"display": "inline-block"}
+            ),
+            html.Button(
+                "Save",
+                id="download-graph",
+                n_clicks=0
             ),
             html.Div(
                 "Document: Untitled",
@@ -315,6 +325,37 @@ def get_header() -> html.Div:
             "flexShrink": 0
         }
     )
+
+def get_index_string() -> str:
+    return """
+        <!DOCTYPE html>
+        <html>
+            <head>
+                {%metas%}
+                <title>{%title%}</title>
+                {%favicon%}
+                {%css%}
+                <style>
+                    html, body, #react-entry-point {
+                        margin: 0;
+                        padding: 0;
+                        width: 100%;
+                        height: 100%;
+                        overflow: hidden;
+                        background-color: #1f252b;
+                    }
+                </style>
+            </head>
+            <body>
+                {%app_entry%}
+                <footer>
+                    {%config%}
+                    {%scripts%}
+                    {%renderer%}
+                </footer>
+            </body>
+        </html>
+    """
 
 def get_log() -> list:
     return [
@@ -353,6 +394,7 @@ def get_name_section(initial_value: str = "Untitled") -> list:
             placeholder="NPC name",
             style={
                 "width": "100%",
+                "marginBottom": "12px",
                 "backgroundColor": "#ffffff",
                 "color": "#111827",
                 "caretColor": "#111827",
@@ -368,7 +410,7 @@ def get_upload_graph() -> dcc.Upload:
     return dcc.Upload(
         id="upload-graph",
         children=html.Button(
-            "Upload",
+            "Open",
             id="upload-graph-button",
             n_clicks=0
         ),
