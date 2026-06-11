@@ -30,7 +30,14 @@ from dialogue_model.codecs import (
 from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 
 class App(Dash):
+    """Dash application wrapper for dialogue graph editing."""
+
     def __init__(self, yaml_file: str | PathLike | None = None) -> None:
+        """Initialize the app layout, state stores, and callbacks.
+
+        Args:
+            yaml_file (str | PathLike | None): Optional yaml file to preload.
+        """
         super().__init__()
         self.index_string = get_index_string()
         self.graph_editor = GraphEditor()
@@ -122,6 +129,18 @@ class App(Dash):
         predicates: list[dict[str, str | int]] | None = None,
         effects: list[dict[str, str | int]] | None = None
     ) -> str:
+        """Add an edge through the graph editor and return its identifier.
+
+        Args:
+            from_vertex (str): Source vertex id.
+            to_vertex (str | None): Target vertex id.
+            text (str | None): Edge dialogue text.
+            predicates (list[dict[str, str | int]] | None): Edge predicates.
+            effects (list[dict[str, str | int]] | None): Edge effects.
+
+        Returns:
+            str: Newly created edge identifier.
+        """
         self.graph_editor.add_edge(
             from_vertex, to_vertex, text, predicates, effects
         )
@@ -132,17 +151,43 @@ class App(Dash):
         text: str | None, 
         effects: list[dict[str, str | int]] | None = None
     ) -> str:
+        """Add a vertex through the graph editor and return its identifier.
+
+        Args:
+            text (str | None): Vertex dialogue text.
+            effects (list[dict[str, str | int]] | None): Vertex effects.
+
+        Returns:
+            str: Newly created vertex identifier.
+        """
         self.graph_editor.add_vertex(text, effects)
         return f"vertex_{self.graph_editor.next_vertex_index-1}"
 
     def append_action_status(
         self, current_log: str | None, new_message: str
     ) -> str:
+        """Append a message to the action log text.
+
+        Args:
+            current_log (str | None): Existing log text.
+            new_message (str): Message to append.
+
+        Returns:
+            str: Updated multiline log text.
+        """
         if not current_log:
             return new_message
         return f"{current_log}\n{new_message}"
 
     def count_unresolved_connections(self, vertex_name: str) -> int:
+        """Count edges referencing a vertex that is about to be removed.
+
+        Args:
+            vertex_name (str): Vertex identifier.
+
+        Returns:
+            int: Number of connected edge endpoints.
+        """
         unresolved_count = 0
         for edge in self.graph_editor.graph.edge_dict.values():
             unresolved_count += int(edge.from_vertex == vertex_name)
@@ -154,6 +199,16 @@ class App(Dash):
         selected_nodes: list[dict] | None, 
         current_delete_cascade: list[str] | None
     ) -> tuple[str, list[dict[str, str | bool]], list[str]]:
+        """Build current delete-panel text and cascade control state.
+
+        Args:
+            selected_nodes (list[dict] | None): Selected Cytoscape nodes.
+            current_delete_cascade (list[str] | None): Current checklist value.
+
+        Returns:
+            tuple[str, list[dict[str, str | bool]], list[str]]: Display text,
+            checklist options, and checklist value.
+        """
         if not selected_nodes:
             return (
                 "Selected node: None",
@@ -179,6 +234,14 @@ class App(Dash):
         return f"Selected node: {node_id}", options, value
 
     def get_edge_endpoints_for_edit(self, node_id: str) -> tuple[str, str]:
+        """Get edge endpoint values for edit controls.
+
+        Args:
+            node_id (str): Selected node identifier.
+
+        Returns:
+            tuple[str, str]: "from" and "to" endpoint values.
+        """
         if node_id not in self.graph_editor.graph.edge_dict:
             return "", ""
         edge = self.graph_editor.graph.edge_dict[node_id]
@@ -191,10 +254,23 @@ class App(Dash):
         return from_vertex, to_vertex
 
     def get_elements(self) -> list[dict[str, dict[str, str]]]:
+        """Build Cytoscape elements for the current graph state.
+
+        Returns:
+            list[dict[str, dict[str, str]]]: Node and edge element mappings.
+        """
         cytoscape_adapter = CytoscapeAdapter(self.graph_editor.graph)
         return cytoscape_adapter.nodes + cytoscape_adapter.edges
 
     def get_filename(self, name: str | None) -> str:
+        """Build a normalized yaml filename from a graph name.
+
+        Args:
+            name (str | None): NPC name.
+
+        Returns:
+            str: Slugified "*_dialogue_graph.yaml" filename.
+        """
         normalized = self.normalize_name(name)
         slug = sub(r"[^a-z0-9]+", "_", normalized.lower()).strip("_")
         if not slug:
@@ -202,6 +278,14 @@ class App(Dash):
         return f"{slug}_dialogue_graph.yaml"
 
     def get_node_effects(self, node_id: str) -> str:
+        """Return serialized effects text for a node.
+
+        Args:
+            node_id (str): Vertex or edge identifier.
+
+        Returns:
+            str: Newline-separated effects text.
+        """
         if node_id in self.graph_editor.graph.vertex_dict:
             effects = self.graph_editor.graph.vertex_dict[node_id].effects
             return "\n".join(
@@ -215,6 +299,14 @@ class App(Dash):
         return ""
 
     def get_node_predicates(self, node_id: str) -> str:
+        """Return serialized predicates text for an edge node.
+
+        Args:
+            node_id (str): Edge identifier.
+
+        Returns:
+            str: Newline-separated predicates text.
+        """
         if node_id in self.graph_editor.graph.edge_dict:
             predicates = self.graph_editor.graph.edge_dict[node_id].predicates
             return "\n".join(
@@ -224,6 +316,14 @@ class App(Dash):
         return ""
 
     def get_node_text(self, node_id: str) -> str:
+        """Return dialogue text associated with a node id.
+
+        Args:
+            node_id (str): Vertex or edge identifier.
+
+        Returns:
+            str: Node dialogue text, or an empty string if missing.
+        """
         if node_id in self.graph_editor.graph.vertex_dict:
             return self.graph_editor.graph.vertex_dict[node_id].text
         if node_id in self.graph_editor.graph.edge_dict:
@@ -231,12 +331,34 @@ class App(Dash):
         return ""
 
     def normalize_name(self, name: str | None) -> str:
+        """Normalize an NPC name to a non-empty display value.
+
+        Args:
+            name (str | None): NPC name.
+
+        Returns:
+            str: Stripped name, or "Untitled" when empty.
+        """
         normalized = (name or "").strip()
         return normalized if normalized else "Untitled"
 
     def parse_effects(
         self, effects_text: str | None
     ) -> list[dict[str, str | int]]:
+        """Parse multiline effect text into effect mappings.
+
+        Args:
+            effects_text (str | None): One effect per line.
+
+        Returns: list[dict[str, str | int]]: Parsed effect mappings.
+
+        Raises:
+            ValueError: If any nonempty line has invalid syntax.
+
+        Examples:
+            Multiple lines such as "player.gold = player.gold+1" and
+            "player.inventory.append(key)" are supported.
+        """
         if not effects_text:
             return []
         effects = []
@@ -255,6 +377,21 @@ class App(Dash):
     def parse_predicates(
         self, predicates_text: str | None
     ) -> list[dict[str, str | int]]:
+        """Parse multiline predicate text into predicate mappings.
+
+        Args:
+            predicates_text (str | None): One predicate per line.
+
+        Returns:
+            list[dict[str, str | int]]: Parsed predicate mappings.
+
+        Raises:
+            ValueError: If any nonempty line has invalid syntax.
+
+        Examples:
+            Lines such as "player.level >= 2" and "key in player.inventory"
+            are supported.
+        """
         if not predicates_text:
             return []
         predicates = []
@@ -273,6 +410,18 @@ class App(Dash):
         return predicates
 
     def parse_uploaded_yaml(self, upload_contents: str | None) -> dict:
+        """Decode and validate uploaded base64 yaml content.
+
+        Args:
+            upload_contents (str | None): Dash upload "contents" payload.
+
+        Returns:
+            dict: Parsed yaml mapping.
+
+        Raises:
+            ValueError: If payload encoding, text decoding, or yaml parsing
+                fails, or yaml root is not a dictionary.
+        """
         if not upload_contents or "," not in upload_contents:
             raise ValueError("Upload failed: missing file contents.")
         _, encoded_content = upload_contents.split(",", 1)
@@ -293,6 +442,7 @@ class App(Dash):
         return parsed_yaml
 
     def register_callbacks(self) -> None:
+        """Register all Dash callbacks for graph editing actions."""
         self.clientside_callback(
             """
             function(actionLog) {
@@ -1166,6 +1316,15 @@ class App(Dash):
             return self.normalize_name(current_document)
 
     def remove_node(self, node_id: str, cascade_delete: bool = False) -> bool:
+        """Remove a vertex or edge by node id.
+
+        Args:
+            node_id (str): Vertex or edge identifier.
+            cascade_delete (bool): Whether to cascade when removing a vertex.
+
+        Returns:
+            bool: "True" when a node was removed, otherwise "False".
+        """
         if node_id in self.graph_editor.graph.vertex_dict:
             self.graph_editor.remove_vertex(node_id, cascade_delete)
             return True
@@ -1180,6 +1339,16 @@ class App(Dash):
         new_from_vertex: str | None, 
         new_to_vertex: str | None
     ) -> tuple[bool, list[str]]:
+        """Validate and update edge enpoint fields from edit input.
+
+        Args:
+            node_id (str): Edge identifier.
+            new_from_vertex (str | None): Candidate source vertex id.
+            new_to_vertex (str | None): Candidate target vertex id.
+
+        Returns:
+            tuple[bool, list[str]]: Update flag and validation warnings.
+        """
         if node_id not in self.graph_editor.graph.edge_dict:
             return False, []
         edge = self.graph_editor.graph.edge_dict[node_id]
@@ -1222,8 +1391,19 @@ class App(Dash):
         node_id: str, 
         new_text: str, 
         new_predicates: list[dict[str, str | int]] | None,
-        new_effects: list[dict[str, str | int]]
+        new_effects: list[dict[str, str | int]] | None
     ) -> bool:
+        """Update node text, predicates, and effects when changed.
+
+        Args:
+            node_id (str): Vertex or edge identifier.
+            new_text (str): New dialogue text.
+            new_predicates (list[dict[str, str | int]] | None): Predicates.
+            new_effects (list[dict[str, str | int]] | None): Effects.
+
+        Returns:
+            bool: "True" when at least one field changed.
+        """
         was_updated = False
         if node_id in self.graph_editor.graph.vertex_dict:
             vertex = self.graph_editor.graph.vertex_dict[node_id]
@@ -1247,9 +1427,7 @@ class App(Dash):
         return was_updated
 
 def main():
+    """Launch the local Dash dialogue editor application."""
     open_url("http://localhost:8050")
     app = App()
-    app.run(debug=True, use_reloader=False)
-
-if __name__ == "__main__":
-    main()
+    app.run()

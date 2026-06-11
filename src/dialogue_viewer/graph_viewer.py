@@ -1,16 +1,31 @@
 from graphviz import Digraph
+from os import PathLike
 
-from dialogue_model.graph import Graph
+from dialogue_editor.graph_editor import GraphEditor
 from dialogue_model.codecs import (
     convert_effect_to_text, convert_predicate_to_text
 )
 
-# Deprecating after completing Dash Cytoscape
 class GraphViewer:
-    def __init__(self, graph: Graph) -> None:
-        self.graph = graph
+    """Render dialogue graph yaml files into Graphviz SVG output."""
+
+    def __init__(self, yaml_file: str | PathLike) -> None:
+        """Initialize a viewer for a specific yaml graph file.
+
+        Args:
+            yaml_file (str | PathLike): Path to a .yaml or .yml file.
+        """
+        self.yaml_file = yaml_file
 
     def get_effects_text(self, effects: list[dict[str, str | int]]) -> str:
+        """Format effect mappings as Graphviz label text.
+
+        Args:
+            effects (list[dict[str, str | int]]): Effect mappings.
+
+        Returns:
+            str: Escaped multiline effects block, or an empty string.
+        """
         if effects:
             effects_text = r"EFFECTS:\n"
             for effect in effects:
@@ -19,7 +34,17 @@ class GraphViewer:
             effects_text = ""
         return effects_text
 
-    def get_predicates_text(self, predicates: list[dict[str, str | int]]) -> str:
+    def get_predicates_text(
+        self, predicates: list[dict[str, str | int]]
+    ) -> str:
+        """Format predicate mappings as Graphviz label text.
+
+        Args:
+            predicates (list[dict[str, str | int]]): Predicate mappings.
+
+        Returns:
+            str: Escaped multiline predicates block, or an empty string.
+        """
         if predicates:
             predicates_text = r"PREDICATES:\n"
             for predicate in predicates:
@@ -29,8 +54,14 @@ class GraphViewer:
         return predicates_text
 
 
-    def render(self) -> None:
-        dot = Digraph(comment=self.graph.name)
+    def render(self) -> bool:
+        """Render the yaml graph to an SVG file beside the source file.
+
+        Returns:
+            bool: "True" when rendering succeeds.
+        """
+        graph_editor = GraphEditor(self.yaml_file)
+        dot = Digraph(comment=graph_editor.graph.name)
         dot.attr(
             bgcolor="#303841",
             rankdir="TB",
@@ -53,7 +84,7 @@ class GraphViewer:
             fontcolor="#e6e6e6",
             fontname="Helvetica",
         )
-        for vertex_name, vertex in self.graph.vertex_dict.items():
+        for vertex_name, vertex in graph_editor.graph.vertex_dict.items():
             effects_text = self.get_effects_text(vertex.effects)
             dialogue_text = fr"TEXT:\n{vertex.text}"
             if effects_text:
@@ -68,7 +99,7 @@ class GraphViewer:
                 fillcolor="#a36a2a",
                 color="#aaaaaa"
             )
-        for edge_name, edge in self.graph.edge_dict.items():
+        for edge_name, edge in graph_editor.graph.edge_dict.items():
             dialogue_text = fr"TEXT:\n{edge.text}\n"
             predicates_text = self.get_predicates_text(edge.predicates)
             effects_text = self.get_effects_text(edge.effects)
@@ -92,4 +123,21 @@ class GraphViewer:
                 edge_name,
                 edge.to_vertex
             )
-        dot.render(f"data/{self.graph.name}_dialogue_graph", format="svg", cleanup=True)
+        if self.yaml_file.endswith(".yaml"):
+            render_file = self.yaml_file[:-5]
+        elif self.yaml_file.endswith(".yml"):
+            render_file = self.yaml_file[:-4]
+        else:
+            return False
+        dot.render(render_file, format="svg", cleanup=True)
+        return True
+
+def main() -> None:
+    """Run a CLI prompt and render one yaml dialogue graph."""
+    yaml_file = input("Enter file path (copy with Option-Command-C): ")
+    graph_viewer = GraphViewer(yaml_file)
+    result = graph_viewer.render()
+    if not result:
+        print("Render failed.")
+    if result:
+        print("Render successful.")

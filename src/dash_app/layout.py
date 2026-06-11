@@ -1,6 +1,11 @@
 from dash import dcc, html
 
 def get_add_edge_section() -> list:
+    """Build the sidebar controls for adding a player edge.
+
+    Returns:
+        list: Dash components for edge creation controls.
+    """
     return [
         html.H3("Add player node"),
         dcc.Input(
@@ -79,6 +84,11 @@ def get_add_edge_section() -> list:
     ]
 
 def get_add_vertex_section() -> list:
+    """Build the sidebar controls for adding an NPC vertex.
+
+    Returns:
+        list: Dash components for vertex creation controls.
+    """
     return [
         html.H3("Add NPC node"),
         dcc.Textarea(
@@ -113,6 +123,11 @@ def get_add_vertex_section() -> list:
     ]
 
 def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
+    """Return the Cytoscape stylesheet for graph rendering.
+
+    Returns:
+        list[dict[str, str | dict[str, str | int]]]: Cytoscape style rules.
+    """
     return [
         {
             "selector": "node",
@@ -179,6 +194,11 @@ def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
     ]
 
 def get_delete_section() -> list:
+    """Build the sidebar controls for deleting a selected node.
+
+    Returns:
+        list: Dash components for delete controls.
+    """
     return [
         html.H3("Delete selected node"),
         html.Div(
@@ -204,6 +224,11 @@ def get_delete_section() -> list:
     ]
 
 def get_edit_section() -> list:
+    """Build the sidebar controls for editing a selected node.
+
+    Returns:
+        list: Dash components for edit controls.
+    """
     return [
         html.H3("Edit selected node"),
         html.Div(
@@ -286,6 +311,11 @@ def get_edit_section() -> list:
     ]
 
 def get_header() -> html.Div:
+    """Build the top toolbar for graph-level actions.
+
+    Returns:
+        html.Div: Header component with new/open/save controls.
+    """
     return html.Div(
         [
             html.Button(
@@ -327,6 +357,11 @@ def get_header() -> html.Div:
     )
 
 def get_index_string() -> str:
+    """Return the custom Dash HTML template.
+
+    Returns:
+        str: Full HTML template string used by Dash.
+    """
     return """
         <!DOCTYPE html>
         <html>
@@ -358,6 +393,11 @@ def get_index_string() -> str:
     """
 
 def get_log() -> list:
+    """Build the sidebar log section.
+
+    Returns:
+        list: Dash components that display action logs.
+    """
     return [
         html.H3("Log"),
         dcc.Textarea(
@@ -385,6 +425,14 @@ def get_log() -> list:
     ]
 
 def get_name_section(initial_value: str = "Untitled") -> list:
+    """Build the sidebar controls for editing NPC name.
+
+    Args:
+        initial_value (str): Initial text for the name input.
+
+    Returns:
+        list: Dash components for name editing controls.
+    """
     return [
         html.H3("NPC name"),
         dcc.Input(
@@ -407,6 +455,11 @@ def get_name_section(initial_value: str = "Untitled") -> list:
     ]
 
 def get_upload_graph() -> dcc.Upload:
+    """Build the upload control used to load graph yaml files.
+
+    Returns:
+        dcc.Upload: Dash upload component for yaml files.
+    """
     return dcc.Upload(
         id="upload-graph",
         children=html.Button(

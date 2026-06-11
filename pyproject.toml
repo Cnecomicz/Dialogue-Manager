@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dialogue"
-version = "0.1"
+version = "0.9"
 authors = [
   {name="Eric", email="eric@locallyringed.space"}
 ]
@@ -34,11 +34,12 @@ dev = [
 src-layout = true
 
 [project.urls]
-# Homepage = "TODO"
-# Issues = "TODO"
+Homepage = "https://github.com/Cnecomicz/dialogue"
+Issues = "https://github.com/Cnecomicz/dialogue/issues"
 
 [project.scripts]
-# TODO
+dialogue-editor = "dash_app.app:main"
+render = "dialogue_viewer.graph_viewer:main"
 
 [tool.hatch.build.targets.wheel]
 packages = [

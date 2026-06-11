@@ -4,11 +4,23 @@ from dialogue_model.codecs import (
 from dialogue_model.graph import Graph
 
 class CytoscapeAdapter:
+    """Adapt a graph model to Dash Cytoscape nodes and edges."""
+
     def __init__(self, graph: Graph) -> None:
+        """Initialize the adapter with a dialogue graph.
+
+        Args:
+            graph (Graph): Source dialogue graph.
+        """
         self.graph = graph
 
     @property
     def edges(self) -> list[dict[str, dict[str, str]]]:
+        """Build Cytoscape edge elements from graph connectivity.
+
+        Returns:
+            list[dict[str, dict[str, str]]]: Cytoscape edge elements.
+        """
         edges = []
         for edge_name, edge in self.graph.edge_dict.items():
             if (
@@ -31,6 +43,11 @@ class CytoscapeAdapter:
 
     @property
     def nodes(self) -> list[dict[str, dict[str, str]]]:
+        """Build Cytoscape node elements for vertices and edges.
+
+        Returns:
+            list[dict[str, dict[str, str]]]: Cytoscape node elements.
+        """
         nodes = []
         # Nodes from vertices
         for vertex_name, vertex in self.graph.vertex_dict.items():
@@ -74,6 +91,14 @@ class CytoscapeAdapter:
         return nodes
 
     def get_effects_text(self, effects: list[dict[str, str | int]]) -> str:
+        """Render effects as a human-readable text block.
+
+        Args:
+            effects (list[dict[str, str | int]]): Effect mappings.
+
+        Returns:
+            str: Prefixed multiline effects text.
+        """
         if effects:
             effects_text = "EFFECTS:\n"
             for effect in effects:
@@ -85,6 +110,14 @@ class CytoscapeAdapter:
     def get_predicates_text(
         self, predicates: list[dict[str, str | int]]
     ) -> str:
+        """Render predicates as a human-readable text block.
+
+        Args:
+            predicates (list[dict[str, str | int]]): Predicate mappings.
+
+        Returns:
+            str: Prefixed multiline predicates text.
+        """
         if predicates:
             predicates_text = "PREDICATES:\n"
             for predicate in predicates:

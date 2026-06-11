@@ -7,7 +7,14 @@ from dialogue_model.graph import Graph
 from dialogue_model.vertex import Vertex
 
 class GraphEditor:
+    """Provide mutation and persistence helpers for a dialogue graph."""
+
     def __init__(self, yaml_file: str | PathLike | None = None) -> None:
+        """Initialize an editor and optionally load an existing graph.
+
+        Args:
+            yaml_file (str | PathLike | None): yaml file path to load.
+        """
         self.yaml_file = None
         self.graph = Graph()
         self.next_vertex_index = 0
@@ -16,9 +23,22 @@ class GraphEditor:
             self.load(yaml_file=yaml_file)
 
     def __repr__(self) -> str:
+        """Return a debug representation of this editor.
+
+        Returns:
+            str: String representation of this editor.
+        """
         return f'GraphEditor(yaml_file="{self.yaml_file}")'
 
     def __eq__(self, other: Any) -> bool:
+        """Compare this editor with another object for graph equality.
+
+        Args:
+            other (Any): Object to compare against.
+
+        Returns:
+            bool: "True" when both editors contain equivalent graphs.
+        """
         if not isinstance(other, GraphEditor):
             return NotImplemented
         return self.graph == other.graph
@@ -28,9 +48,18 @@ class GraphEditor:
         from_vertex: str, 
         to_vertex: str | None = None, 
         text: str | None = None, 
-        predicates: list[dict[str, str | int]] = None, 
-        effects: list[dict[str, str | int]] = None
+        predicates: list[dict[str, str | int]] | None = None, 
+        effects: list[dict[str, str | int]] | None = None
     ) -> None:
+        """Create and add a new edge to the graph.
+
+        Args:
+            from_vertex (str): Source vertex identifier.
+            to_vertex (str | None): Target vertex identifier.
+            text (str | None): Edge dialogue text.
+            predicates (list[dict[str, str | int]] | None): Edge predicates.
+            effects (list[dict[str, str | int]] | None): Edge effects.
+        """
         if to_vertex is None:
             self.add_vertex()
             to_vertex = f"vertex_{self.next_vertex_index-1}"
@@ -55,6 +84,12 @@ class GraphEditor:
     def add_effect(
         self, vertex_or_edge_name: str, effect: dict[str, str | int]
     ) -> None:
+        """Append an effect to a vertex or edge.
+
+        Args:
+            vertex_or_edge_name (str): Vertex or edge identifier.
+            effect (dict[str, str | int]): Effect mapping to append.
+        """
         if vertex_or_edge_name in self.graph.vertex_dict:
             self.graph.vertex_dict[vertex_or_edge_name].effects.append(effect)
         elif vertex_or_edge_name in self.graph.edge_dict:
@@ -63,13 +98,25 @@ class GraphEditor:
     def add_predicate(
         self, edge_name: str, predicate: dict[str, str | int]
     ) -> None:
+        """Append a predicate to an edge.
+
+        Args:
+            edge_name (str): Edge identifier.
+            predicate (dict[str, str | int]]): Predicate mapping to append.
+        """
         self.graph.edge_dict[edge_name].predicates.append(predicate)
 
     def add_vertex(
         self, 
         text: str | None = None, 
-        effects: list[dict[str, str | int]] = None
+        effects: list[dict[str, str | int]] | None = None
     ) -> None:
+        """Create an add a new vertex to the graph.
+
+        Args:
+            text (str | None): Vertex dialogue text.
+            effects (list[dict[str, str | int]] | None): Vertex effects.
+        """
         if text is None:
             text = ""
         if effects is None:
@@ -83,34 +130,86 @@ class GraphEditor:
     def edit_edge_effects(
         self, edge_name: str, effects: list[dict[str, str | int]]
     ) -> None:
+        """Replace effects for an edge.
+
+        Args:
+            edge_name (str): Edge identifier.
+            effects (list[dict[str, str | int]]): New effects list.
+        """
         self.graph.edge_dict[edge_name].effects = effects
 
     def edit_edge_predicates(
         self, edge_name: str, predicates: list[dict[str, str | int]]
     ) -> None:
+        """Replace predicates for an edge.
+
+        Args:
+            edge_name (str): Edge identifier.
+            predicates (list[dict[str, str | int]]): New predicates list.
+        """
         self.graph.edge_dict[edge_name].predicates = predicates
 
     def edit_edge_text(self, edge_name: str, text: str) -> None:
+        """Replace the dialogue text for an edge.
+
+        Args:
+            edge_name (str): Edge identifier.
+            text (str): New dialogue text.
+        """
         self.graph.edge_dict[edge_name].text = text
 
     def edit_from_vertex(self, edge_name: str, from_vertex: str) -> None:
+        """Replace the source vertex of an edge.
+
+        Args:
+            edge_name (str): Edge identifier.
+            from_vertex (str): New source vertex identifier.
+        """
         self.graph.edge_dict[edge_name].from_vertex = from_vertex
 
     def edit_name(self, name: str) -> None:
+        """Replace the NPC name.
+
+        Args:
+            name (str): New NPC name.
+        """
         self.graph.name = name
 
     def edit_to_vertex(self, edge_name: str, to_vertex: str) -> None:
+        """Replace the target vertex of an edge.
+
+        Args:
+            edge_name (str): Edge identifier.
+            to_vertex (str): New target vertex identifier.
+        """
         self.graph.edge_dict[edge_name].to_vertex = to_vertex
 
     def edit_vertex_effects(
         self, vertex_name: str, effects: list[dict[str, str | int]]
     ) -> None:
+        """Replace effects for a vertex.
+
+        Args:
+            vertex_name (str): Vertex identifier.
+            effects (list[dict[str, str | int]]): New effects list.
+        """
         self.graph.vertex_dict[vertex_name].effects = effects
 
     def edit_vertex_text(self, vertex_name: str, text: str) -> None:
+        """Replace the dialogue text for a vertex.
+
+        Args:
+            vertex_name (str): Vertex identifier.
+            text (str): New dialogue text.
+        """
         self.graph.vertex_dict[vertex_name].text = text
 
     def export_yaml_text(self) -> str:
+        """Serialize the current graph to yaml text.
+
+        Returns:
+            str: yaml document string for the current graph.
+        """
         yaml_data = {
             "name": self.graph.name,
             "vertices": {
@@ -134,6 +233,11 @@ class GraphEditor:
         return safe_dump(yaml_data, sort_keys=False)
 
     def get_next_edge_index(self) -> int:
+        """Compute the next available edge index.
+
+        Returns:
+            int: Next index to use for "edge_<index>" ids.
+        """
         if not self.graph.edge_dict:
             return 0
         indices = []
@@ -146,6 +250,11 @@ class GraphEditor:
         )
 
     def get_next_vertex_index(self) -> int:
+        """Compute the next available vertex index.
+
+        Returns:
+            int: Next index to use for "vertex_<index>" ids.
+        """
         if not self.graph.vertex_dict:
             return 0
         indices = []
@@ -162,17 +271,34 @@ class GraphEditor:
         yaml_file: str | PathLike | None = None, 
         yaml_data: dict | None = None
     ) -> None:
+        """Load graph data from file and/or parsed yaml mapping.
+
+        Args:
+            yaml_file (str | PathLike | None): yaml file path to load.
+            yaml_data (dict | None): Parsed yaml mapping.
+        """
         self.yaml_file = yaml_file
         self.graph = Graph(yaml_file=yaml_file, yaml_data=yaml_data)
         self.next_vertex_index = self.get_next_vertex_index()
         self.next_edge_index = self.get_next_edge_index()
 
     def remove_edge(self, edge_name: str) -> None:
+        """Remove an edge by identifier.
+
+        Args:
+            edge_name (str): Edge identifier.
+        """
         del self.graph.edge_dict[edge_name]
 
     def remove_effect(
         self, vertex_or_edge_name: str, effect: dict[str, str | int]
     ) -> None:
+        """Remove an effect from a vertex or edge.
+
+        Args:
+            vertex_or_edge_name (str): Vertex or edge identifier.
+            effect (dict[str, str | int]): Effect mapping to remove.
+        """
         if vertex_or_edge_name in self.graph.vertex_dict:
             self.graph.vertex_dict[vertex_or_edge_name].effects.remove(effect)
         elif vertex_or_edge_name in self.graph.edge_dict:
@@ -181,11 +307,23 @@ class GraphEditor:
     def remove_predicate(
         self, edge_name: str, predicate: dict[str, str | int]
     ) -> None:
+        """Remove a predicate from an edge.
+
+        Args:
+            edge_name (str): Edge identifier.
+            predicate (dict[str, str | int]): Predicate mapping to remove.
+        """
         self.graph.edge_dict[edge_name].predicates.remove(predicate)
 
     def remove_vertex(
         self, vertex_name: str, cascade_delete: bool = False
     ) -> None:
+        """Remove a vertex and optionally connected edges.
+
+        Args:
+            vertex_name (str): Vertex identifier.
+            cascade_delete (bool): Removed connected edges when "True".
+        """
         if cascade_delete:
             edges_to_remove = [
                 edge_name
@@ -203,6 +341,14 @@ class GraphEditor:
         del self.graph.vertex_dict[vertex_name]
 
     def save(self, yaml_file: str | PathLike | None = None) -> None:
+        """Persist the current graph to a yaml file.
+
+        Args:
+            yaml_file (str | PathLike | None): Destination file path.
+
+        Raises:
+            ValueError: If no desination path is available.
+        """
         if yaml_file is None:
             yaml_file = self.yaml_file
         if yaml_file is None:

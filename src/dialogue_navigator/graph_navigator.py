@@ -6,16 +6,31 @@ from dialogue_model.graph import Graph
 from dialogue_model.vertex import Vertex
 
 class InvalidEdgeError(Exception):
+    """Raised when a selected edge is not valid for the current state."""
+
     pass
 
 class GraphNavigator:
+    """Navigate a dialogue graph using predicates and effects."""
+
     def __init__(self, graph: Graph, game_state: "GameState") -> None:
+        """Initialize a navigator at the default starting vertex.
+
+        Args:
+            graph (Graph): Dialogue graph to navigate.
+            game_state (GameState): Mutable game state object.
+        """
         self.graph = graph
         self.game_state = game_state
         self.current_vertex = "vertex_0"
 
     @property
     def current_edges(self) -> dict[str, Edge]:
+        """Return currently selectable outgoing edges.
+
+        Returns:
+            dict[str, Edge]: Edge mapping available from the current vertex.
+        """
         current_edges = {}
         for edge_name, edge in self.graph.edge_dict.items():
             if (edge.from_vertex == self.current_vertex 
@@ -24,12 +39,25 @@ class GraphNavigator:
         return current_edges
 
     def enter_vertex(self, vertex_name: str) -> None:
+        """Enter a vertex and apply all vertex effects.
+
+        Args:
+            vertex_name (str): Vertex identifier to enter.
+        """
         vertex = self.graph.vertex_dict[vertex_name]
         for effect in vertex.effects:
             self.proc_effect(effect)
         self.current_vertex = vertex_name
 
     def evaluate_edge_predicates(self, edge_name: str) -> bool:
+        """Evaluate whether all predicates for an edge pass.
+
+        Args:
+            edge_name (str): Edge identifier to evaluate.
+
+        Returns:
+            bool: "True" when every predicate is satisified.
+        """
         edge = self.graph.edge_dict[edge_name]
         is_valid_edge = True
         for predicate in edge.predicates:
@@ -53,9 +81,19 @@ class GraphNavigator:
         return is_valid_edge
 
     def get_current_edges(self) -> list[str]:
+        """Return identifiers of currently selectable edges.
+
+        Returns:
+            list[str]: Edge identifiers from "self.current_edges".
+        """
         return list(self.current_edges.keys())
 
     def proc_effect(self, effect: dict[str, str | int]) -> None:
+        """Apply an effect to the game state.
+
+        Args: 
+            effect (dict[str, str | int]): Effect mapping to be processed.
+        """
         match effect["type"]:
             case "modify_value":
                 target_value = get_nested_attr(
@@ -77,6 +115,14 @@ class GraphNavigator:
                         target_list.remove(effect["value"])
 
     def select(self, edge_name: str) -> None:
+        """Select an edge, apply effects, and move to the target vertex.
+
+        Args:
+            edge_name (str): Edge identifier to select.
+
+        Raises:
+            InvalidEdgeError: If the edge is not currently selectable.
+        """
         if edge_name not in self.get_current_edges():
             raise InvalidEdgeError(
                 f"Cannot select {edge_name} at vertex "

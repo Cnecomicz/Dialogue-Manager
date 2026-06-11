@@ -7,11 +7,26 @@ from dialogue_model.edge import Edge
 from dialogue_model.vertex import Vertex
 
 class Graph:
+    """Represent a dialogue graph loaded from yaml data.
+
+    Attributes:
+        yaml_file (str | PathLike | None): Source yaml path when loaded.
+        name (str): NPC name.
+        vertex_dict (dict[str, Vertex]): Vertex mapping by id.
+        edge_dict (dict[str, Edge]): Edge mapping by id.
+    """
+
     def __init__(
         self, 
         yaml_file: str | PathLike | None = None, 
         yaml_data: dict | None = None
     ) -> None:
+        """Initialize a graph from file input or in-memory yaml mapping.
+
+        Args:
+            yaml_file (str | PathLike | None): Path to a yaml file.
+            yaml_data (dict | None): Pre-parsed yaml mapping.
+        """
         self.yaml_file = yaml_file
         loaded_yaml_data = (
             yaml_data 
@@ -30,9 +45,22 @@ class Graph:
         }
 
     def __repr__(self) -> str:
+        """Return a debug representation of this graph.
+
+        Returns:
+            str: String representation of this graph.
+        """
         return f'Graph(yaml_file="{self.yaml_file}")'
 
     def __eq__(self, other: Any) -> bool:
+        """Compare this graph with another object for value equality.
+
+        Args:
+            other (Any): Object to compare against.
+
+        Returns:
+            bool: "True" when graph name, vertices, and edges match.
+        """
         if not isinstance(other, Graph):
             return NotImplemented
         return (
@@ -42,6 +70,14 @@ class Graph:
         )
 
     def get_yaml(self, yaml_file: str | PathLike | None) -> dict:
+        """Load yaml content from a file path.
+
+        Args:
+            yaml_file (str | PathLike | None): File path to load.
+
+        Returns:
+            dict: Parsed yaml mapping, or an empty dictionary when unavailable.
+        """
         if yaml_file is None:
             return {}
         yaml_path = Path(yaml_file)
@@ -51,6 +87,14 @@ class Graph:
             return safe_load(f) or {}
 
     def normalize_yaml(self, data: dict) -> dict:
+        """Normalize yaml data to the expected graph schema.
+
+        Args:
+            data (dict): Raw yaml mapping.
+
+        Returns:
+            dict: Mapping with "name", "vertices", and "edges" keys.
+        """
         return {
             "name": data.get("name", ""),
             "vertices": data.get("vertices") or {},
