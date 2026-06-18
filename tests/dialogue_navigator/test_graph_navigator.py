@@ -88,3 +88,8 @@ def test_init_applies_vertex_0_effects(mock_game_state):
     assert mock_game_state.player.gold == 2
     GraphNavigator(graph, mock_game_state)
     assert mock_game_state.player.gold == 1
+
+def test_getting_text_should_dynamically_evaluate_based_on_gamestate(alice_graph, mock_game_state_with_no_gold):
+    graph_navigator = GraphNavigator(alice_graph, mock_game_state_with_no_gold)
+    assert graph_navigator.get_current_vertex_text()["vertex_0"] == "Hello. You have 0 gold. Want to buy a flower?"
+    assert graph_navigator.get_current_edge_texts()["edge_2"] == "Well, can I buy one with 0 gold?"

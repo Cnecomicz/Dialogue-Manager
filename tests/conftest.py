@@ -42,3 +42,19 @@ def mock_game_state_with_limited_inventory():
             self.alice = MockAlice()
     game_state = MockGameState()
     return game_state
+
+@fixture
+def mock_game_state_with_no_gold():
+    class MockPlayer:
+        def __init__(self):
+            self.gold = 0
+            self.inventory = []
+    class MockAlice:
+        def __init__(self):
+            self.inventory = ["Flower", "Flower"]
+    class MockGameState:
+        def __init__(self):
+            self.player = MockPlayer()
+            self.alice = MockAlice()
+    game_state = MockGameState()
+    return game_state
