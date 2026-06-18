@@ -55,7 +55,7 @@ class GraphEditor:
         text: str | None = None, 
         predicates: list[dict[str, str | int]] | None = None, 
         effects: list[dict[str, str | int]] | None = None
-    ) -> None:
+    ) -> str:
         """Create and add a new edge to the graph.
 
         Args:
@@ -64,10 +64,12 @@ class GraphEditor:
             text (str | None): Edge dialogue text.
             predicates (list[dict[str, str | int]] | None): Edge predicates.
             effects (list[dict[str, str | int]] | None): Edge effects.
+
+        Returns:
+            str: Identifier of the newly created edge.
         """
         if to_vertex is None:
-            self.add_vertex()
-            to_vertex = f"vertex_{self.next_vertex_index-1}"
+            to_vertex = self.add_vertex()
         if text is None:
             text = ""
         if predicates is None:
@@ -85,6 +87,7 @@ class GraphEditor:
             }
         )
         self.next_edge_index += 1
+        return edge_name
 
     def add_effect(
         self, vertex_or_edge_name: str, effect: dict[str, str | int]
@@ -115,12 +118,15 @@ class GraphEditor:
         self, 
         text: str | None = None, 
         effects: list[dict[str, str | int]] | None = None
-    ) -> None:
+    ) -> str:
         """Create an add a new vertex to the graph.
 
         Args:
             text (str | None): Vertex dialogue text.
             effects (list[dict[str, str | int]] | None): Vertex effects.
+
+        Returns:
+            str: Identifier of the newly created vertex.
         """
         if text is None:
             text = ""
@@ -131,6 +137,7 @@ class GraphEditor:
             vertex_name, {"text": text, "effects": effects}
         )
         self.next_vertex_index += 1
+        return vertex_name
 
     def edit_edge_effects(
         self, edge_name: str, effects: list[dict[str, str | int]]
@@ -243,16 +250,28 @@ class GraphEditor:
         Returns:
             int: Next index to use for "edge_<index>" ids.
         """
-        if not self.graph.edge_dict:
+        return self.get_next_index(self.graph.edge_dict, "edge_")
+
+    def get_next_index(self, node_dict: dict[str, Any], prefix: str) -> int:
+        """Compute the next numeric suffix for ids with a shared prefix.
+
+        Args:
+            node_dict (dict[str, Any]): Mapping containing identifier keys.
+            prefix (str): Expected leading identifier prefix.
+
+        Returns:
+            int: Next available numeric suffix for matching keys.
+        """
+        if not node_dict:
             return 0
         indices = []
-        for edge_name in self.graph.edge_dict.keys():
-            if edge_name.startswith("edge_"):
-                indices.append(int(edge_name.split("_")[1]))
-        return (
-            max(max(indices)+1, len(self.graph.edge_dict))
-            if indices else len(self.graph.edge_dict)
-        )
+        for node_name in node_dict.keys():
+            if not node_name.startswith(prefix):
+                continue
+            suffix = node_name.removeprefix(prefix)
+            if suffix.isdigit():
+                indices.append(int(suffix))
+        return max(indices, default=len(node_dict)-1) + 1
 
     def get_next_vertex_index(self) -> int:
         """Compute the next available vertex index.
@@ -260,16 +279,7 @@ class GraphEditor:
         Returns:
             int: Next index to use for "vertex_<index>" ids.
         """
-        if not self.graph.vertex_dict:
-            return 0
-        indices = []
-        for vertex_name in self.graph.vertex_dict.keys():
-            if vertex_name.startswith("vertex_"):
-                indices.append(int(vertex_name.split("_")[1]))
-        return (
-            max(max(indices)+1, len(self.graph.vertex_dict)) 
-            if indices else len(self.graph.vertex_dict)
-        )
+        return self.get_next_index(self.graph.vertex_dict, "vertex_")
 
     def load(
         self, 

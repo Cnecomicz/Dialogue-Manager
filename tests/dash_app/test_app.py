@@ -49,6 +49,7 @@ def test_add_vertex_via_app(app):
     new_vertex_name = app.add_vertex("Brand new vertex.", new_effects)
     after_length = len(app.graph_editor.graph.vertex_dict)
     assert before_length + 1 == after_length
+    assert new_vertex_name == "vertex_5"
     assert new_vertex_name in app.graph_editor.graph.vertex_dict
     assert app.graph_editor.graph.vertex_dict[new_vertex_name].text == "Brand new vertex."
     assert app.graph_editor.graph.vertex_dict[new_vertex_name].effects == new_effects
@@ -72,6 +73,7 @@ def test_add_edge_via_app(app):
     )
     after_length = len(app.graph_editor.graph.edge_dict)
     assert before_length + 1 == after_length
+    assert new_edge_name == "edge_8"
     assert new_edge_name in app.graph_editor.graph.edge_dict
     assert app.graph_editor.graph.edge_dict[new_edge_name].text == "A new edge"
     assert app.graph_editor.graph.edge_dict[new_edge_name].predicates == new_predicates
@@ -86,16 +88,14 @@ def test_remove_edge_via_app(app):
 
 # Removing a selected vertex without cascade keeps connected edges
 def test_remove_vertex_without_cascade(app):
-    app.graph_editor.add_edge("vertex_0", "vertex_1", "Temporary edge")
-    edge_name = f"edge_{app.graph_editor.next_edge_index-1}"
+    edge_name = app.graph_editor.add_edge("vertex_0", "vertex_1", "Temporary edge")
     was_removed = app.remove_node("vertex_1", cascade_delete=False)
     assert "vertex_1" not in app.graph_editor.graph.vertex_dict
     assert edge_name in app.graph_editor.graph.edge_dict
 
 # Removing a selected vertex with cascade removes selected edges
 def test_remove_vertex_with_cascade(app):
-    app.graph_editor.add_edge("vertex_0", "vertex_1", "Temporary edge")
-    edge_name = f"edge_{app.graph_editor.next_edge_index-1}"
+    edge_name = app.graph_editor.add_edge("vertex_0", "vertex_1", "Temporary edge")
     was_removed = app.remove_node("vertex_1", cascade_delete=True)
     assert "vertex_1" not in app.graph_editor.graph.vertex_dict
     assert edge_name not in app.graph_editor.graph.edge_dict

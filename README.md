@@ -3,7 +3,8 @@
 A Python toolkit for building, editing, navigating, and visualizing branching
 dialogue graphs for video games. This is intended to support my current
 game development but has been built standalone in order to contain its scope 
-and to allow anyone willing to use my conventions to adopt.
+and to allow anyone willing to use my conventions to adopt it for their 
+own purposes.
 
 It includes:
 
@@ -36,7 +37,7 @@ Using the static svg render requires [Graphviz](https://graphviz.org) installed 
 
 After downloading this project off of 
 [https://github.com/Cnecomicz/dialogue](https://github.com/Cnecomicz/dialogue), 
-install in the terminal using pip:
+install it in the terminal using pip:
 
 ```
 pip install -e .
@@ -57,7 +58,8 @@ and pytest-xdist, and are used for running the pytest suite.
 ## Quick start
 
 Launch the visual dialogue editor with `dialogue-editor`. This starts a 
-local Dash app and opens http://localhost:8050.
+local Dash app and opens http://localhost:8050. To end the session, close
+the browser tab, and interrupt the terminal with `Ctrl+C`.
 
 Render a dialogue graph to svg with `render`. You will be prompted for a 
 yaml file path. An svg is generated in the same directory.
@@ -65,6 +67,9 @@ yaml file path. An svg is generated in the same directory.
 With dev dependencies installed, run the test suite with `./run_tests.sh`. 
 This attempts to optimize which tests run using testmon. To override this, 
 use `COVERAGE=1 ./run_tests.sh`.
+
+Use the `GraphNavigator` API to handle presenting, filtering, and selecting
+dialogue options in your game engine. See a minimal working example below.
 
 ## Dialogue model yaml format
 

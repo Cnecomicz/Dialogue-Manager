@@ -22,8 +22,9 @@ def test_not_loading_graph():
 # You can add new vertices
 def test_add_new_vertex():
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("Hello world.")
+    vertex_name = graph_editor.add_vertex("Hello world.")
     assert len(graph_editor.graph.vertex_dict) == 1
+    assert vertex_name == "vertex_0"
     assert graph_editor.graph.vertex_dict["vertex_0"] == Vertex(
         "vertex_0", {"text": "Hello world.", "effects": []}
     )
@@ -54,8 +55,9 @@ def test_add_new_edge():
     graph_editor = GraphEditor()
     graph_editor.add_vertex("Hello world.")
     graph_editor.add_vertex("Goodbye world.")
-    graph_editor.add_edge("vertex_0", to_vertex="vertex_1", text="This is an edge.")
+    edge_name = graph_editor.add_edge("vertex_0", to_vertex="vertex_1", text="This is an edge.")
     assert len(graph_editor.graph.edge_dict) == 1
+    assert edge_name == "edge_0"
     assert graph_editor.graph.edge_dict["edge_0"] == Edge(
         "edge_0", {"from": "vertex_0", "to": "vertex_1", "text": "This is an edge.", "predicates": [], "effects": []}
     )
@@ -64,9 +66,11 @@ def test_add_new_edge():
 def test_add_new_edge_without_to_vertex():
     graph_editor = GraphEditor()
     graph_editor.add_vertex("Hello world.")
-    graph_editor.add_edge("vertex_0", text="This is an edge without preexisting target.")
+    edge_name = graph_editor.add_edge("vertex_0", text="This is an edge without preexisting target.")
     assert len(graph_editor.graph.edge_dict) == 1
     assert len(graph_editor.graph.vertex_dict) == 2
+    assert edge_name == "edge_0"
+    assert graph_editor.graph.edge_dict[edge_name].to_vertex == "vertex_1"
 
 # You can edit existing edges (removing/adding predicates/effects)
 def test_editing_edge():
@@ -255,3 +259,32 @@ def test_save_without_path_raises_error():
     graph_editor = GraphEditor()
     with raises(ValueError, match=r"No yaml file path is set for save\(\)\."):
         graph_editor.save()
+
+# Loading custom ids ignores malformed suffixes and stays monotonic
+def test_load_with_custom_ids_uses_next_numeric_suffix():
+    graph_editor = GraphEditor()
+    graph_editor.load(
+        yaml_data={
+            "name": "Bob",
+            "vertices": {"vertex_alpha": {"text": "Alpha.", "effects": []}, "vertex_7": {"text": "Seven.", "effects": []}},
+            "edges": {"edge_custom": {"from": "vertex_alpha", "to": "vertex_7", "text": "Custom edge.", "predicates": [], "effects": []}, "edge_3": {"from": "vertex_7", "to": "vertex_alpha", "text": "Three edge.", "predicates": [], "effects": []}}
+        }
+    )
+    assert graph_editor.next_vertex_index == 8
+    assert graph_editor.next_edge_index == 4
+    assert graph_editor.add_vertex("Next vertex.") == "vertex_8"
+    assert graph_editor.add_edge("vertex_8", "vertex_7", "Next edge.") == "edge_4"
+
+# Deletions do not cause id reuse
+def test_add_after_delete_keeps_monotonic_ids():
+    graph_editor = GraphEditor()
+    graph_editor.load(
+        yaml_data={
+            "name": "Bob",
+            "vertices": {"vertex_0": {"text": "Start", "effects": []}, "vertex_2": {"text": "Skip.", "effects": []}},
+            "edges": {"edge_1": {"from": "vertex_0", "to": "vertex_2", "text": "Go.", "predicates": [], "effects": []}}
+        }
+    )
+    graph_editor.remove_vertex("vertex_2", cascade_delete=True)
+    assert graph_editor.add_vertex("Replacement vertex.") == "vertex_3"
+    assert graph_editor.add_edge("vertex_0", "vertex_3", "Replacement edge.") == "edge_2"

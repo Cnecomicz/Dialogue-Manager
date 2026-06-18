@@ -141,10 +141,9 @@ class App(Dash):
         Returns:
             str: Newly created edge identifier.
         """
-        self.graph_editor.add_edge(
+        return self.graph_editor.add_edge(
             from_vertex, to_vertex, text, predicates, effects
         )
-        return f"edge_{self.graph_editor.next_edge_index-1}"
 
     def add_vertex(
         self, 
@@ -160,8 +159,7 @@ class App(Dash):
         Returns:
             str: Newly created vertex identifier.
         """
-        self.graph_editor.add_vertex(text, effects)
-        return f"vertex_{self.graph_editor.next_vertex_index-1}"
+        return self.graph_editor.add_vertex(text, effects)
 
     def append_action_status(
         self, current_log: str | None, new_message: str
