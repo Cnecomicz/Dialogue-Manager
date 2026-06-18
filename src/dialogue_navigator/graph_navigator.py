@@ -21,7 +21,7 @@ class GraphNavigator:
         """
         self.graph = graph
         self.game_state = game_state
-        self.current_vertex = "vertex_0"
+        self.enter_vertex("vertex_0")
 
     @property
     def current_edges(self) -> dict[str, Edge]:
