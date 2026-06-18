@@ -97,7 +97,7 @@ class GraphNavigator:
             edge_id: edge.text for edge_id, edge in self.current_edges.items()
         }
 
-    def get_current_turn(self) -> dict[str, str | dict[str, str]]:
+    def get_current_turn(self) -> dict[str, dict[str, str]]:
         """Return current turn text payload for game UI handshakes.
 
         Returns:
@@ -109,13 +109,16 @@ class GraphNavigator:
             "edge_texts": self.get_current_edge_texts()
         }
 
-    def get_current_vertex_text(self) -> str:
+    def get_current_vertex_text(self) -> dict[str, str]:
         """Return the current vertex dialogue text.
 
         Returns:
             str: Dialogue text for "self.current_vertex".
         """
-        return self.graph.vertex_dict[self.current_vertex].text
+        return {
+            self.current_vertex: 
+            self.graph.vertex_dict[self.current_vertex].text
+        }
 
     def proc_effect(self, effect: dict[str, str | int]) -> None:
         """Apply an effect to the game state.
