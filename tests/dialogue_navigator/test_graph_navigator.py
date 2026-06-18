@@ -1,5 +1,6 @@
 from pytest import raises
 
+from dialogue_model.graph import Graph
 from dialogue_navigator.graph_navigator import GraphNavigator, InvalidEdgeError
 
 # GraphNavigator has a current vertex that starts with "begin"
@@ -79,3 +80,11 @@ def test_get_current_turn(alice_graph, mock_game_state):
     graph_navigator = GraphNavigator(alice_graph, mock_game_state)
     assert graph_navigator.get_current_turn() == {"vertex_text": "Hello. You have {player.gold} gold. Want to buy a flower?", "edge_texts": {"edge_0": "Yes, I'll buy a flower.", "edge_3": "No thanks."}}
 
+# Starting vertex effects are applied immediately during navigator init
+def test_init_applies_vertex_0_effects(mock_game_state):
+    graph = Graph(
+        yaml_data={"name": "Charlie", "vertices": {"vertex_0": {"text": "Start.", "effects": [{"type": "modify_value", "target": "player.gold", "delta": -1}]}}, "edges": {}}
+    )
+    assert mock_game_state.player.gold == 2
+    GraphNavigator(graph, mock_game_state)
+    assert mock_game_state.player.gold == 1
