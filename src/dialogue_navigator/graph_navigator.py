@@ -1,5 +1,5 @@
 from dialogue_navigator.helper_functions import (
-    get_operator, get_nested_attr, set_nested_attr
+    evaluate_text, get_operator, get_nested_attr, set_nested_attr
 )
 from dialogue_model.edge import Edge
 from dialogue_model.graph import Graph
@@ -88,20 +88,22 @@ class GraphNavigator:
         return list(self.current_edges.keys())
 
     def get_current_edge_texts(self) -> dict[str, str]:
-        """Return current selectable edge text keyed by edge_id.
+        """Return current selectable edge text keyed by edge_id, with 
+        placeholders evaluated.
 
         Returns:
             dict[str, str]: Mapping of edge_id to edge dialogue text.
         """
         return {
-            edge_id: edge.text for edge_id, edge in self.current_edges.items()
+            edge_id: evaluate_text(edge.text, self.game_state)
+            for edge_id, edge in self.current_edges.items()
         }
 
     def get_current_turn(self) -> dict[str, dict[str, str]]:
         """Return current turn text payload for game UI handshakes.
 
         Returns:
-            dict[str, str | dict[str, str]]: Mapping containing current
+            dict[str, dict[str, str]]: Mapping containing current
             vertex dialogue text and available edge text options.
         """
         return {
@@ -110,15 +112,16 @@ class GraphNavigator:
         }
 
     def get_current_vertex_text(self) -> dict[str, str]:
-        """Return the current vertex dialogue text.
+        """Return the current vertex dialogue text keyed by vertex_id, with
+        placeholders evaluated.
 
         Returns:
-            str: Dialogue text for "self.current_vertex".
+            dict[str, str]: Mapping of "self.current_vertex" to vertex dialogue
+            text.
         """
-        return {
-            self.current_vertex: 
-            self.graph.vertex_dict[self.current_vertex].text
-        }
+        vertex_text = self.graph.vertex_dict[self.current_vertex].text
+        evaluated_text = evaluate_text(vertex_text, self.game_state)
+        return {self.current_vertex:  evaluated_text}
 
     def proc_effect(self, effect: dict[str, str | int]) -> None:
         """Apply an effect to the game state.

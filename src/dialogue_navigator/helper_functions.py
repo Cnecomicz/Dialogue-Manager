@@ -1,5 +1,25 @@
 from operator import eq, ge, gt, le, lt, ne
+from re import sub
 from typing import Any, Callable
+
+def evaluate_text(text: str, game_state: "GameState") -> str:
+    """Evaluate placeholder expressions in text using the game state.
+
+    Args:
+        text (str): Text possibly containing placeholders like {player.gold}.
+        game_state (GameState): Game state object for resolving values.
+
+    Returns:
+        str: Text with any placeholders replaced by evaluated values.
+    """
+    def replace_placeholder(match):
+        attr_path = match.group(1)
+        try:
+            value = get_nested_attr(game_state, attr_path)
+            return str(value)
+        except AttributeError:
+            return match.group(0)
+    return sub(r"\{([^}]+)\}", replace_placeholder, text)
 
 def get_operator(op: str) -> Callable[[object, object], bool]:
     """Return the comparison function for a predicate operator string.

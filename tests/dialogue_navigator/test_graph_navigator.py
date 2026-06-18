@@ -68,7 +68,7 @@ def test_edge_predicate_1_and_predicate_2(alice_graph, mock_game_state_with_limi
 # You can get the current NPC dialogue text directly
 def test_get_current_vertex_text(alice_graph, mock_game_state):
     graph_navigator = GraphNavigator(alice_graph, mock_game_state)
-    assert graph_navigator.get_current_vertex_text() == {"vertex_0": "Hello. You have {player.gold} gold. Want to buy a flower?"}
+    assert graph_navigator.get_current_vertex_text() == {"vertex_0": "Hello. You have 2 gold. Want to buy a flower?"}
 
 # You can get current edge texts as {edge_id: edge.text}
 def test_get_current_edge_texts(alice_graph, mock_game_state):
@@ -78,7 +78,7 @@ def test_get_current_edge_texts(alice_graph, mock_game_state):
 # You can get all current turn text in one payload
 def test_get_current_turn(alice_graph, mock_game_state):
     graph_navigator = GraphNavigator(alice_graph, mock_game_state)
-    assert graph_navigator.get_current_turn() == {"vertex_text": {"vertex_0": "Hello. You have {player.gold} gold. Want to buy a flower?"}, "edge_texts": {"edge_0": "Yes, I'll buy a flower.", "edge_3": "No thanks."}}
+    assert graph_navigator.get_current_turn() == {"vertex_text": {"vertex_0": "Hello. You have 2 gold. Want to buy a flower?"}, "edge_texts": {"edge_0": "Yes, I'll buy a flower.", "edge_3": "No thanks."}}
 
 # Starting vertex effects are applied immediately during navigator init
 def test_init_applies_vertex_0_effects(mock_game_state):
