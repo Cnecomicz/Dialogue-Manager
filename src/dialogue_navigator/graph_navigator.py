@@ -3,7 +3,6 @@ from dialogue_navigator.helper_functions import (
 )
 from dialogue_model.edge import Edge
 from dialogue_model.graph import Graph
-from dialogue_model.vertex import Vertex
 
 class InvalidEdgeError(Exception):
     """Raised when a selected edge is not valid for the current state."""
@@ -87,6 +86,36 @@ class GraphNavigator:
             list[str]: Edge identifiers from "self.current_edges".
         """
         return list(self.current_edges.keys())
+
+    def get_current_edge_texts(self) -> dict[str, str]:
+        """Return current selectable edge text keyed by edge_id.
+
+        Returns:
+            dict[str, str]: Mapping of edge_id to edge dialogue text.
+        """
+        return {
+            edge_id: edge.text for edge_id, edge in self.current_edges.items()
+        }
+
+    def get_current_turn(self) -> dict[str, str | dict[str, str]]:
+        """Return current turn text payload for game UI handshakes.
+
+        Returns:
+            dict[str, str | dict[str, str]]: Mapping containing current
+            vertex dialogue text and available edge text options.
+        """
+        return {
+            "vertex_text": self.get_current_vertex_text(),
+            "edge_texts": self.get_current_edge_texts()
+        }
+
+    def get_current_vertex_text(self) -> str:
+        """Return the current vertex dialogue text.
+
+        Returns:
+            str: Dialogue text for "self.current_vertex".
+        """
+        return self.graph.vertex_dict[self.current_vertex].text
 
     def proc_effect(self, effect: dict[str, str | int]) -> None:
         """Apply an effect to the game state.
