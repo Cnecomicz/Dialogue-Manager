@@ -88,16 +88,16 @@ def test_remove_edge_via_app(app):
 def test_remove_vertex_without_cascade(app):
     app.graph_editor.add_edge("vertex_0", "vertex_1", "Temporary edge")
     edge_name = f"edge_{app.graph_editor.next_edge_index-1}"
-    was_removed = app.remove_node("vertex_0", cascade_delete=False)
-    assert "vertex_0" not in app.graph_editor.graph.vertex_dict
+    was_removed = app.remove_node("vertex_1", cascade_delete=False)
+    assert "vertex_1" not in app.graph_editor.graph.vertex_dict
     assert edge_name in app.graph_editor.graph.edge_dict
 
 # Removing a selected vertex with cascade removes selected edges
 def test_remove_vertex_with_cascade(app):
     app.graph_editor.add_edge("vertex_0", "vertex_1", "Temporary edge")
     edge_name = f"edge_{app.graph_editor.next_edge_index-1}"
-    was_removed = app.remove_node("vertex_0", cascade_delete=True)
-    assert "vertex_0" not in app.graph_editor.graph.vertex_dict
+    was_removed = app.remove_node("vertex_1", cascade_delete=True)
+    assert "vertex_1" not in app.graph_editor.graph.vertex_dict
     assert edge_name not in app.graph_editor.graph.edge_dict
 
 

@@ -30,9 +30,6 @@ dev = [
   "pytest-xdist",
 ]
 
-[template.plugins.default]
-src-layout = true
-
 [project.urls]
 Homepage = "https://github.com/Cnecomicz/dialogue"
 Issues = "https://github.com/Cnecomicz/dialogue/issues"

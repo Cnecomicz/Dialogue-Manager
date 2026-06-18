@@ -1,7 +1,7 @@
 from graphviz import Digraph
 from os import PathLike
 
-from dialogue_editor.graph_editor import GraphEditor
+from dialogue_model.graph import Graph
 from dialogue_model.codecs import (
     convert_effect_to_text, convert_predicate_to_text
 )
@@ -60,8 +60,8 @@ class GraphViewer:
         Returns:
             bool: "True" when rendering succeeds.
         """
-        graph_editor = GraphEditor(self.yaml_file)
-        dot = Digraph(comment=graph_editor.graph.name)
+        graph = Graph(yaml_file=self.yaml_file)
+        dot = Digraph(comment=graph.name)
         dot.attr(
             bgcolor="#303841",
             rankdir="TB",
@@ -84,7 +84,7 @@ class GraphViewer:
             fontcolor="#e6e6e6",
             fontname="Helvetica",
         )
-        for vertex_name, vertex in graph_editor.graph.vertex_dict.items():
+        for vertex_name, vertex in graph.vertex_dict.items():
             effects_text = self.get_effects_text(vertex.effects)
             dialogue_text = fr"TEXT:\n{vertex.text}"
             if effects_text:
@@ -99,7 +99,7 @@ class GraphViewer:
                 fillcolor="#a36a2a",
                 color="#aaaaaa"
             )
-        for edge_name, edge in graph_editor.graph.edge_dict.items():
+        for edge_name, edge in graph.edge_dict.items():
             dialogue_text = fr"TEXT:\n{edge.text}\n"
             predicates_text = self.get_predicates_text(edge.predicates)
             effects_text = self.get_effects_text(edge.effects)

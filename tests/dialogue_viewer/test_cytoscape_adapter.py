@@ -22,7 +22,7 @@ def test_cytoscape_edges(alice_graph):
 # Unresolved endpoints are shown on edge nodes and invalid connectors are hidden
 def test_cytoscape_unresolved_edge_after_non_cascade_delete():
     graph_editor = GraphEditor("data/alice_dialogue_graph.yaml")
-    graph_editor.remove_vertex("vertex_0", cascade_delete=False)
+    graph_editor.remove_vertex("vertex_1", cascade_delete=False)
     cytoscape_adapter = CytoscapeAdapter(graph_editor.graph)
     assert not any(
         edge["data"].get("source", "") == ""

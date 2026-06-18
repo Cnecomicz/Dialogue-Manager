@@ -6,6 +6,11 @@ from dialogue_model.edge import Edge
 from dialogue_model.graph import Graph
 from dialogue_model.vertex import Vertex
 
+class VertexCannotBeDeletedError(Exception):
+    """Raised when attempting to delete an ineligible vertex."""
+
+    pass
+
 class GraphEditor:
     """Provide mutation and persistence helpers for a dialogue graph."""
 
@@ -323,7 +328,14 @@ class GraphEditor:
         Args:
             vertex_name (str): Vertex identifier.
             cascade_delete (bool): Removed connected edges when "True".
+
+        Raises:
+            VertexCannotBeDeletedError: If vertex_name is vertex_0.
         """
+        if vertex_name == "vertex_0":
+            raise VertexCannotBeDeletedError(
+                "vertex_0 is mandatory and cannot be deleted."
+            )
         if cascade_delete:
             edges_to_remove = [
                 edge_name
