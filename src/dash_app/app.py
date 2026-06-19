@@ -16,6 +16,7 @@ from dash_app.layout import (
     get_center_panel,
     get_delete_node_modal,
     get_edit_node_modal,
+    get_graph_component,
     get_index_string,
     get_left_panel,
     get_modal_overlay_style,
@@ -61,6 +62,7 @@ class App(Dash):
         super().__init__()
         self.index_string = get_index_string()
         self.graph_editor = GraphEditor()
+        self.graph_render_count = 0
         if yaml_file is not None:
             self.graph_editor.load(yaml_file=yaml_file)
         load_extra_layouts()
@@ -248,6 +250,21 @@ class App(Dash):
         if not slug:
             slug = "untitled"
         return f"{slug}_dialogue_graph.yaml"
+
+    def get_fresh_graph_component(self):
+        """Build a graph component with a new key to force a remount.
+
+        A unique key makes React mount a brand new Cytoscape instance,
+        clearing any selection or render state carried over from a
+        previously loaded graph. Use this for whole-graph swaps (New/Open).
+
+        Returns:
+            Cytoscape: A freshly keyed graph component for the current graph.
+        """
+        self.graph_render_count += 1
+        return get_graph_component(
+            self.get_elements(), key=str(self.graph_render_count)
+        )
 
     def get_node_effects(self, node_id: str) -> str:
         """Return serialized effects text for a node.
@@ -530,7 +547,7 @@ class App(Dash):
             Output("new-edge-text", "value"),
             Output("new-edge-predicates", "value"),
             Output("new-edge-effects", "value"),
-            Output("dialogue-editor", "selectedNodeData"),
+            Output("graph-container", "children"),
             Output("unsaved-changes", "data"),
             Output("current-document", "data"),
             Output("confirm-unsaved-work", "displayed"),
@@ -613,7 +630,7 @@ class App(Dash):
             str, 
             str, 
             str, 
-            list,
+            object,
             bool,
             str,
             bool,
@@ -718,7 +735,7 @@ class App(Dash):
                     )
                 self.graph_editor.load()
                 return (
-                    self.get_elements(),
+                    no_update,
                     self.append_action_status(
                         current_log, "Started a new graph."
                     ),
@@ -729,7 +746,7 @@ class App(Dash):
                     no_update,
                     no_update,
                     no_update,
-                    [],
+                    self.get_fresh_graph_component(),
                     False,
                     self.normalize_name(self.graph_editor.graph.name),
                     False,
@@ -789,7 +806,7 @@ class App(Dash):
                 self.graph_editor.load(yaml_data=parsed_yaml)
                 loaded_name = self.normalize_name(self.graph_editor.graph.name)
                 return (
-                    self.get_elements(),
+                    no_update,
                     self.append_action_status(
                         current_log, 
                         f"Opened {upload_filename or loaded_name}."
@@ -801,7 +818,7 @@ class App(Dash):
                     no_update,
                     no_update,
                     no_update,
-                    [],
+                    self.get_fresh_graph_component(),
                     False,
                     loaded_name,
                     False,
@@ -814,7 +831,7 @@ class App(Dash):
                 if pending_action == "new":
                     self.graph_editor.load()
                     return (
-                        self.get_elements(),
+                        no_update,
                         self.append_action_status(
                             current_log, 
                             "Discarded changes and started a new graph."
@@ -826,7 +843,7 @@ class App(Dash):
                         no_update,
                         no_update,
                         no_update,
-                        [],
+                        self.get_fresh_graph_component(),
                         False,
                         self.normalize_name(self.graph_editor.graph.name),
                         False,
@@ -893,7 +910,7 @@ class App(Dash):
                         self.graph_editor.graph.name
                     )
                     return (
-                        self.get_elements(),
+                        no_update,
                         self.append_action_status(
                             current_log,
                             "Discarded changes and opened "
@@ -906,7 +923,7 @@ class App(Dash):
                         no_update,
                         no_update,
                         no_update,
-                        [],
+                        self.get_fresh_graph_component(),
                         False,
                         loaded_name,
                         False,
@@ -1158,7 +1175,7 @@ class App(Dash):
                     no_update,
                     no_update,
                     no_update,
-                    [],
+                    no_update,
                     True,
                     no_update,
                     False,

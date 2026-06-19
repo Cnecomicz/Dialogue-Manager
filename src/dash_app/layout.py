@@ -235,17 +235,8 @@ def get_center_panel(initial_elements: list) -> html.Div:
         [
             get_header(),
             html.Div(
-                Cytoscape(
-                    id="dialogue-editor",
-                    layout={"name": "dagre", "rankDir": "TB"},
-                    style={
-                        "width": "100%",
-                        "height": "100%",
-                        "backgroundColor": "#303841"
-                    },
-                    elements=initial_elements,
-                    stylesheet=get_cytoscape_stylesheet()
-                ),
+                get_graph_component(initial_elements),
+                id="graph-container",
                 style={"flex": "1", "minHeight": 0}
             )
         ],
@@ -566,6 +557,39 @@ def get_edit_section() -> list:
             }
         )
     ]
+
+def get_graph_component(elements: list, key: str | None = None) -> html.Div:
+    """ Build the Cytoscape graph wrapped in a keyed container.
+
+    The key is placed on the wrapping Div (dash_cytoscape rejects unknown
+    props such as "key"). Changing the key forces React to remount the 
+    wrapper and, with it, a fresh Cytoscape instance. This fully resets
+    selection and render state when an entirely new graph is loaded
+    (New/Open), so nodes whose ids are shared across graphs (e.g. the
+    mandatory vertex_0) do not retain selection from a prior graph.
+
+    Args:
+        elements (list): Cytoscape graph elements.
+        key (str | None): React key on the wrapper. Change to force remount.
+
+    Returns:
+        html.Div: The keyed wrapper containing the graph component.
+    """
+    return html.Div(
+        Cytoscape(
+            id="dialogue-editor",
+            layout={"name": "dagre", "rankDir": "TB"},
+            style={
+                "width": "100%",
+                "height": "100%",
+                "backgroundColor": "#303841"
+            },
+            elements=elements,
+            stylesheet=get_cytoscape_stylesheet()
+        ),
+        key=key,
+        style={"width": "100%", "height": "100%"}
+    )
 
 def get_header() -> html.Div:
     """Build the top toolbar for graph-level actions.
