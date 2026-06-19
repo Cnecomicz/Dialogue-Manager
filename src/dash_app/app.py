@@ -2,22 +2,24 @@ from base64 import b64decode
 from binascii import Error as BinasciiError
 from dash import Dash, Input, Output, State, ctx, dcc, html, no_update
 from dash.exceptions import PreventUpdate
-from dash_cytoscape import Cytoscape, load_extra_layouts
+from dash_cytoscape import load_extra_layouts
 from os import PathLike
+from pathlib import Path
 from re import sub
+from tomllib import load as toml_load
 from webbrowser import open as open_url
 from yaml import YAMLError, safe_load
 
 from dash_app.layout import (
-    get_add_edge_section, 
-    get_add_vertex_section, 
-    get_cytoscape_stylesheet, 
-    get_delete_section,
-    get_edit_section, 
-    get_header,
+    get_add_edge_modal,
+    get_add_vertex_modal,
+    get_center_panel,
+    get_delete_node_modal,
+    get_edit_node_modal,
     get_index_string,
-    get_log,
-    get_name_section,
+    get_left_panel,
+    get_modal_overlay_style,
+    get_right_panel,
     get_upload_graph
 )
 from dialogue_editor.graph_editor import GraphEditor
@@ -28,6 +30,24 @@ from dialogue_model.codecs import (
     convert_text_to_predicate
 )
 from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
+
+def read_project_metadata() -> tuple[str, str]:
+    """Read author name and version from pyproject.toml.
+
+    Returns:
+        tuple[str, str]: (author, version) strings, empty if unavailable.
+    """
+    toml_path = Path(__file__).parent.parent.parent / "pyproject.toml"
+    try:
+        with open(toml_path, "rb") as f:
+            data = toml_load(f)
+        project = data.get("project", {})
+        version = project.get("version", "")
+        authors = project.get("authors", [])
+        author = authors[0].get("name", "") if authors else ""
+        return author, version
+    except (FileNotFoundError, KeyError, IndexError):
+        return "", ""
 
 class App(Dash):
     """Dash application wrapper for dialogue graph editing."""
@@ -44,78 +64,32 @@ class App(Dash):
         if yaml_file is not None:
             self.graph_editor.load(yaml_file=yaml_file)
         load_extra_layouts()
+        author, version = read_project_metadata()
+        initial_name = self.normalize_name(self.graph_editor.graph.name)
         self.layout = html.Div(
             [
-                html.Div(
-                    get_log()
-                    + [html.Hr()]
-                    + get_name_section(
-                        self.normalize_name(self.graph_editor.graph.name)
-                    )
-                    + [html.Hr()]
-                    + get_edit_section() 
-                    + [html.Hr()] 
-                    + get_add_vertex_section()
-                    + [html.Hr()]
-                    + get_add_edge_section()
-                    + [html.Hr()]
-                    + get_delete_section(),
-                    style={
-                        "width": "320px",
-                        "flexShrink": 0,
-                        "boxSizing": "border-box",
-                        "padding": "12px",
-                        "paddingBottom": "24px",
-                        "backgroundColor": "#1f252b",
-                        "color": "#e6e6e6",
-                        "borderRight": "1px solid #444",
-                        "overflowY": "auto",
-                        "height": "100vh"
-                    }
-                ),
-                html.Div(
-                    [
-                        get_header(),
-                        html.Div(
-                            Cytoscape(
-                                id=f"dialogue-graph",
-                                layout={"name": "dagre", "rankDir": "TB"},
-                                style={
-                                    "width": "100%", 
-                                    "height": "100%", 
-                                    "backgroundColor": "#303841"
-                                },
-                                elements=self.get_elements(),
-                                stylesheet=get_cytoscape_stylesheet()
-                            ),
-                            style={"flex": "1", "minHeight": 0}
-                        )
-                    ],
-                    style={
-                        "flex": "1",
-                        "minWidth": 0,
-                        "height": "100%",
-                        "display": "flex",
-                        "flexDirection": "column"
-                    }
-                ),
+                get_left_panel(initial_name, author, version),
+                get_center_panel(self.get_elements()),
+                get_right_panel(),
+                get_add_vertex_modal(),
+                get_add_edge_modal(),
+                get_edit_node_modal(),
+                get_delete_node_modal(),
                 dcc.Store(id="unsaved-changes", data=False),
-                dcc.Store(
-                    id="current-document", 
-                    data=self.normalize_name(self.graph_editor.graph.name)
-                ),
+                dcc.Store(id="current-document", data=initial_name),
                 dcc.Store(id="pending-action", data=""),
                 dcc.Store(id="pending-upload", data={}),
+                dcc.Store(id="selected-node-id", data=None),
                 dcc.Download(id="download-yaml"),
                 dcc.ConfirmDialog(
-                    id="confirm-unsaved-work", 
+                    id="confirm-unsaved-work",
                     message="You have unsaved changes. Continue?"
                 )
             ],
             style={
-                "display": "flex", 
-                "width": "100vw", 
-                "height": "100vh", 
+                "display": "flex",
+                "width": "100vw",
+                "height": "100vh",
                 "overflow": "hidden"
             }
         )
@@ -460,76 +434,103 @@ class App(Dash):
         @self.callback(
             Output("edit-text", "value"),
             Output("edit-predicates", "value"),
-            Output("edit-predicates", "disabled"),
             Output("edit-effects", "value"),
-            Output("new-edge-from", "value"),
             Output("edit-from-vertex", "value"),
             Output("edit-to-vertex", "value"),
-            Output("edit-from-vertex", "disabled"),
-            Output("edit-to-vertex", "disabled"),
-            Input("dialogue-graph", "selectedNodeData")
+            Output("new-edge-from", "value"),
+            Input("dialogue-editor", "selectedNodeData")
         )
-        def autofill_edit_fields(
+        def autofill_modal_fields(
             selected_nodes: list[dict] | None
-        ) -> tuple[str, str, bool, str, str, str, str, bool, bool]:
+        ) -> tuple[str, str, str, str, str, str]:
             if not selected_nodes:
-                return "", "", True, "", "", "", "", True, True
+                return "", "", "", "", "", ""
             node_id = selected_nodes[0].get("id")
             if not node_id:
-                return "", "", True, "", "", "", "", True, True
+                return "", "", "", "", "", ""
             node_text = self.get_node_text(node_id)
             if node_text is None:
-                return "", "", True, "", "", "", "", True, True
+                return "", "", "", "", "", ""
             is_vertex = node_id in self.graph_editor.graph.vertex_dict
             predicates_text = self.get_node_predicates(node_id)
             effects_text = self.get_node_effects(node_id)
-            new_edge_from = node_id if is_vertex else ""
             edit_from_vertex, edit_to_vertex = (
                 self.get_edge_endpoints_for_edit(node_id)
             )
-            disable_edge_endpoint_edit = is_vertex
+            new_edge_from = node_id if is_vertex else ""
             return (
                 node_text, 
                 predicates_text, 
-                is_vertex, 
-                effects_text, 
-                new_edge_from,
+                effects_text,
                 edit_from_vertex,
                 edit_to_vertex,
-                disable_edge_endpoint_edit,
-                disable_edge_endpoint_edit
+                new_edge_from
             )
 
         @self.callback(
-            Output("selected-node-display", "children"),
-            Output("delete-selected-node-display", "children"),
-            Output("delete-cascade", "options"),
-            Output("delete-cascade", "value"),
-            Input("dialogue-graph", "selectedNodeData"),
-            State("delete-cascade", "value")
-        )
-        def display_selected_node(
-            selected_nodes: list[dict] | None, 
-            current_delete_cascade: list[str] | None
-        ) -> tuple[str, str, list[dict[str, str | bool]], list[str]]:
-            delete_text, delete_options, delete_value = (
-                self.get_delete_section_state(
-                    selected_nodes, current_delete_cascade
-                )
-            )
-            return delete_text, delete_text, delete_options, delete_value
-
-        @self.callback(
-            Output("dialogue-graph", "elements"),
-            Output("action-status", "value"),
-            Output("new-vertex-text", "value"),
-            Output("new-vertex-effects", "value"),
+            Output("new-edge-from", "value"),
             Output("new-edge-to", "value"),
             Output("new-edge-text", "value"),
             Output("new-edge-predicates", "value"),
             Output("new-edge-effects", "value"),
-            Output("confirm-delete-node", "displayed"),
-            Output("dialogue-graph", "selectedNodeData"),
+            Input("cancel-add-edge", "n_clicks"),
+            Input("save-add-edge", "n_clicks"),
+            prevent_initial_call=True
+        )
+        def clear_add_edge_form(
+            cancel_clicks: int, save_clicks: int
+        ) -> tuple[str, str, str, str, str]:
+            return "", "", "", "", ""
+
+        @self.callback(
+            Output("new-vertex-text", "value"),
+            Output("new-vertex-effects", "value"),
+            Input("cancel-add-vertex", "n_clicks"),
+            Input("save-add-vertex", "n_clicks"),
+            prevent_initial_call=True
+        )
+        def clear_add_vertex_form(
+            cancel_clicks: int, save_clicks: int
+        ) -> tuple[str, str]:
+            return "", ""
+
+        @self.callback(
+            Output("delete-cascade", "value"),
+            Input("cancel-delete-node-modal", "n_clicks"),
+            Input("confirm-delete-node-modal", "n_clicks"),
+            prevent_initial_call=True
+        )
+        def clear_delete_form(
+                cancel_clicks: int, confirm_clicks: int
+        ) -> list:
+            return []
+
+        @self.callback(
+            Output("edit-text", "value"),
+            Output("edit-from-vertex", "value"),
+            Output("edit-to-vertex", "value"),
+            Output("edit-predicates", "value"),
+            Output("edit-effects", "value"),
+            Input("cancel-edit-node", "n_clicks"),
+            Input("save-edit-node", "n_clicks"),
+            prevent_initial_call=True
+        )
+        def clear_edit_form(
+            cancel_clicks: int, save_clicks: int
+        ) -> tuple[str, str, str, str, str]:
+            return "", "", "", "", ""
+
+        @self.callback(
+            Output("dialogue-editor", "elements"),
+            Output("action-status", "value"),
+            Output("new-vertex-text", "value"),
+            Output("new-vertex-effects", "value"),
+            Output("new-edge-from", "value"),
+            Output("new-edge-to", "value"),
+            Output("new-edge-text", "value"),
+            Output("new-edge-predicates", "value"),
+            Output("new-edge-effects", "value"),
+            Output("dialogue-editor", "selectedNodeData"),
             Output("unsaved-changes", "data"),
             Output("current-document", "data"),
             Output("confirm-unsaved-work", "displayed"),
@@ -538,17 +539,16 @@ class App(Dash):
             Output("pending-upload", "data"),
             Output("download-yaml", "data"),
             Input("save-name", "n_clicks"),
-            Input("save-text", "n_clicks"),
-            Input("add-vertex", "n_clicks"),
-            Input("add-edge", "n_clicks"),
-            Input("delete-node", "n_clicks"),
-            Input("confirm-delete-node", "submit_n_clicks"),
+            Input("save-edit-node", "n_clicks"),
+            Input("save-add-vertex", "n_clicks"),
+            Input("save-add-edge", "n_clicks"),
+            Input("confirm-delete-node-modal", "n_clicks"),
             Input("new-graph", "n_clicks"),
             Input("download-graph", "n_clicks"),
             Input("upload-graph", "contents"),
             Input("confirm-unsaved-work", "submit_n_clicks"),
             Input("confirm-unsaved-work", "cancel_n_clicks"),
-            State("dialogue-graph", "selectedNodeData"),
+            State("dialogue-editor", "selectedNodeData"),
             State("edit-text", "value"),
             State("edit-predicates", "value"),
             State("edit-effects", "value"),
@@ -573,22 +573,21 @@ class App(Dash):
         )
         def handle_graph_updates(
             save_name_clicks: int,
-            save_clicks: int,
-            add_vertex_clicks: int,
-            add_edge_clicks: int,
-            delete_node_clicks: int,
-            confirm_delete_submit_clicks: int,
+            save_edit_clicks: int,
+            save_add_vertex_clicks: int,
+            save_add_edge_clicks: int,
+            confirm_delete_clicks: int,
             new_graph_clicks: int,
             download_graph_clicks: int,
             upload_contents: str | None,
             confirm_unsaved_submit_clicks: int,
             confirm_unsaved_cancel_clicks: int,
             selected_nodes: list[dict] | None,
-            new_text: str | None,
-            new_predicates_text: str | None,
-            new_effects_text: str | None,
-            new_from_vertex: str | None,
-            new_to_vertex: str | None,
+            edit_text: str | None,
+            edit_predicates_text: str | None,
+            edit_effects_text: str | None,
+            edit_from_vertex: str | None,
+            edit_to_vertex: str | None,
             new_vertex_text: str | None,
             new_vertex_effects_text: str | None,
             new_edge_from: str | None,
@@ -605,7 +604,7 @@ class App(Dash):
             pending_action: str | None,
             pending_upload: dict | None
         ) -> tuple[
-            list[dict], 
+            list[dict] | str, 
             str, 
             str, 
             str, 
@@ -613,7 +612,7 @@ class App(Dash):
             str, 
             str, 
             str, 
-            bool, 
+            str, 
             list,
             bool,
             str,
@@ -939,7 +938,7 @@ class App(Dash):
                     {},
                     no_update
                 )
-            if triggered_id == "add-vertex":
+            if triggered_id == "save-add-vertex":
                 if not new_vertex_text:
                     raise PreventUpdate
                 try:
@@ -952,15 +951,15 @@ class App(Dash):
                         self.append_action_status(
                             current_log, f"Add vertex failed: {exception}"
                         ),
+                        "",
+                        "",
                         no_update,
                         no_update,
                         no_update,
                         no_update,
                         no_update,
                         no_update,
-                        False,
-                        no_update,
-                        no_update,
+                        True,
                         no_update,
                         False,
                         no_update,
@@ -982,7 +981,7 @@ class App(Dash):
                     no_update,
                     no_update,
                     no_update,
-                    False,
+                    no_update,
                     no_update,
                     True,
                     no_update,
@@ -992,7 +991,7 @@ class App(Dash):
                     {},
                     no_update
                 )
-            if triggered_id == "add-edge":
+            if triggered_id == "save-add-edge":
                 if not new_edge_from or not new_edge_from.strip():
                     return (
                         no_update,
@@ -1002,13 +1001,13 @@ class App(Dash):
                         ),
                         no_update,
                         no_update,
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
                         no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        False,
-                        no_update,
-                        no_update,
+                        True,
                         no_update,
                         False,
                         no_update,
@@ -1031,13 +1030,13 @@ class App(Dash):
                         ),
                         no_update,
                         no_update,
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
                         no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        False,
-                        no_update,
-                        no_update,
+                        True,
                         no_update,
                         False,
                         no_update,
@@ -1068,7 +1067,7 @@ class App(Dash):
                     "",
                     "",
                     "",
-                    False,
+                    "",
                     no_update,
                     True,
                     no_update,
@@ -1078,49 +1077,7 @@ class App(Dash):
                     {},
                     no_update
                 )
-            if triggered_id == "delete-node":
-                if not selected_nodes:
-                    return (
-                        no_update,
-                        self.append_action_status(
-                            current_log, "Delete failed: no node selected."
-                        ),
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        False,
-                        no_update,
-                        no_update,
-                        no_update,
-                        False,
-                        no_update,
-                        "",
-                        {},
-                        no_update
-                    )
-                return (
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    True,
-                    no_update,
-                    no_update,
-                    no_update,
-                    False,
-                    no_update,
-                    "",
-                    {},
-                    no_update
-                )
-            if triggered_id == "confirm-delete-node":
+            if triggered_id == "confirm-delete-node-modal":
                 if not selected_nodes:
                     return (
                         no_update,
@@ -1210,15 +1167,15 @@ class App(Dash):
                     {},
                     no_update
                 )
-            if triggered_id == "save-text":
+            if triggered_id == "save-edit-node":
                 if not selected_nodes:
                     raise PreventUpdate
                 node_id = selected_nodes[0].get("id")
                 if not node_id:
                     raise PreventUpdate
                 try:
-                    predicates = self.parse_predicates(new_predicates_text)
-                    effects = self.parse_effects(new_effects_text)
+                    predicates = self.parse_predicates(edit_predicates_text)
+                    effects = self.parse_effects(edit_effects_text)
                 except ValueError as exception:
                     return (
                         no_update, 
@@ -1231,9 +1188,9 @@ class App(Dash):
                         no_update,
                         no_update,
                         no_update,
-                        False,
                         no_update,
                         no_update,
+                        True,
                         no_update,
                         False,
                         no_update,
@@ -1242,14 +1199,14 @@ class App(Dash):
                         no_update
                     )
                 was_updated = self.update_node(
-                    node_id, new_text or "", predicates, effects
+                    node_id, edit_text or "", predicates, effects
                 )
                 endpoint_warnings = []
                 endpoint_updated = False
                 if node_id in self.graph_editor.graph.edge_dict:
                     endpoint_updated, endpoint_warnings = (
                         self.update_edge_endpoints(
-                            node_id, new_from_vertex, new_to_vertex
+                            node_id, edit_from_vertex, edit_to_vertex
                         )
                     )
                 was_anything_updated = was_updated or endpoint_updated
@@ -1307,11 +1264,240 @@ class App(Dash):
             return get_upload_graph()
 
         @self.callback(
+            Output("edit-predicates-container", "style"),
+            Output("edit-from-vertex-container", "style"),
+            Output("edit-to-vertex-container", "style"),
+            Input("dialogue-editor", "selectedNodeData")
+        )
+        def show_hide_edge_only_fields(
+            selected_nodes: list[dict] | None
+        ) -> tuple[dict, dict, dict]:
+            if not selected_nodes:
+                return (
+                    {"display": "none"},
+                    {"display": "none"},
+                    {"display": "none"}
+                )
+            node_id = selected_nodes[0].get("id")
+            if not node_id or node_id in self.graph_editor.graph.vertex_dict:
+                return (
+                    {"display": "none"},
+                    {"display": "none"},
+                    {"display": "none"}
+                )
+            return (
+                {"display": "block"},
+                {"display": "block"},
+                {"display": "block"}
+            )
+
+        @self.callback(
             Output("document-name", "value"),
             Input("current-document", "data")
         )
         def sync_document_name(current_document: str | None) -> str:
             return self.normalize_name(current_document)
+
+        @self.callback(
+            Output("add-edge-modal", "style"),
+            Input("open-add-edge-modal", "n_clicks"),
+            Input("cancel-add-edge", "n_clicks"),
+            Input("save-add-edge", "n_clicks"),
+            State("add-edge-modal", "style"),
+            prevent_initial_call=True
+        )
+        def toggle_add_edge_modal(
+            open_clicks: int, 
+            cancel_clicks: int, 
+            save_clicks: int, 
+            current_style: dict | None
+        ) -> dict[str, str | int]:
+            if not ctx.triggered:
+                return current_style or get_modal_overlay_style(False)
+            triggered_id = ctx.triggered_id
+            if triggered_id == "open-add-edge-modal":
+                return get_modal_overlay_style(True)
+            if triggered_id in ["cancel-add-edge", "save-add-edge"]:
+                return get_modal_overlay_style(False)
+            return current_style or get_modal_overlay_style(False)
+        
+        @self.callback(
+            Output("add-vertex-modal", "style"),
+            Input("open-add-vertex-modal", "n_clicks"),
+            Input("cancel-add-vertex", "n_clicks"),
+            Input("save-add-vertex", "n_clicks"),
+            State("add-vertex-modal", "style"),
+            prevent_initial_call=True
+        )
+        def toggle_add_vertex_modal(
+            open_clicks: int, 
+            cancel_clicks: int, 
+            save_clicks: int, 
+            current_style: dict | None
+        ) -> dict[str, str | int]:
+            if not ctx.triggered:
+                return current_style or get_modal_overlay_style(False)
+            triggered_id = ctx.triggered_id
+            if triggered_id == "open-add-vertex-modal":
+                return get_modal_overlay_style(True)
+            if triggered_id in ["cancel-add-vertex", "save-add-vertex"]:
+                return get_modal_overlay_style(False)
+            return current_style or get_modal_overlay_style(False)
+        
+        @self.callback(
+            Output("delete-cascade", "style"),
+            Output("delete-cascade", "value"),
+            Input("dialogue-editor", "selectedNodeData")
+        )
+        def toggle_cascade_delete(
+            selected_nodes: list[dict] | None
+        ) -> tuple[dict, list]:
+            if not selected_nodes:
+                is_vertex = False
+            else:
+                node_id = selected_nodes[0].get("id")
+                is_vertex = (
+                    node_id is not None
+                    and node_id in self.graph_editor.graph.vertex_dict
+                )
+            if is_vertex:
+                return (
+                    {
+                        "marginBottom": "16px", 
+                        "color": "#e5e7eb", 
+                        "display": "block"
+                    },
+                    []
+                )
+            return (
+                {"display": "none"},
+                []
+            )
+
+        @self.callback(
+            Output("delete-node-modal", "style"),
+            Input("open-delete-modal", "n_clicks"),
+            Input("cancel-delete-node-modal", "n_clicks"),
+            Input("confirm-delete-node-modal", "n_clicks"),
+            State("delete-node-modal", "style"),
+            State("dialogue-editor", "selectedNodeData"),
+            prevent_initial_call=True
+        )
+        def toggle_delete_modal(
+            open_clicks: int,
+            cancel_clicks: int,
+            confirm_clicks: int,
+            current_style: dict | None,
+            selected_nodes: list[dict] | None
+        ) -> dict[str, str | int]:
+            if not ctx.triggered:
+                return current_style or get_modal_overlay_style(False)
+            triggered_id = ctx.triggered_id
+            if triggered_id == "open-delete-modal" and selected_nodes:
+                return get_modal_overlay_style(True)
+            if triggered_id in [
+                "cancel-delete-node-modal", "confirm-delete-node-modal"
+            ]:
+                return get_modal_overlay_style(False)
+            return current_style or get_modal_overlay_style(False)
+        
+        @self.callback(
+            Output("open-edit-modal", "disabled"),
+            Output("open-edit-modal", "style"),
+            Output("open-delete-modal", "disabled"),
+            Output("open-delete-modal", "style"),
+            Input("dialogue-editor", "selectedNodeData")
+        )
+        def toggle_edit_delete_buttons(
+            selected_nodes: list[dict] | None
+        ) -> tuple[bool, dict, bool, dict]:
+            edit_base_style = {
+                "width": "100%",
+                "padding": "10px",
+                "marginBottom": "8px",
+                "border": "1px solid #666",
+                "borderRadius": "4px"
+            }
+            delete_base_style = {
+                "width": "100%",
+                "padding": "10px",
+                "marginBottom": "8px",
+                "borderRadius": "4px"
+            }
+            if not selected_nodes:
+                return (
+                    True, 
+                    {
+                        **edit_base_style,
+                        "backgroundColor": "#374151",
+                        "color": "#6b7280",
+                        "cursor": "not-allowed",
+                        "opacity": 0.5
+                    },
+                    True,
+                    {
+                        **delete_base_style,
+                        "backgroundColor": "#4b1c1c",
+                        "color": "#6b7280",
+                        "border": "1px solid #7f1d1d",
+                        "cursor": "not-allowed",
+                        "opacity": 0.5
+                    }
+                )
+            return (
+                False, 
+                {
+                    **edit_base_style,
+                    "backgroundColor": "#4b5563",
+                    "color": "#e6e6e6",
+                    "cursor": "pointer"
+                },
+                False,
+                {
+                    **delete_base_style,
+                    "backgroundColor": "#7f1d1d",
+                    "color": "#e6e6e6",
+                    "border": "1px solid #c53030",
+                    "cursor": "pointer"
+                }
+            )
+
+        @self.callback(
+            Output("edit-node-modal", "style"),
+            Input("open-edit-modal", "n_clicks"),
+            Input("cancel-edit-node", "n_clicks"),
+            Input("save-edit-node", "n_clicks"),
+            State("edit-node-modal", "style"),
+            State("dialogue-editor", "selectedNodeData"),
+            prevent_initial_call=True
+        )
+        def toggle_edit_modal(
+            open_clicks: int,
+            cancel_clicks: int,
+            save_clicks: int,
+            current_style: dict | None,
+            selected_nodes: list[dict] | None
+        ) -> dict[str, str | int]:
+            if not ctx.triggered:
+                return current_style or get_modal_overlay_style(False)
+            triggered_id = ctx.triggered_id
+            if triggered_id == "open-edit-modal" and selected_nodes:
+                return get_modal_overlay_style(True)
+            if triggered_id in ["cancel-edit-node", "save-edit-node"]:
+                return get_modal_overlay_style(False)
+            return current_style or get_modal_overlay_style(False)
+        
+        @self.callback(
+            Output("selected-node-display", "children"),
+            Input("dialogue-editor", "selectedNodeData")
+        )
+        def update_selected_node_display(
+            selected_nodes: list[dict] | None
+        ) -> str:
+            if not selected_nodes:
+                return "None"
+            node_id = selected_nodes[0].get("id", "None")
+            return node_id
 
     def remove_node(self, node_id: str, cascade_delete: bool = False) -> bool:
         """Remove a vertex or edge by node id.
