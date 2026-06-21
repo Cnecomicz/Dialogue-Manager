@@ -4,9 +4,7 @@ from dash import Dash, Input, Output, State, ctx, dcc, html, no_update
 from dash.exceptions import PreventUpdate
 from dash_cytoscape import load_extra_layouts
 from os import PathLike
-from pathlib import Path
 from re import sub
-from tomllib import load as toml_load
 from webbrowser import open as open_url
 from yaml import YAMLError, safe_load
 
@@ -20,6 +18,7 @@ from dash_app.layout import (
     get_index_string,
     get_left_panel,
     get_modal_overlay_style,
+    get_project_metadata,
     get_right_panel,
     get_upload_graph
 )
@@ -31,24 +30,6 @@ from dialogue_model.codecs import (
     convert_text_to_predicate
 )
 from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
-
-def read_project_metadata() -> tuple[str, str]:
-    """Read author name and version from pyproject.toml.
-
-    Returns:
-        tuple[str, str]: (author, version) strings, empty if unavailable.
-    """
-    toml_path = Path(__file__).parent.parent.parent / "pyproject.toml"
-    try:
-        with open(toml_path, "rb") as f:
-            data = toml_load(f)
-        project = data.get("project", {})
-        version = project.get("version", "")
-        authors = project.get("authors", [])
-        author = authors[0].get("name", "") if authors else ""
-        return author, version
-    except (FileNotFoundError, KeyError, IndexError):
-        return "", ""
 
 class App(Dash):
     """Dash application wrapper for dialogue graph editing."""
@@ -66,7 +47,7 @@ class App(Dash):
         if yaml_file is not None:
             self.graph_editor.load(yaml_file=yaml_file)
         load_extra_layouts()
-        author, version = read_project_metadata()
+        author, version = get_project_metadata()
         initial_name = self.normalize_name(self.graph_editor.graph.name)
         self.layout = html.Div(
             [
@@ -449,39 +430,54 @@ class App(Dash):
         )
 
         @self.callback(
+            Output("new-edge-from", "value"),
+            Input("open-add-edge-modal", "n_clicks"),
+            State("dialogue-editor", "selectedNodeData"),
+            prevent_initial_call=True
+        )
+        def autofill_add_edge_from_field(
+            open_clicks: int, selected_nodes: list[dict] | None
+        ) -> str:
+            if not selected_nodes:
+                return ""
+            node_id = selected_nodes[0].get("id")
+            if not node_id:
+                return ""
+            is_vertex = node_id in self.graph_editor.graph.vertex_dict
+            return node_id if is_vertex else ""
+
+        @self.callback(
             Output("edit-text", "value"),
             Output("edit-predicates", "value"),
             Output("edit-effects", "value"),
             Output("edit-from-vertex", "value"),
             Output("edit-to-vertex", "value"),
-            Output("new-edge-from", "value"),
-            Input("dialogue-editor", "selectedNodeData")
+            Input("open-edit-modal", "n_clicks"),
+            State("dialogue-editor", "selectedNodeData"),
+            prevent_initial_call=True
         )
-        def autofill_modal_fields(
-            selected_nodes: list[dict] | None
-        ) -> tuple[str, str, str, str, str, str]:
+        def autofill_edit_modal_fields(
+            open_clicks: int, selected_nodes: list[dict] | None
+        ) -> tuple[str, str, str, str, str]:
             if not selected_nodes:
-                return "", "", "", "", "", ""
+                return "", "", "", "", ""
             node_id = selected_nodes[0].get("id")
             if not node_id:
-                return "", "", "", "", "", ""
+                return "", "", "", "", ""
             node_text = self.get_node_text(node_id)
             if node_text is None:
-                return "", "", "", "", "", ""
-            is_vertex = node_id in self.graph_editor.graph.vertex_dict
+                return "", "", "", "", ""
             predicates_text = self.get_node_predicates(node_id)
             effects_text = self.get_node_effects(node_id)
             edit_from_vertex, edit_to_vertex = (
                 self.get_edge_endpoints_for_edit(node_id)
             )
-            new_edge_from = node_id if is_vertex else ""
             return (
-                node_text, 
-                predicates_text, 
+                node_text,
+                predicates_text,
                 effects_text,
                 edit_from_vertex,
-                edit_to_vertex,
-                new_edge_from
+                edit_to_vertex
             )
 
         @self.callback(

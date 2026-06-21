@@ -1,5 +1,7 @@
 from dash import dcc, html
 from dash_cytoscape import Cytoscape
+from pathlib import Path
+from tomllib import load as toml_load
 
 def get_add_edge_modal() -> html.Div:
     """Build the complete Add Edge modal.
@@ -96,18 +98,6 @@ def get_add_edge_modal_content() -> list:
         )
     ]
 
-# def get_add_edge_section() -> list:
-#     """Build the sidebar controls for adding a player edge.
-
-#     Returns:
-#         list: Dash components for edge creation controls.
-#     """
-#     return [
-#         html.H3("Add player node"),
-#         *get_add_edge_modal_content(),
-#         html.Button("Save", id="add-edge", n_clicks=0)
-#     ]
-
 def get_add_vertex_modal() -> html.Div:
     """ Build the complete Add Vertex modal.
 
@@ -182,45 +172,6 @@ def get_add_vertex_modal_content() -> list:
             style=get_textarea_style("70px")
         )
     ]
-
-# def get_add_vertex_section() -> list:
-#     """Build the sidebar controls for adding an NPC vertex.
-
-#     Returns:
-#         list: Dash components for vertex creation controls.
-#     """
-#     return [
-#         html.H3("Add NPC node"),
-#         dcc.Textarea(
-#             id="new-vertex-text",
-#             placeholder="NPC dialogue",
-#             style={
-#                 "width": "100%",
-#                 "backgroundColor": "#ffffff",
-#                 "color": "#111827",
-#                 "caretColor": "#111827",
-#                 "border": "1px solid #9ca3af",
-#                 "fontSize": "14px",
-#                 "opacity": 1
-#             }
-#         ),
-#         dcc.Textarea(
-#             id="new-vertex-effects",
-#             placeholder="Effects (one per line)",
-#             style={
-#                 "width": "100%",
-#                 "height": "70px",
-#                 "marginTop": "12px",
-#                 "marginBottom": "12px",
-#                 "fontSize": "14px",
-#                 "backgroundColor": "#ffffff",
-#                 "color": "#111827",
-#                 "border": "1px solid #9ca3af",
-#                 "resize": "vertical"
-#             }
-#         ),
-#         html.Button("Save", id="add-vertex", n_clicks=0)
-#     ]
 
 def get_center_panel(initial_elements: list) -> html.Div:
     """Build the center graph panel with Cytoscape visualization.
@@ -408,21 +359,6 @@ def get_delete_node_modal() -> html.Div:
         id="delete-node-modal",
         style=get_modal_overlay_style(False)
     )
-
-# def get_delete_section() -> list:
-#     """Build the sidebar controls for deleting a selected node.
-
-#     Returns:
-#         list: Dash components for delete controls.
-#     """
-#     return [
-#         html.H3("Delete selected node"),
-#         html.Div(
-#             "Selected node: None", 
-#             id="delete-selected-node-display"
-#         ),
-#         html.Button("Delete", id="delete-node", n_clicks=0)
-#     ]
 
 def get_edit_node_modal() -> html.Div:
     """Build the complete Edit Node modal.
@@ -920,6 +856,24 @@ def get_name_section(initial_value: str = "Untitled") -> list:
         ),
         html.Button("Save", id="save-name", n_clicks=0)
     ]
+
+def get_project_metadata() -> tuple[str, str]:
+    """Get author name and version from pyproject.toml.
+
+    Returns:
+        tuple[str, str]: (author, version) strings, empty if unavailable.
+    """
+    toml_path = Path(__file__).parent.parent.parent / "pyproject.toml"
+    try:
+        with open(toml_path, "rb") as f:
+            data = toml_load(f)
+        project = data.get("project", {})
+        version = project.get("version", "")
+        authors = project.get("authors", [])
+        author = authors[0].get("name", "") if authors else ""
+        return author, version
+    except (FileNotFoundError, KeyError, IndexError):
+        return "", ""
 
 def get_right_panel() -> html.Div:
     """Build the right sidebar panel containing the action log.

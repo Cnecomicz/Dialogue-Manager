@@ -184,7 +184,7 @@ def test_add_edge_or_edit_autofill_uses_open_click_and_selected_state(app):
     ]
     matching_edit_callbacks = [
         callback
-        for callbac in app.callback_map.values()
+        for callback in app.callback_map.values()
         if {"id": "open-edit-modal", "property": "n_clicks"}
         in callback.get("inputs", [])
         and {"id": "dialogue-editor", "property": "selectedNodeData"}
