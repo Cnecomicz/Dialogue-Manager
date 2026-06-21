@@ -171,3 +171,24 @@ def test_upload_reset_callback_registered(app):
     assert callback_key in app.callback_map
     callback_inputs = app.callback_map[callback_key]["inputs"]
     assert {"id": "action-status", "property": "value"} in callback_inputs
+
+# Opening the add or edit modals autofills the fields (no matter how many times you do it)
+def test_add_edge_or_edit_autofill_uses_open_click_and_selected_state(app):
+    matching_add_edge_callbacks = [
+        callback
+        for callback in app.callback_map.values()
+        if {"id": "open-add-edge-modal", "property": "n_clicks"}
+        in callback.get("inputs", [])
+        and {"id": "dialogue-editor", "property": "selectedNodeData"}
+        in callback.get("state", [])
+    ]
+    matching_edit_callbacks = [
+        callback
+        for callbac in app.callback_map.values()
+        if {"id": "open-edit-modal", "property": "n_clicks"}
+        in callback.get("inputs", [])
+        and {"id": "dialogue-editor", "property": "selectedNodeData"}
+        in callback.get("state", [])
+    ]
+    assert matching_add_edge_callbacks
+    assert matching_edit_callbacks
