@@ -33,7 +33,8 @@ choices while handling predicates and effects
 
 ## Installation
 
-Using the static svg render requires [Graphviz](https://graphviz.org) installed on your system.
+Using the static svg render requires [Graphviz](https://graphviz.org) installed 
+on your system.
 
 After downloading this project off of 
 [https://github.com/Cnecomicz/dialogue](https://github.com/Cnecomicz/dialogue), 
@@ -120,13 +121,17 @@ predicates or effects by hand for a given vertex/edge.
 
 ### Effects:
 
-* Modifying a list: `player.inventory.append(Flower)` <-> `{type: "modify_list", target: "player.inventory", method: "append", value: "Flower"}`
-* Modifying a value: `player.gold = player.gold-1` <-> `{type: "modify_value", target: "player.gold", delta: -1}`
+* Modifying a list: `player.inventory.append(Flower)` <-> 
+    `{type: "modify_list", target: "player.inventory", method: "append", value: "Flower"}`
+* Modifying a value: `player.gold = player.gold-1` <-> 
+    `{type: "modify_value", target: "player.gold", delta: -1}`
 
 ### Predicates:
 
-* Checking a value: `player.gold >= 1` <-> `{type: "check_value", path: "player.gold", op: ">=", value: 1}`
-* Checkling list membership: `Flower in zeke.inventory` <-> `{type: "check_list", path: "zeke.inventory", op: "in", value: "Flower"}`
+* Checking a value: `player.gold >= 1` <-> 
+    `{type: "check_value", path: "player.gold", op: ">=", value: 1}`
+* Checkling list membership: `Flower in zeke.inventory` <-> 
+    `{type: "check_list", path: "zeke.inventory", op: "in", value: "Flower"}`
 
 ## Programmatic usage MWE:
 
@@ -208,6 +213,37 @@ removing a vertex orphans all edges having that vertex as its source or
 target, flagging the from and to keys as `__MISSING__`.
 
 Graphs begin at vertex_0, which cannot be deleted.
+
+## Editor log messages
+
+The Log in `dialogue-editor` is intended to be a user-facing history of 
+changes made in the UI.
+
+The editor uses these terms in the log:
+
+* NPC node: A dialogue node spoken by the NPC (represented by a vertex in
+    the dialogue model).
+* Player node: A dialogue option spoken by the player (represented by an
+    edge in the dialogue model).
+
+### What gets logged
+
+* Creating nodes: Click Add NPC Dialogue or Add Player Dialogue, enter data, 
+    and click Save. Logs the node id and any nonempty saved fields.
+* Editing nodes: Select a node, click Edit Selected Node, change data, and 
+    click Save. Logs any old values and their corresponding updated values.
+* Deleting nodes: Select a node, click Delete Selected Node, and click Confirm
+    Delete. Logs the deleted node id and any nonempty fields.
+* Cascade delete: Click the checkbox to delete all connected player nodes 
+    before clicking Confirm Delete when deleting an NPC node. Logs one line 
+    for the deleted NPC node and one line for each Player node.
+* Non-cascade delete: Leave the checkbox unselected before clicking Confirm
+    Delete. Logs the deletion and flags the number of unresolved connections 
+    of Source/Target NPC nodes that need to be addressed.
+* New/Open/Save: Click the corresponding buttons in the header of the user
+    interface. Logs outcomes and filenames when relevant.
+* Validation and parsing failures: Logs plain-language explanations with
+    direct guidance on how to resolve.
 
 ## Console scripts
 

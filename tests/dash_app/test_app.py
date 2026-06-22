@@ -128,7 +128,7 @@ def test_update_edge_endpoints_does_not_save_invalid_endpoint(app):
     assert was_updated is True
     assert app.graph_editor.graph.edge_dict["edge_0"].from_vertex == "vertex_1"
     assert app.graph_editor.graph.edge_dict["edge_0"].to_vertex == original_to
-    assert warnings == ["Invalid to vertex: not_a_vertex"]
+    assert warnings == ["Could not update Target for Player node \"edge_0\" because NPC node \"not_a_vertex\" does not exist. Enter an existing NPC node ID in Target and save again."]
 
 # Unresolved count is based on how many fixes to be made
 def test_count_unresolved_connections_for_vertex_delete(app):
@@ -148,21 +148,21 @@ def test_parse_uploaded_yaml(app):
 
 # Error if file has invalid encoding
 def test_parse_uploaded_yaml_invalid_encoding(app):
-    with raises(ValueError, match="invalid file encoding"):
+    with raises(ValueError, match="upload data is invalid"):
         app.parse_uploaded_yaml("data:text/yaml;base64,***")
 
 # Error if yaml has invalid syntax
 def test_parse_uploaded_yaml_invalid_syntax(app):
     invalid_yaml = "name: [Not terminated"
     payload = "data:text/yaml;base64," + b64encode(invalid_yaml.encode("utf-8")).decode("ascii")
-    with raises(ValueError, match="invalid yaml format"):
+    with raises(ValueError, match="yaml format is invalid"):
         app.parse_uploaded_yaml(payload)
 
 # Error if yaml doesn't at least start with the right format
 def test_parse_uploaded_yaml_requires_mapping_root(app):
     list_yaml = "-one\n- two\n"
     payload = "data:text/yaml;base64," + b64encode(list_yaml.encode("utf-8")).decode("ascii")
-    with raises(ValueError, match="root must be a dictionary"):
+    with raises(ValueError, match="top level must be a dictionary"):
         app.parse_uploaded_yaml(payload)
 
 # You can reupload the same file

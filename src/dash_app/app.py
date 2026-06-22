@@ -22,7 +22,10 @@ from dash_app.layout import (
     get_right_panel,
     get_upload_graph
 )
-from dialogue_editor.graph_editor import GraphEditor
+from dash_app.logger import Logger
+from dialogue_editor.graph_editor import (
+    GraphEditor, VertexCannotBeDeletedError
+)
 from dialogue_model.codecs import (
     convert_effect_to_text, 
     convert_predicate_to_text, 
@@ -43,6 +46,7 @@ class App(Dash):
         super().__init__()
         self.index_string = get_index_string()
         self.graph_editor = GraphEditor()
+        self.action_logger = Logger(self.graph_editor)
         self.graph_render_count = 0
         if yaml_file is not None:
             self.graph_editor.load(yaml_file=yaml_file)
@@ -117,22 +121,6 @@ class App(Dash):
             str: Newly created vertex identifier.
         """
         return self.graph_editor.add_vertex(text, effects)
-
-    def append_action_status(
-        self, current_log: str | None, new_message: str
-    ) -> str:
-        """Append a message to the action log text.
-
-        Args:
-            current_log (str | None): Existing log text.
-            new_message (str): Message to append.
-
-        Returns:
-            str: Updated multiline log text.
-        """
-        if not current_log:
-            return new_message
-        return f"{current_log}\n{new_message}"
 
     def count_unresolved_connections(self, vertex_name: str) -> int:
         """Count edges referencing a vertex that is about to be removed.
@@ -393,22 +381,38 @@ class App(Dash):
                 fails, or yaml root is not a dictionary.
         """
         if not upload_contents or "," not in upload_contents:
-            raise ValueError("Upload failed: missing file contents.")
+            raise ValueError(
+                "Could not open the file because no file data was received. "
+                "Select the file again and try one more time."
+            )
         _, encoded_content = upload_contents.split(",", 1)
         try:
             raw_bytes = b64decode(encoded_content, validate=True)
         except BinasciiError as e:
-            raise ValueError("Upload failed: invalid file encoding.") from e
+            raise ValueError(
+                "Could not open the file because the upload data is "
+                "invalid. Select the file again and try one more time."
+            ) from e
         try:
             decoded_text = raw_bytes.decode("utf-8")
         except UnicodeDecodeError as e:
-            raise ValueError("Upload failed: file must be UTF-8 text.") from e
+            raise ValueError(
+                "Could not open the file because it is not UTF-8 text. "
+                "Save the file as UTF-8 yaml and try again."
+            ) from e
         try:
             parsed_yaml = safe_load(decoded_text) or {}
         except YAMLError as e:
-            raise ValueError("Upload failed: invalid yaml format.") from e
+            raise ValueError(
+                "Could not open the file because the yaml format is "
+                "invalid. Fix the yaml syntax and try again."
+            ) from e
         if not isinstance(parsed_yaml, dict):
-            raise ValueError("Upload failed: yaml root must be a dictionary.")
+            raise ValueError(
+                "Could not open the file because the top level must be a "
+                "dictionary. Use a yaml object with name, vertices, and "
+                "edges."
+            )
         return parsed_yaml
 
     def register_callbacks(self) -> None:
@@ -664,8 +668,10 @@ class App(Dash):
                 self.graph_editor.edit_name(normalized)
                 return (
                     no_update,
-                    self.append_action_status(
-                        current_log, f"Saved NPC name as {normalized}."
+                    self.action_logger.append_status(
+                        current_log,
+                        "Saved NPC name as "
+                        f"{self.action_logger.quote_value(normalized)}."
                     ),
                     no_update,
                     no_update,
@@ -687,8 +693,10 @@ class App(Dash):
                 download_name = self.get_filename(current_document)
                 return (
                     no_update,
-                    self.append_action_status(
-                        current_log, f"Downloaded {download_name}."
+                    self.action_logger.append_status(
+                        current_log, 
+                        "Saved a copy as "
+                        f"{self.action_logger.quote_value(download_name)}."
                     ),
                     no_update,
                     no_update,
@@ -732,8 +740,9 @@ class App(Dash):
                 self.graph_editor.load()
                 return (
                     no_update,
-                    self.append_action_status(
-                        current_log, "Started a new graph."
+                    self.action_logger.append_status(
+                        current_log, 
+                        "Started a new dialogue graph."
                     ),
                     no_update,
                     no_update,
@@ -782,7 +791,9 @@ class App(Dash):
                 except ValueError as exception:
                     return (
                         no_update,
-                        self.append_action_status(current_log, str(exception)),
+                        self.action_logger.append_status(
+                            current_log, str(exception)
+                        ),
                         no_update,
                         no_update,
                         no_update,
@@ -801,12 +812,15 @@ class App(Dash):
                     )
                 self.graph_editor.load(yaml_data=parsed_yaml)
                 loaded_name = self.normalize_name(self.graph_editor.graph.name)
+                quoted_value = upload_filename or loaded_name
+                new_log = self.action_logger.append_status(
+                    current_log,
+                    "Opened "
+                    f"{self.action_logger.quote_value(quoted_value)}."
+                )
                 return (
                     no_update,
-                    self.append_action_status(
-                        current_log, 
-                        f"Opened {upload_filename or loaded_name}."
-                    ),
+                    new_log,
                     no_update,
                     no_update,
                     no_update,
@@ -828,9 +842,10 @@ class App(Dash):
                     self.graph_editor.load()
                     return (
                         no_update,
-                        self.append_action_status(
+                        self.action_logger.append_status(
                             current_log, 
-                            "Discarded changes and started a new graph."
+                            "Discarded unsaved changes and started a new "
+                            "dialogue graph."
                         ),
                         no_update,
                         no_update,
@@ -857,9 +872,11 @@ class App(Dash):
                     if not queued_contents:
                         return (
                             no_update,
-                            self.append_action_status(
+                            self.action_logger.append_status(
                                 current_log, 
-                                "Open failed: no pending upload data."
+                                "Could not open the file because no pending "
+                                "file data was found. Select the file again "
+                                "and try one more time."
                             ),
                             no_update,
                             no_update,
@@ -882,7 +899,7 @@ class App(Dash):
                     except ValueError as exception:
                         return (
                             no_update,
-                            self.append_action_status(
+                            self.action_logger.append_status(
                                 current_log, str(exception)
                             ),
                             no_update,
@@ -905,13 +922,14 @@ class App(Dash):
                     loaded_name = self.normalize_name(
                         self.graph_editor.graph.name
                     )
+                    new_log = self.action_logger.append_status(
+                        current_log,
+                        "Discarded unsaved changes and opened "
+                        f"{self.action_logger.quote_value(queued_filename)}."
+                    )
                     return (
                         no_update,
-                        self.append_action_status(
-                            current_log,
-                            "Discarded changes and opened "
-                            f"{queued_filename}."
-                        ),
+                        new_log,
                         no_update,
                         no_update,
                         no_update,
@@ -932,9 +950,7 @@ class App(Dash):
             if triggered_prop_id == "confirm-unsaved-work.cancel_n_clicks":
                 return (
                     no_update,
-                    self.append_action_status(
-                        current_log, "Cancelled action."
-                    ),
+                    no_update,
                     no_update,
                     no_update,
                     no_update,
@@ -961,8 +977,11 @@ class App(Dash):
                 except ValueError as exception:
                     return (
                         no_update,
-                        self.append_action_status(
-                            current_log, f"Add vertex failed: {exception}"
+                        self.action_logger.append_status(
+                            current_log, 
+                            "Could not create an NPC node because "
+                            f"{exception}. Fix the Effects field and save "
+                            "again."
                         ),
                         "",
                         "",
@@ -983,10 +1002,16 @@ class App(Dash):
                 new_vertex_name = self.add_vertex(
                     new_vertex_text, new_vertex_effects
                 )
+                create_log = self.action_logger.build_create_log(
+                    "NPC node",
+                    new_vertex_name,
+                    self.action_logger.get_npc_log_fields(new_vertex_name)
+                )
                 return (
                     self.get_elements(), 
-                    self.append_action_status(
-                        current_log, f"Added {new_vertex_name}."
+                    self.action_logger.append_status(
+                        current_log, 
+                        create_log
                     ),
                     "",
                     "",
@@ -1008,9 +1033,11 @@ class App(Dash):
                 if not new_edge_from or not new_edge_from.strip():
                     return (
                         no_update,
-                        self.append_action_status(
+                        self.action_logger.append_status(
                             current_log, 
-                            "Add edge failed: from vertex is required."
+                            "Could not create a Player node because Source "
+                            "is required. Enter an NPC node ID in Source and "
+                            "save again."
                         ),
                         no_update,
                         no_update,
@@ -1038,8 +1065,11 @@ class App(Dash):
                 except ValueError as exception:
                     return (
                         no_update,
-                        self.append_action_status(
-                            current_log, f"Add edge failed: {exception}"
+                        self.action_logger.append_status(
+                            current_log, 
+                            "Could not create a Player node because "
+                            f"{exception}. Fix Predicates/Effects and save "
+                            "again."
                         ),
                         no_update,
                         no_update,
@@ -1069,11 +1099,30 @@ class App(Dash):
                     new_edge_predicates,
                     new_edge_effects
                 )
+                new_log = self.action_logger.append_status(
+                    current_log,
+                    self.action_logger.build_create_log(
+                        "Player node",
+                        new_edge_name,
+                        self.action_logger.get_player_log_fields(new_edge_name)
+                    )
+                )
+                if normalized_to_vertex is None:
+                    new_edge = self.graph_editor.graph.edge_dict[new_edge_name]
+                    auto_created_npc = new_edge.to_vertex
+                    new_log = self.action_logger.append_status(
+                        new_log,
+                        self.action_logger.build_create_log(
+                            "NPC node",
+                            auto_created_npc,
+                            self.action_logger.get_npc_log_fields(
+                                auto_created_npc
+                            )
+                        )
+                    )
                 return (
                     self.get_elements(),
-                    self.append_action_status(
-                        current_log, f"Added {new_edge_name}."
-                    ),
+                    new_log,
                     no_update,
                     no_update,
                     "",
@@ -1094,8 +1143,10 @@ class App(Dash):
                 if not selected_nodes:
                     return (
                         no_update,
-                        self.append_action_status(
-                            current_log, "Delete failed: no node selected."
+                        self.action_logger.append_status(
+                            current_log, 
+                            "Could not delete a node because nothing is "
+                            "selected. Select a node and try again."
                         ),
                         no_update,
                         no_update,
@@ -1121,18 +1172,71 @@ class App(Dash):
                     node_id in self.graph_editor.graph.vertex_dict
                 )
                 cascade_delete_enabled = "cascade" in (delete_cascade or [])
+                delete_messages = []
+                if was_vertex_delete and cascade_delete_enabled:
+                    delete_messages.append(
+                        self.action_logger.build_delete_log(
+                            "NPC node",
+                            node_id,
+                            self.action_logger.get_npc_log_fields(
+                                node_id, include_empty=True
+                            )
+                        )
+                    )
+                if was_edge_delete:
+                    delete_messages.append(
+                        self.action_logger.build_delete_log(
+                            "Player node",
+                            node_id,
+                            self.action_logger.get_player_log_fields(
+                                node_id, include_empty=True
+                            )
+                        )
+                    )
+                connected_player_ids = []
+                if was_vertex_delete and cascade_delete_enabled:
+                    connected_player_ids = sorted(
+                        edge_name
+                        for edge_name, edge in
+                        self.graph_editor.graph.edge_dict.items()
+                        if edge.from_vertex == node_id 
+                        or edge.to_vertex == node_id
+                    )
+                    for edge_name in connected_player_ids:
+                        delete_messages.append(
+                            self.action_logger.build_delete_log(
+                                "Player node",
+                                edge_name,
+                                self.action_logger.get_player_log_fields(
+                                    edge_name, include_empty=True
+                                )
+                            )
+                        )
                 unresolved_connections_created = (
                     self.count_unresolved_connections(node_id)
                     if was_vertex_delete and not cascade_delete_enabled 
                     else 0
                 )
-                was_removed = self.remove_node(node_id, cascade_delete_enabled)
-                if not was_removed:
+                npc_log_fields_before_delete = None
+                if was_vertex_delete and not cascade_delete_enabled:
+                    npc_log_fields_before_delete = (
+                        self.action_logger.get_npc_log_fields(
+                            node_id, include_empty=True
+                        )
+                    )
+                try:
+                    was_removed = self.remove_node(
+                        node_id,
+                        cascade_delete_enabled
+                    )
+                except VertexCannotBeDeletedError:
                     return (
                         no_update,
-                        self.append_action_status(
+                        self.action_logger.append_status(
                             current_log, 
-                            f"Delete failed: unknown node {node_id}."
+                            "You could not delete NPC node "
+                            f"{self.action_logger.quote_value(node_id)} "
+                            "because the first NPC node cannot be deleted."
                         ),
                         no_update,
                         no_update,
@@ -1150,20 +1254,53 @@ class App(Dash):
                         {},
                         no_update
                     )
+                if not was_removed:
+                    return (
+                        no_update,
+                        self.action_logger.append_status(
+                            current_log,
+                            "Could not delete "
+                            f"{self.action_logger.quote_value(node_id)} "
+                            "because it no longer exists. Select a current "
+                            "node and try again."
+                        ),
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        False,
+                        no_update,
+                        "",
+                        {},
+                        no_update
+                    )
+                new_log = self.action_logger.append_statuses(
+                    current_log,
+                    delete_messages
+                )
+                if was_vertex_delete and not cascade_delete_enabled:
+                    npc_delete_message = self.action_logger.build_delete_log(
+                        "NPC node",
+                        node_id,
+                        npc_log_fields_before_delete
+                    ).removesuffix(".")
+                    new_log = self.action_logger.append_status(
+                        new_log,
+                        f"{npc_delete_message}. "
+                        f"{unresolved_connections_created} unresolved "
+                        "connections were left behind. Open each affected "
+                        "Player node and set Source/Target to a valid NPC "
+                        "node."
+                    )
                 return (
                     self.get_elements(),
-                    self.append_action_status(
-                        current_log, 
-                        (
-                            f"Deleted {node_id}."
-                            if was_edge_delete or cascade_delete_enabled
-                            else (
-                                f"Deleted {node_id}. "
-                                f"{unresolved_connections_created} unresolved "
-                                "connections created."
-                            )
-                        )
-                    ),
+                    new_log,
                     no_update,
                     no_update,
                     no_update,
@@ -1186,14 +1323,23 @@ class App(Dash):
                 node_id = selected_nodes[0].get("id")
                 if not node_id:
                     raise PreventUpdate
+                node_type, before_fields = (
+                    self.action_logger.get_node_log_fields(
+                        node_id, include_empty=False
+                    )
+                )
                 try:
                     predicates = self.parse_predicates(edit_predicates_text)
                     effects = self.parse_effects(edit_effects_text)
                 except ValueError as exception:
                     return (
                         no_update, 
-                        self.append_action_status(
-                            current_log, f"Save failed: {exception}"
+                        self.action_logger.append_status(
+                            current_log, 
+                            f"Could not save changes for {node_type} "
+                            f"{self.action_logger.quote_value(node_id)} "
+                            f"because {exception}. Fix the invalid field "
+                            "and save again."
                         ),
                         no_update,
                         no_update,
@@ -1227,11 +1373,23 @@ class App(Dash):
                     raise PreventUpdate
                 new_log = current_log
                 if was_anything_updated:
-                    new_log = self.append_action_status(
-                        new_log, f"Saved node data for {node_id}."
+                    _, after_fields = self.action_logger.get_node_log_fields(
+                        node_id,
+                        include_empty=False
+                    )
+                    new_log = self.action_logger.append_status(
+                        new_log, 
+                        self.action_logger.build_update_log(
+                            node_type,
+                            node_id,
+                            before_fields,
+                            after_fields
+                        )
                     )
                 for warning in endpoint_warnings:
-                    new_log = self.append_action_status(new_log, warning)
+                    new_log = self.action_logger.append_status(
+                        new_log, warning
+                    )
                 return (
                     self.get_elements() if was_anything_updated else no_update, 
                     new_log,
@@ -1562,12 +1720,22 @@ class App(Dash):
                     was_updated = True
             else:
                 warnings.append(
-                    f"Invalid from vertex: {candidate_from_vertex}"
+                    "Could not update Source for Player node "
+                    f"{self.action_logger.quote_value(node_id)} "
+                    "because NPC node "
+                    f"{self.action_logger.quote_value(candidate_from_vertex)} "
+                    "does not exist. Enter an existing NPC node ID in Source "
+                    "and save again."
                 )
         elif edge.from_vertex == "__MISSING__":
             pass
         else:
-            warnings.append("Invalid from vertex: (empty)")
+            warnings.append(
+                "Could not update Source for Player node "
+                f"{self.action_logger.quote_value(node_id)} because "
+                "Source cannot be empty. Enter an existing NPC node ID in "
+                "Source and save again."
+            )
         if candidate_to_vertex:
             if candidate_to_vertex in self.graph_editor.graph.vertex_dict:
                 if edge.to_vertex != candidate_to_vertex:
@@ -1576,11 +1744,23 @@ class App(Dash):
                     )
                     was_updated = True
             else:
-                warnings.append(f"Invalid to vertex: {candidate_to_vertex}")
+                warnings.append(
+                    "Could not update Target for Player node "
+                    f"{self.action_logger.quote_value(node_id)} "
+                    "because NPC node "
+                    f"{self.action_logger.quote_value(candidate_to_vertex)} "
+                    "does not exist. Enter an existing NPC node ID in Target "
+                    "and save again."
+                )
         elif edge.to_vertex == "__MISSING__":
             pass
         else:
-            warnings.append("Invalid to vertex: (empty)")
+            warnings.append(
+                "Could not update Target for Player node "
+                f"{self.action_logger.quote_value(node_id)} because "
+                "Target cannot be empty. Enter an existing NPC node ID in "
+                "Target and save again."
+            )
         return was_updated, warnings
 
     def update_node(
