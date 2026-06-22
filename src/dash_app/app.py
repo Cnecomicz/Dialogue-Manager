@@ -37,6 +37,10 @@ from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 class App(Dash):
     """Dash application wrapper for dialogue graph editing."""
 
+    MISSING_VERTEX = "__MISSING__"
+    PENDING_ACTION_NEW = "new"
+    PENDING_ACTION_UPLOAD = "upload"
+
     def __init__(self, yaml_file: str | PathLike | None = None) -> None:
         """Initialize the app layout, state stores, and callbacks.
 
@@ -189,10 +193,10 @@ class App(Dash):
             return "", ""
         edge = self.graph_editor.graph.edge_dict[node_id]
         from_vertex = (
-            "" if edge.from_vertex == "__MISSING__" else edge.from_vertex
+            "" if edge.from_vertex == self.MISSING_VERTEX else edge.from_vertex
         )
         to_vertex = (
-            "" if edge.to_vertex == "__MISSING__" else edge.to_vertex
+            "" if edge.to_vertex == self.MISSING_VERTEX else edge.to_vertex
         )
         return from_vertex, to_vertex
 
@@ -538,878 +542,629 @@ class App(Dash):
             return "", "", "", "", ""
 
         @self.callback(
-            Output("dialogue-editor", "elements"),
-            Output("action-status", "value"),
-            Output("new-vertex-text", "value"),
-            Output("new-vertex-effects", "value"),
-            Output("new-edge-from", "value"),
-            Output("new-edge-to", "value"),
-            Output("new-edge-text", "value"),
-            Output("new-edge-predicates", "value"),
-            Output("new-edge-effects", "value"),
-            Output("graph-container", "children"),
-            Output("unsaved-changes", "data"),
-            Output("current-document", "data"),
-            Output("confirm-unsaved-work", "displayed"),
-            Output("confirm-unsaved-work", "message"),
-            Output("pending-action", "data"),
-            Output("pending-upload", "data"),
-            Output("download-yaml", "data"),
-            Input("save-name", "n_clicks"),
-            Input("save-edit-node", "n_clicks"),
-            Input("save-add-vertex", "n_clicks"),
-            Input("save-add-edge", "n_clicks"),
+            Output("dialogue-editor", "elements", allow_duplicate=True),
+            Output("action-status", "value", allow_duplicate=True),
+            Output("unsaved-changes", "data", allow_duplicate=True),
             Input("confirm-delete-node-modal", "n_clicks"),
-            Input("new-graph", "n_clicks"),
-            Input("download-graph", "n_clicks"),
-            Input("upload-graph", "contents"),
-            Input("confirm-unsaved-work", "submit_n_clicks"),
-            Input("confirm-unsaved-work", "cancel_n_clicks"),
             State("dialogue-editor", "selectedNodeData"),
-            State("edit-text", "value"),
-            State("edit-predicates", "value"),
-            State("edit-effects", "value"),
-            State("edit-from-vertex", "value"),
-            State("edit-to-vertex", "value"),
-            State("new-vertex-text", "value"),
-            State("new-vertex-effects", "value"),
-            State("new-edge-from", "value"),
-            State("new-edge-to", "value"),
-            State("new-edge-text", "value"),
-            State("new-edge-predicates", "value"),
-            State("new-edge-effects", "value"),
             State("delete-cascade", "value"),
             State("action-status", "value"),
-            State("document-name", "value"),
-            State("upload-graph", "filename"),
-            State("unsaved-changes", "data"),
-            State("current-document", "data"),
-            State("pending-action", "data"),
-            State("pending-upload", "data"),
             prevent_initial_call=True
         )
-        def handle_graph_updates(
-            save_name_clicks: int,
-            save_edit_clicks: int,
-            save_add_vertex_clicks: int,
-            save_add_edge_clicks: int,
+        def on_confirm_delete_node(
             confirm_delete_clicks: int,
-            new_graph_clicks: int,
-            download_graph_clicks: int,
-            upload_contents: str | None,
-            confirm_unsaved_submit_clicks: int,
-            confirm_unsaved_cancel_clicks: int,
             selected_nodes: list[dict] | None,
-            edit_text: str | None,
-            edit_predicates_text: str | None,
-            edit_effects_text: str | None,
-            edit_from_vertex: str | None,
-            edit_to_vertex: str | None,
-            new_vertex_text: str | None,
-            new_vertex_effects_text: str | None,
-            new_edge_from: str | None,
-            new_edge_to: str | None,
-            new_edge_text: str | None,
-            new_edge_predicates_text: str | None,
-            new_edge_effects_text: str | None,
             delete_cascade: list[str] | None,
-            current_log: str | None,
-            document_name: str | None,
-            upload_filename: str | None,
-            unsaved_changes: bool,
-            current_document: str | None,
-            pending_action: str | None,
-            pending_upload: dict | None
-        ) -> tuple[
-            list[dict] | str, 
-            str, 
-            str, 
-            str, 
-            str, 
-            str, 
-            str, 
-            str, 
-            str, 
-            object,
-            bool,
-            str,
-            bool,
-            str,
-            str,
-            dict,
-            dict
-        ]:
-            def default_result() -> tuple:
-                return (
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    False,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update
-                )
-            triggered_id = ctx.triggered_id
-            triggered_prop_id = (
-                ctx.triggered[0]["prop_id"] if ctx.triggered else ""
-            )
-            if triggered_id == "save-name":
-                normalized = self.normalize_name(document_name)
-                self.graph_editor.edit_name(normalized)
+            current_log: str | None
+        ) -> tuple[object, str, object]:
+            if not confirm_delete_clicks:
+                raise PreventUpdate
+            if not selected_nodes:
                 return (
                     no_update,
                     self.action_logger.append_status(
                         current_log,
-                        "Saved NPC name as "
-                        f"{self.action_logger.quote_value(normalized)}."
+                        "Could not delete a node because nothing is "
+                        "selected. Select a node and try again."
                     ),
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    True,
-                    normalized,
-                    False,
-                    no_update,
-                    "",
-                    {},
                     no_update
                 )
-            if triggered_id == "download-graph":
-                download_name = self.get_filename(current_document)
-                return (
-                    no_update,
-                    self.action_logger.append_status(
-                        current_log, 
-                        "Saved a copy as "
-                        f"{self.action_logger.quote_value(download_name)}."
-                    ),
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    False,
-                    no_update,
-                    "",
-                    {},
-                    dcc.send_string(
-                        self.graph_editor.export_yaml_text(), download_name
+            node_id = selected_nodes[0].get("id")
+            if not node_id:
+                raise PreventUpdate
+            was_edge_delete = node_id in self.graph_editor.graph.edge_dict
+            was_vertex_delete = node_id in self.graph_editor.graph.vertex_dict
+            cascade_delete_enabled = "cascade" in (delete_cascade or [])
+            delete_messages = []
+            if was_vertex_delete and cascade_delete_enabled:
+                delete_messages.append(
+                    self.action_logger.build_delete_log(
+                        "NPC node",
+                        node_id,
+                        self.action_logger.get_npc_log_fields(
+                            node_id,
+                            include_empty=True
+                        )
                     )
                 )
-            if triggered_id == "new-graph":
-                if unsaved_changes:
-                    return (
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        True,
-                        "You have unsaved changes. Start a new graph anyway?",
-                        "new",
-                        {},
-                        no_update
+            if was_edge_delete:
+                delete_messages.append(
+                    self.action_logger.build_delete_log(
+                        "Player node",
+                        node_id,
+                        self.action_logger.get_player_log_fields(
+                            node_id,
+                            include_empty=True
+                        )
                     )
-                self.graph_editor.load()
+                )
+            if was_vertex_delete and cascade_delete_enabled:
+                connected_player_ids = sorted(
+                    edge_name
+                    for edge_name, edge 
+                    in self.graph_editor.graph.edge_dict.items()
+                    if edge.from_vertex == node_id 
+                    or edge.to_vertex == node_id
+                )
+                for edge_name in connected_player_ids:
+                    delete_messages.append(
+                        self.action_logger.build_delete_log(
+                            "Player node",
+                            edge_name,
+                            self.action_logger.get_player_log_fields(
+                                edge_name,
+                                include_empty=True
+                            )
+                        )
+                    )
+            unresolved_connections_created = (
+                self.count_unresolved_connections(node_id)
+                if was_vertex_delete and not cascade_delete_enabled
+                else 0
+            )
+            npc_log_fields_before_delete = None
+            if was_vertex_delete and not cascade_delete_enabled:
+                npc_log_fields_before_delete = (
+                    self.action_logger.get_npc_log_fields(
+                    node_id, include_empty=True
+                    )
+                )
+            try:
+                was_removed = self.remove_node(node_id, cascade_delete_enabled)
+            except VertexCannotBeDeletedError:
                 return (
                     no_update,
                     self.action_logger.append_status(
-                        current_log, 
-                        "Started a new dialogue graph."
+                        current_log,
+                        "You could not delete NPC node "
+                        f"{self.action_logger.quote_value(node_id)} "
+                        "because the first NPC node cannot be deleted."
                     ),
+                    no_update
+                )
+            if not was_removed:
+                return (
                     no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
+                    self.action_logger.append_status(
+                        current_log,
+                        "Could not delete "
+                        f"{self.action_logger.quote_value(node_id)} "
+                        "because it no longer exists. Select a current "
+                        "node and try again."
+                    ),
+                    no_update
+                )
+            new_log = self.action_logger.append_statuses(
+                current_log,
+                delete_messages
+            )
+            if was_vertex_delete and not cascade_delete_enabled:
+                npc_delete_message = self.action_logger.build_delete_log(
+                    "NPC node",
+                    node_id,
+                    npc_log_fields_before_delete
+                ).removesuffix(".")
+                new_log = self.action_logger.append_status(
+                    new_log,
+                    f"{npc_delete_message}. "
+                    f"{unresolved_connections_created} unresolved "
+                    "connections were left behind. Open each affected "
+                    "Player node and set Source/Target to a valid NPC "
+                    "node."
+                )
+            return (self.get_elements(), new_log, True)
+
+        @self.callback(
+            Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
+            Output("pending-action", "data", allow_duplicate=True),
+            Output("pending-upload", "data", allow_duplicate=True),
+            Input("confirm-unsaved-work", "cancel_n_clicks"),
+            prevent_initial_call=True
+        )
+        def on_confirm_unsaved_cancel(
+            confirm_unsaved_cancel_clicks: int
+        ) -> tuple[bool, str, dict]:
+            if not confirm_unsaved_cancel_clicks:
+                raise PreventUpdate
+            return False, "", {}
+
+        @self.callback(
+            Output("action-status", "value", allow_duplicate=True),
+            Output("graph-container", "children", allow_duplicate=True),
+            Output("unsaved-changes", "data", allow_duplicate=True),
+            Output("current-document", "data", allow_duplicate=True),
+            Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
+            Output("pending-action", "data", allow_duplicate=True),
+            Output("pending-upload", "data", allow_duplicate=True),
+            Input("confirm-unsaved-work", "submit_n_clicks"),
+            State("pending-action", "data"),
+            State("pending-upload", "data"),
+            State("action-status", "value"),
+            prevent_initial_call=True
+        )
+        def on_confirm_unsaved_submit(
+            confirm_unsaved_submit_clicks: int,
+            pending_action: str | None,
+            pending_upload: dict | None,
+            current_log: str | None
+        ) -> tuple[object, object, object, object, bool, str, dict]:
+            if not confirm_unsaved_submit_clicks:
+                raise PreventUpdate
+            if pending_action == self.PENDING_ACTION_NEW:
+                self.graph_editor.load()
+                return (
+                    self.action_logger.append_status(
+                        current_log,
+                        "Discarded unsaved changes and started a new "
+                        "dialogue graph."
+                    ),
                     self.get_fresh_graph_component(),
                     False,
                     self.normalize_name(self.graph_editor.graph.name),
                     False,
-                    no_update,
                     "",
-                    {},
-                    no_update
+                    {}
                 )
-            if triggered_id == "upload-graph":
-                if not upload_contents:
-                    raise PreventUpdate
-                if unsaved_changes:
+            if pending_action == self.PENDING_ACTION_UPLOAD:
+                queued_upload = pending_upload or {}
+                queued_contents = queued_upload.get("contents")
+                queued_filename = queued_upload.get("filename") or "Untitled"
+                if not queued_contents:
                     return (
+                        self.action_logger.append_status(
+                            current_log,
+                            "Could not open the file because no pending "
+                            "file data was found. Select the file again "
+                            "and try one more time."
+                        ),
                         no_update,
                         no_update,
                         no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        True,
-                        "You have unsaved changes. Upload and replace anyway?",
-                        "upload",
-                        {
-                            "contents": upload_contents, 
-                            "filename": upload_filename or "Untitled"
-                        },
-                        no_update
+                        False,
+                        "",
+                        {}
                     )
                 try:
-                    parsed_yaml = self.parse_uploaded_yaml(upload_contents)
+                    parsed_yaml = self.parse_uploaded_yaml(queued_contents)
                 except ValueError as exception:
                     return (
-                        no_update,
                         self.action_logger.append_status(
                             current_log, str(exception)
                         ),
                         no_update,
                         no_update,
                         no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
                         False,
-                        no_update,
                         "",
-                        {},
-                        no_update
+                        {}
                     )
                 self.graph_editor.load(yaml_data=parsed_yaml)
                 loaded_name = self.normalize_name(self.graph_editor.graph.name)
-                quoted_value = upload_filename or loaded_name
-                new_log = self.action_logger.append_status(
-                    current_log,
-                    "Opened "
-                    f"{self.action_logger.quote_value(quoted_value)}."
-                )
                 return (
-                    no_update,
-                    new_log,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
+                    self.action_logger.append_status(
+                        current_log,
+                        "Discarded unsaved changes and opened "
+                        f"{self.action_logger.quote_value(queued_filename)}."
+                    ),
                     self.get_fresh_graph_component(),
                     False,
                     loaded_name,
                     False,
-                    no_update,
                     "",
-                    {},
-                    no_update
-                )
-            if triggered_prop_id == "confirm-unsaved-work.submit_n_clicks":
-                if pending_action == "new":
-                    self.graph_editor.load()
-                    return (
-                        no_update,
-                        self.action_logger.append_status(
-                            current_log, 
-                            "Discarded unsaved changes and started a new "
-                            "dialogue graph."
-                        ),
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        self.get_fresh_graph_component(),
-                        False,
-                        self.normalize_name(self.graph_editor.graph.name),
-                        False,
-                        no_update,
-                        "",
-                        {},
-                        no_update
-                    )
-                if pending_action == "upload":
-                    queued_upload = pending_upload or {}
-                    queued_contents = queued_upload.get("contents")
-                    queued_filename = (
-                        queued_upload.get("filename") or "Untitled"
-                    )
-                    if not queued_contents:
-                        return (
-                            no_update,
-                            self.action_logger.append_status(
-                                current_log, 
-                                "Could not open the file because no pending "
-                                "file data was found. Select the file again "
-                                "and try one more time."
-                            ),
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            False,
-                            no_update,
-                            "",
-                            {},
-                            no_update
-                        )
-                    try:
-                        parsed_yaml = self.parse_uploaded_yaml(queued_contents)
-                    except ValueError as exception:
-                        return (
-                            no_update,
-                            self.action_logger.append_status(
-                                current_log, str(exception)
-                            ),
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            no_update,
-                            False,
-                            no_update,
-                            "",
-                            {},
-                            no_update
-                        )
-                    self.graph_editor.load(yaml_data=parsed_yaml)
-                    loaded_name = self.normalize_name(
-                        self.graph_editor.graph.name
-                    )
-                    new_log = self.action_logger.append_status(
-                        current_log,
-                        "Discarded unsaved changes and opened "
-                        f"{self.action_logger.quote_value(queued_filename)}."
-                    )
-                    return (
-                        no_update,
-                        new_log,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        self.get_fresh_graph_component(),
-                        False,
-                        loaded_name,
-                        False,
-                        no_update,
-                        "",
-                        {},
-                        no_update
-                    )
-                return default_result()
-            if triggered_prop_id == "confirm-unsaved-work.cancel_n_clicks":
-                return (
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    False,
-                    no_update,
-                    "",
-                    {},
-                    no_update
-                )
-            if triggered_id == "save-add-vertex":
-                if not new_vertex_text:
-                    raise PreventUpdate
-                try:
-                    new_vertex_effects = self.parse_effects(
-                        new_vertex_effects_text
-                    )
-                except ValueError as exception:
-                    return (
-                        no_update,
-                        self.action_logger.append_status(
-                            current_log, 
-                            "Could not create an NPC node because "
-                            f"{exception}. Fix the Effects field and save "
-                            "again."
-                        ),
-                        "",
-                        "",
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        True,
-                        no_update,
-                        False,
-                        no_update,
-                        "",
-                        {},
-                        no_update
-                    )
-                new_vertex_name = self.add_vertex(
-                    new_vertex_text, new_vertex_effects
-                )
-                create_log = self.action_logger.build_create_log(
-                    "NPC node",
-                    new_vertex_name,
-                    self.action_logger.get_npc_log_fields(new_vertex_name)
-                )
-                return (
-                    self.get_elements(), 
-                    self.action_logger.append_status(
-                        current_log, 
-                        create_log
-                    ),
-                    "",
-                    "",
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    True,
-                    no_update,
-                    False,
-                    no_update,
-                    "",
-                    {},
-                    no_update
-                )
-            if triggered_id == "save-add-edge":
-                if not new_edge_from or not new_edge_from.strip():
-                    return (
-                        no_update,
-                        self.action_logger.append_status(
-                            current_log, 
-                            "Could not create a Player node because Source "
-                            "is required. Enter an NPC node ID in Source and "
-                            "save again."
-                        ),
-                        no_update,
-                        no_update,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        no_update,
-                        True,
-                        no_update,
-                        False,
-                        no_update,
-                        "",
-                        {},
-                        no_update
-                    )
-                try: 
-                    new_edge_predicates = self.parse_predicates(
-                        new_edge_predicates_text
-                    )
-                    new_edge_effects = self.parse_effects(
-                        new_edge_effects_text
-                    )
-                except ValueError as exception:
-                    return (
-                        no_update,
-                        self.action_logger.append_status(
-                            current_log, 
-                            "Could not create a Player node because "
-                            f"{exception}. Fix Predicates/Effects and save "
-                            "again."
-                        ),
-                        no_update,
-                        no_update,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        no_update,
-                        True,
-                        no_update,
-                        False,
-                        no_update,
-                        "",
-                        {},
-                        no_update
-                    )
-                normalized_to_vertex = (
-                    new_edge_to.strip() 
-                    if new_edge_to and new_edge_to.strip()
-                    else None
-                )
-                new_edge_name = self.add_edge(
-                    new_edge_from.strip(),
-                    normalized_to_vertex,
-                    new_edge_text,
-                    new_edge_predicates,
-                    new_edge_effects
-                )
-                new_log = self.action_logger.append_status(
-                    current_log,
-                    self.action_logger.build_create_log(
-                        "Player node",
-                        new_edge_name,
-                        self.action_logger.get_player_log_fields(new_edge_name)
-                    )
-                )
-                if normalized_to_vertex is None:
-                    new_edge = self.graph_editor.graph.edge_dict[new_edge_name]
-                    auto_created_npc = new_edge.to_vertex
-                    new_log = self.action_logger.append_status(
-                        new_log,
-                        self.action_logger.build_create_log(
-                            "NPC node",
-                            auto_created_npc,
-                            self.action_logger.get_npc_log_fields(
-                                auto_created_npc
-                            )
-                        )
-                    )
-                return (
-                    self.get_elements(),
-                    new_log,
-                    no_update,
-                    no_update,
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    no_update,
-                    True,
-                    no_update,
-                    False,
-                    no_update,
-                    "",
-                    {},
-                    no_update
-                )
-            if triggered_id == "confirm-delete-node-modal":
-                if not selected_nodes:
-                    return (
-                        no_update,
-                        self.action_logger.append_status(
-                            current_log, 
-                            "Could not delete a node because nothing is "
-                            "selected. Select a node and try again."
-                        ),
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        False,
-                        no_update,
-                        "",
-                        {},
-                        no_update
-                    )
-                node_id = selected_nodes[0].get("id")
-                if not node_id:
-                    raise PreventUpdate
-                was_edge_delete = node_id in self.graph_editor.graph.edge_dict
-                was_vertex_delete = (
-                    node_id in self.graph_editor.graph.vertex_dict
-                )
-                cascade_delete_enabled = "cascade" in (delete_cascade or [])
-                delete_messages = []
-                if was_vertex_delete and cascade_delete_enabled:
-                    delete_messages.append(
-                        self.action_logger.build_delete_log(
-                            "NPC node",
-                            node_id,
-                            self.action_logger.get_npc_log_fields(
-                                node_id, include_empty=True
-                            )
-                        )
-                    )
-                if was_edge_delete:
-                    delete_messages.append(
-                        self.action_logger.build_delete_log(
-                            "Player node",
-                            node_id,
-                            self.action_logger.get_player_log_fields(
-                                node_id, include_empty=True
-                            )
-                        )
-                    )
-                connected_player_ids = []
-                if was_vertex_delete and cascade_delete_enabled:
-                    connected_player_ids = sorted(
-                        edge_name
-                        for edge_name, edge in
-                        self.graph_editor.graph.edge_dict.items()
-                        if edge.from_vertex == node_id 
-                        or edge.to_vertex == node_id
-                    )
-                    for edge_name in connected_player_ids:
-                        delete_messages.append(
-                            self.action_logger.build_delete_log(
-                                "Player node",
-                                edge_name,
-                                self.action_logger.get_player_log_fields(
-                                    edge_name, include_empty=True
-                                )
-                            )
-                        )
-                unresolved_connections_created = (
-                    self.count_unresolved_connections(node_id)
-                    if was_vertex_delete and not cascade_delete_enabled 
-                    else 0
-                )
-                npc_log_fields_before_delete = None
-                if was_vertex_delete and not cascade_delete_enabled:
-                    npc_log_fields_before_delete = (
-                        self.action_logger.get_npc_log_fields(
-                            node_id, include_empty=True
-                        )
-                    )
-                try:
-                    was_removed = self.remove_node(
-                        node_id,
-                        cascade_delete_enabled
-                    )
-                except VertexCannotBeDeletedError:
-                    return (
-                        no_update,
-                        self.action_logger.append_status(
-                            current_log, 
-                            "You could not delete NPC node "
-                            f"{self.action_logger.quote_value(node_id)} "
-                            "because the first NPC node cannot be deleted."
-                        ),
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        False,
-                        no_update,
-                        "",
-                        {},
-                        no_update
-                    )
-                if not was_removed:
-                    return (
-                        no_update,
-                        self.action_logger.append_status(
-                            current_log,
-                            "Could not delete "
-                            f"{self.action_logger.quote_value(node_id)} "
-                            "because it no longer exists. Select a current "
-                            "node and try again."
-                        ),
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        False,
-                        no_update,
-                        "",
-                        {},
-                        no_update
-                    )
-                new_log = self.action_logger.append_statuses(
-                    current_log,
-                    delete_messages
-                )
-                if was_vertex_delete and not cascade_delete_enabled:
-                    npc_delete_message = self.action_logger.build_delete_log(
-                        "NPC node",
-                        node_id,
-                        npc_log_fields_before_delete
-                    ).removesuffix(".")
-                    new_log = self.action_logger.append_status(
-                        new_log,
-                        f"{npc_delete_message}. "
-                        f"{unresolved_connections_created} unresolved "
-                        "connections were left behind. Open each affected "
-                        "Player node and set Source/Target to a valid NPC "
-                        "node."
-                    )
-                return (
-                    self.get_elements(),
-                    new_log,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    True,
-                    no_update,
-                    False,
-                    no_update,
-                    "",
-                    {},
-                    no_update
-                )
-            if triggered_id == "save-edit-node":
-                if not selected_nodes:
-                    raise PreventUpdate
-                node_id = selected_nodes[0].get("id")
-                if not node_id:
-                    raise PreventUpdate
-                node_type, before_fields = (
-                    self.action_logger.get_node_log_fields(
-                        node_id, include_empty=False
-                    )
-                )
-                try:
-                    predicates = self.parse_predicates(edit_predicates_text)
-                    effects = self.parse_effects(edit_effects_text)
-                except ValueError as exception:
-                    return (
-                        no_update, 
-                        self.action_logger.append_status(
-                            current_log, 
-                            f"Could not save changes for {node_type} "
-                            f"{self.action_logger.quote_value(node_id)} "
-                            f"because {exception}. Fix the invalid field "
-                            "and save again."
-                        ),
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        no_update,
-                        True,
-                        no_update,
-                        False,
-                        no_update,
-                        "",
-                        {},
-                        no_update
-                    )
-                was_updated = self.update_node(
-                    node_id, edit_text or "", predicates, effects
-                )
-                endpoint_warnings = []
-                endpoint_updated = False
-                if node_id in self.graph_editor.graph.edge_dict:
-                    endpoint_updated, endpoint_warnings = (
-                        self.update_edge_endpoints(
-                            node_id, edit_from_vertex, edit_to_vertex
-                        )
-                    )
-                was_anything_updated = was_updated or endpoint_updated
-                if not was_anything_updated and not endpoint_warnings:
-                    raise PreventUpdate
-                new_log = current_log
-                if was_anything_updated:
-                    _, after_fields = self.action_logger.get_node_log_fields(
-                        node_id,
-                        include_empty=False
-                    )
-                    new_log = self.action_logger.append_status(
-                        new_log, 
-                        self.action_logger.build_update_log(
-                            node_type,
-                            node_id,
-                            before_fields,
-                            after_fields
-                        )
-                    )
-                for warning in endpoint_warnings:
-                    new_log = self.action_logger.append_status(
-                        new_log, warning
-                    )
-                return (
-                    self.get_elements() if was_anything_updated else no_update, 
-                    new_log,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    no_update,
-                    True if was_anything_updated else no_update,
-                    no_update,
-                    False,
-                    no_update,
-                    "",
-                    {},
-                    no_update
+                    {}
                 )
             raise PreventUpdate
+
+        @self.callback(
+            Output("action-status", "value", allow_duplicate=True),
+            Output("download-yaml", "data", allow_duplicate=True),
+            Input("download-graph", "n_clicks"),
+            State("action-status", "value"),
+            State("current-document", "data"),
+            prevent_initial_call=True
+        )
+        def on_download_graph(
+            download_graph_clicks: int,
+            current_log: str | None,
+            current_document: str | None
+        ) -> tuple[str, object]:
+            if not download_graph_clicks:
+                raise PreventUpdate
+            download_name = self.get_filename(current_document)
+            return (
+                self.action_logger.append_status(
+                    current_log,
+                    "Saved a copy as "
+                    f"{self.action_logger.quote_value(download_name)}."
+                ),
+                dcc.send_string(
+                    self.graph_editor.export_yaml_text(),
+                    download_name
+                )
+            )
+
+        @self.callback(
+            Output("action-status", "value", allow_duplicate=True),
+            Output("graph-container", "children", allow_duplicate=True),
+            Output("unsaved-changes", "data", allow_duplicate=True),
+            Output("current-document", "data", allow_duplicate=True),
+            Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
+            Output("confirm-unsaved-work", "message", allow_duplicate=True),
+            Output("pending-action", "data", allow_duplicate=True),
+            Output("pending-upload", "data", allow_duplicate=True),
+            Input("new-graph", "n_clicks"),
+            State("action-status", "value"),
+            State("unsaved-changes", "data"),
+            prevent_initial_call=True
+        )
+        def on_new_graph(
+            new_graph_clicks: int,
+            current_log: str | None,
+            unsaved_changes: bool
+        ) -> tuple[object, object, object, object, bool, object, str, dict]:
+            if not new_graph_clicks:
+                raise PreventUpdate
+            if unsaved_changes:
+                return (
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    True,
+                    "You have unsaved changes. Start a new graph anyway?",
+                    self.PENDING_ACTION_NEW,
+                    {}
+                )
+            self.graph_editor.load()
+            return (
+                self.action_logger.append_status(
+                    current_log,
+                    "Started a new dialogue graph."
+                ),
+                self.get_fresh_graph_component(),
+                False,
+                self.normalize_name(self.graph_editor.graph.name),
+                False,
+                no_update,
+                "",
+                {}
+            )
+
+        @self.callback(
+            Output("dialogue-editor", "elements", allow_duplicate=True),
+            Output("action-status", "value", allow_duplicate=True),
+            Output("unsaved-changes", "data", allow_duplicate=True),
+            Input("save-add-edge", "n_clicks"),
+            State("new-edge-from", "value"),
+            State("new-edge-to", "value"),
+            State("new-edge-text", "value"),
+            State("new-edge-predicates", "value"),
+            State("new-edge-effects", "value"),
+            State("action-status", "value"),
+            prevent_initial_call=True
+        )
+        def on_save_add_edge(
+            save_add_edge_clicks: int,
+            new_edge_from: str | None,
+            new_edge_to: str | None,
+            new_edge_text: str | None,
+            new_edge_predicates_text: str | None,
+            new_edge_effects_text: str | None,
+            current_log: str | None
+        ) -> tuple[object, str, bool]:
+            if not save_add_edge_clicks:
+                raise PreventUpdate
+            if not new_edge_from or not new_edge_from.strip():
+                return (
+                    no_update,
+                    self.action_logger.append_status(
+                        current_log,
+                        "Could not create a Player node because Source "
+                        "is required. Enter an NPC node ID in Source and "
+                        "save again."
+                    ),
+                    True
+                )
+            try:
+                new_edge_predicates = self.parse_predicates(
+                    new_edge_predicates_text
+                )
+                new_edge_effects = self.parse_effects(new_edge_effects_text)
+            except ValueError as exception:
+                return (
+                    no_update,
+                    self.action_logger.append_status(
+                        current_log,
+                        "Could not create a Player node because "
+                        f"{exception}. Fix Predicates/Effects and save "
+                        "again."
+                    ),
+                    True
+                )
+            normalized_to_vertex = (
+                new_edge_to.strip()
+                if new_edge_to and new_edge_to.strip()
+                else None
+            )
+            new_edge_name = self.add_edge(
+                new_edge_from.strip(),
+                normalized_to_vertex,
+                new_edge_text,
+                new_edge_predicates,
+                new_edge_effects
+            )
+            new_log = self.action_logger.append_status(
+                current_log,
+                self.action_logger.build_create_log(
+                    "Player node",
+                    new_edge_name,
+                    self.action_logger.get_player_log_fields(new_edge_name)
+                )
+            )
+            if normalized_to_vertex is None:
+                new_edge = self.graph_editor.graph.edge_dict[new_edge_name]
+                auto_created_npc = new_edge.to_vertex
+                new_log = self.action_logger.append_status(
+                    new_log,
+                    self.action_logger.build_create_log(
+                        "NPC node",
+                        auto_created_npc,
+                        self.action_logger.get_npc_log_fields(
+                            auto_created_npc
+                        )
+                    )
+                )
+            return (self.get_elements(), new_log, True)
+
+        @self.callback(
+            Output("dialogue-editor", "elements", allow_duplicate=True),
+            Output("action-status", "value", allow_duplicate=True),
+            Output("unsaved-changes", "data", allow_duplicate=True),
+            Input("save-add-vertex", "n_clicks"),
+            State("new-vertex-text", "value"),
+            State("new-vertex-effects", "value"),
+            State("action-status", "value"),
+            prevent_initial_call=True
+        )
+        def on_save_add_vertex(
+            save_add_vertex_clicks: int,
+            new_vertex_text: str | None,
+            new_vertex_effects_text: str | None,
+            current_log: str | None
+        ) -> tuple[object, str, object]:
+            if not save_add_vertex_clicks or not new_vertex_text:
+                raise PreventUpdate
+            try:
+                new_vertex_effects = self.parse_effects(
+                    new_vertex_effects_text
+                )
+            except ValueError as exception:
+                return (
+                    no_update,
+                    self.action_logger.append_status(
+                        current_log,
+                        "Could not create an NPC node because "
+                        f"{exception}. Fix the Effects field and save "
+                        "again."
+                    ),
+                    True
+                )
+            new_vertex_name = self.add_vertex(
+                new_vertex_text, new_vertex_effects
+            )
+            create_log = self.action_logger.build_create_log(
+                "NPC node",
+                new_vertex_name,
+                self.action_logger.get_npc_log_fields(new_vertex_name)
+            )
+            return (
+                self.get_elements(),
+                self.action_logger.append_status(current_log, create_log),
+                True
+            )
+
+        @self.callback(
+            Output("dialogue-editor", "elements", allow_duplicate=True),
+            Output("action-status", "value", allow_duplicate=True),
+            Output("unsaved-changes", "data", allow_duplicate=True),
+            Input("save-edit-node", "n_clicks"),
+            State("dialogue-editor", "selectedNodeData"),
+            State("edit-text", "value"),
+            State("edit-predicates", "value"),
+            State("edit-effects", "value"),
+            State("edit-from-vertex", "value"),
+            State("edit-to-vertex", "value"),
+            State("action-status", "value"),
+            prevent_initial_call=True
+        )
+        def on_save_edit_node(
+            save_edit_clicks: int,
+            selected_nodes: list[dict] | None,
+            edit_text: str | None,
+            edit_predicates_text: str | None,
+            edit_effects_text: str | None,
+            edit_from_vertex: str | None,
+            edit_to_vertex: str | None,
+            current_log: str | None
+        ) -> tuple[object, str, object]:
+            if not save_edit_clicks or not selected_nodes:
+                raise PreventUpdate
+            node_id = selected_nodes[0].get("id")
+            if not node_id:
+                raise PreventUpdate
+            node_type, before_fields = self.action_logger.get_node_log_fields(
+                node_id,
+                include_empty=False
+            )
+            try:
+                predicates = self.parse_predicates(edit_predicates_text)
+                effects = self.parse_effects(edit_effects_text)
+            except ValueError as exception:
+                return (
+                    no_update,
+                    self.action_logger.append_status(
+                        current_log,
+                        f"Could not save changes for {node_type} "
+                        f"{self.action_logger.quote_value(node_id)} "
+                        f"because {exception}. Fix the invalid field "
+                        "and save again."
+                    ),
+                    True
+                )
+            was_updated = self.update_node(
+                node_id, edit_text or "", predicates, effects
+            )
+            endpoint_warnings = []
+            endpoint_updated = False
+            if node_id in self.graph_editor.graph.edge_dict:
+                endpoint_updated, endpoint_warnings = (
+                    self.update_edge_endpoints(
+                        node_id, edit_from_vertex, edit_to_vertex
+                    )
+                )
+            was_anything_updated = was_updated or endpoint_updated
+            if not was_anything_updated and not endpoint_warnings:
+                raise PreventUpdate
+            new_log = current_log
+            if was_anything_updated:
+                _, after_fields = self.action_logger.get_node_log_fields(
+                    node_id,
+                    include_empty=False
+                )
+                new_log = self.action_logger.append_status(
+                    new_log,
+                    self.action_logger.build_update_log(
+                        node_type,
+                        node_id,
+                        before_fields,
+                        after_fields
+                    )
+                )
+            for warning in endpoint_warnings:
+                new_log = self.action_logger.append_status(new_log, warning)
+            return (
+                self.get_elements() if was_anything_updated else no_update,
+                new_log,
+                True if was_anything_updated else no_update
+            )
+
+        @self.callback(
+            Output("action-status", "value", allow_duplicate=True),
+            Output("unsaved-changes", "data", allow_duplicate=True),
+            Output("current-document", "data", allow_duplicate=True),
+            Input("save-name", "n_clicks"),
+            State("action-status", "value"),
+            State("document-name", "value"),
+            prevent_initial_call=True
+        )
+        def on_save_name(
+            save_name_clicks: int,
+            current_log: str | None,
+            document_name: str | None
+        ) -> tuple[str, bool, str]:
+            if not save_name_clicks:
+                raise PreventUpdate
+            normalized = self.normalize_name(document_name)
+            self.graph_editor.edit_name(normalized)
+            return (
+                self.action_logger.append_status(
+                    current_log,
+                    "Saved NPC name as "
+                    f"{self.action_logger.quote_value(normalized)}."
+                ),
+                True,
+                normalized
+            )
+
+        @self.callback(
+            Output("action-status", "value", allow_duplicate=True),
+            Output("graph-container", "children", allow_duplicate=True),
+            Output("unsaved-changes", "data", allow_duplicate=True),
+            Output("current-document", "data", allow_duplicate=True),
+            Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
+            Output("confirm-unsaved-work", "message", allow_duplicate=True),
+            Output("pending-action", "data", allow_duplicate=True),
+            Output("pending-upload", "data", allow_duplicate=True),
+            Input("upload-graph", "contents"),
+            State("upload-graph", "filename"),
+            State("action-status", "value"),
+            State("unsaved-changes", "data"),
+            prevent_initial_call=True
+        )
+        def on_upload_graph(
+            upload_contents: str | None,
+            upload_filename: str | None,
+            current_log: str | None,
+            unsaved_changes: bool
+        ) -> tuple[object, object, object, object, bool, object, str, dict]:
+            if not upload_contents:
+                raise PreventUpdate
+            if unsaved_changes:
+                return (
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    True,
+                    "You have unsaved changes. Upload and replace anyway?",
+                    self.PENDING_ACTION_UPLOAD,
+                    {
+                        "contents": upload_contents,
+                        "filename": upload_filename or "Untitled"
+                    }
+                )
+            try:
+                parsed_yaml = self.parse_uploaded_yaml(upload_contents)
+            except ValueError as exception:
+                return (
+                    self.action_logger.append_status(
+                        current_log, str(exception)
+                    ),
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    no_update,
+                    "",
+                    {}
+                )
+            self.graph_editor.load(yaml_data=parsed_yaml)
+            loaded_name = self.normalize_name(self.graph_editor.graph.name)
+            quoted_value = upload_filename or loaded_name
+            return (
+                self.action_logger.append_status(
+                    current_log,
+                    "Opened "
+                    f"{self.action_logger.quote_value(quoted_value)}."
+                ),
+                self.get_fresh_graph_component(),
+                False,
+                loaded_name,
+                False,
+                no_update,
+                "",
+                {}
+            )
 
         @self.callback(
             Output("current-document-label", "children"),
@@ -1727,7 +1482,7 @@ class App(Dash):
                     "does not exist. Enter an existing NPC node ID in Source "
                     "and save again."
                 )
-        elif edge.from_vertex == "__MISSING__":
+        elif edge.from_vertex == self.MISSING_VERTEX:
             pass
         else:
             warnings.append(
@@ -1752,7 +1507,7 @@ class App(Dash):
                     "does not exist. Enter an existing NPC node ID in Target "
                     "and save again."
                 )
-        elif edge.to_vertex == "__MISSING__":
+        elif edge.to_vertex == self.MISSING_VERTEX:
             pass
         else:
             warnings.append(
