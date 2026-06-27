@@ -4,6 +4,45 @@ from dialogue_navigator.helper_functions import (
 from dialogue_model.edge import Edge
 from dialogue_model.graph import Graph
 
+class AggregatedValidationErrors(Exception):
+    """Aggregate graph validation errors."""
+
+    def __init__(self, errors: list[Exception]) -> None:
+        """Initialize the aggregate error from individual validation errors.
+
+        Args:
+            errors (list[Exception]): Individual validation errors gathered
+                for the graph.
+        """
+        self.errors = errors
+        message_lines = [
+            "Graph failed runtime validation:",
+            *[f"- {error}" for error in errors]
+        ]
+        super().__init__("\n".join(message_lines))
+
+class DisconnectedGraphError(Exception):
+    """Raised when graph has multiple connected components."""
+
+    def __init__(self, components: list[list[str]]) -> None:
+        """Initialize the error with the connected components.
+
+        Args:
+            components (list[str[str]]): List of vertex lists, each
+                representing a connected component.
+        """
+        self.components = components
+        component_strings = [
+            f"Component {i+1}: {component}"
+            for i, component in enumerate(components)
+        ]
+        message = (
+            f"Graph is not connected. Found {len(components)} "
+            "connected components:\n"
+            + "\n".join(f". {string}" for string in component_strings)
+        )
+        super().__init__(message)
+
 class EndpointNotFoundError(Exception):
     """Raised when an edge endpoint references an unknown vertex."""
 
@@ -143,6 +182,37 @@ class GraphNavigator:
                 vertex_names - already_reachable_vertices
             ):
                 errors.append(UnreachableVertexError(vertex_name))
+        visited_vertices = set()
+        connected_components = []
+        for vertex_name in sorted(vertex_names):
+            if vertex_name not in visited_vertices:
+                component = set()
+                frontier = [vertex_name]
+                while frontier:
+                    current_vertex = frontier.pop()
+                    if current_vertex in visited_vertices:
+                        continue
+                    visited_vertices.add(current_vertex)
+                    component.add(current_vertex)
+                    for edge in self.graph.edge_dict.values():
+                        if (
+                            edge.from_vertex in vertex_names
+                            and edge.to_vertex in vertex_names
+                        ):
+                            if (
+                                edge.from_vertex == current_vertex
+                                and edge.to_vertex not in visited_vertices
+                            ):
+                                frontier.append(edge.to_vertex)
+                            elif (
+                                edge.to_vertex == current_vertex
+                                and edge.from_vertex not in visited_vertices
+                            ):
+                                frontier.append(edge.from_vertex)
+                if component:
+                    connected_components.append(sorted(component))
+            if len(connected_components) > 1:
+                errors.append(DisconnectedGraphError(connected_components))
         return errors
 
     def enter_vertex(self, vertex_name: str) -> None:
@@ -284,11 +354,11 @@ class GraphNavigator:
         """Raise errors if graph is invalid.
 
         Raises:
-            StartVertexMissingError: If vertex_0 is not present.
+            AggregatedValidationErrors: If the graph has any validation errors.
         """
         errors = self.collect_validation_errors()
-        for error in errors:
-            raise error
+        if errors:
+            raise AggregatedValidationErrors(errors)
 
 
     
