@@ -6,7 +6,8 @@ from dialogue_navigator.graph_navigator import (
     GraphNavigator,
     InvalidEdgeError,
     MissingEdgeEndpointError,
-    StartVertexMissingError
+    StartVertexMissingError,
+    UnreachableVertexError
 )
 
 # GraphNavigator has a current vertex that starts with "begin"
@@ -126,4 +127,16 @@ def test_all_endpoints_exist_in_vertex_dict(mock_game_state):
         GraphNavigator(graph, mock_game_state)
 
 # Validation that every vertex is reachable from vertex_0
+def test_directed_connectivity_of_graph_starting_at_vertex_0(mock_game_state):
+    graph_1 = Graph(
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start", "effects": []}, {"vertex_1": {"text": "Disconnected.", "effects": []}}}, "edges": {}}
+    )
+    with raises(UnreachableVertexError):
+        GraphNavigator(graph_1, mock_game_state)
+    graph_2 = Graph(
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start", "effects": []}, {"vertex_1": {"text": "Connected, but in the wrong direction.", "effects": []}}}, "edges": {"edge_0": {"from": "vertex_1", "to": "vertex_0", "text": "This sole edge ensures that in this graph, vertex_1 is not reachable FROM vertex_0.", "predicates": [], "effects": []}}}
+    )
+    with raises(UnreachableVertexError):
+        GraphNavigator(graph_2, mock_game_state)
+
 # Validation that aggregates all present validation errors to display at once
