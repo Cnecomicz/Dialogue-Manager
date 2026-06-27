@@ -77,10 +77,10 @@ dialogue options in your game engine. See a minimal working example below.
 A graph has this top-level shape:
 
 * name: NPC name
-* vertices: map of vertex_id -> vertex object. A vertex object has text,
+* vertices: map of vertex_name -> vertex object. A vertex object has text,
 representing the NPC dialogue, and optionally effects, representing game
 state changes that occur upon entering this vertex.
-* edges: map of edge_id -> edge object. An edge object has from, representing
+* edges: map of edge_name -> edge object. An edge object has from, representing
 the source vertex, to, representing the target vertex, text, representing 
 the player dialogue, optionally predicates, representing game state conditions
 that must be true for the edge to be available, and optionally effects,
@@ -162,11 +162,11 @@ graph_navigator = GraphNavigator(graph, MWEGameState())
 
 current_turn = graph_navigator.get_current_turn()
 print("Alice says:")
-for vertex_id, vertex_text in current_turn["vertex_text"].items():
-    print(f"{vertex_text} ({vertex_id})")
+for vertex_name, vertex_text in current_turn["vertex_text"].items():
+    print(f"{vertex_text} ({vertex_name})")
 print("Your options:")
-for edge_id, edge_text in current_turn["edge_texts"].items():
-    print(f"{edge_text} ({edge_id})")
+for edge_name, edge_text in current_turn["edge_texts"].items():
+    print(f"{edge_text} ({edge_name})")
 
 try:
     graph_navigator.select("edge_0")
@@ -175,11 +175,11 @@ except InvalidEdgeError as exception:
 
 current_turn = graph_navigator.get_current_turn()
 print("Alice then says:")
-for vertex_id, vertex_text in current_turn["vertex_text"].items():
-    print(f"{vertex_text} ({vertex_id})")
+for vertex_name, vertex_text in current_turn["vertex_text"].items():
+    print(f"{vertex_text} ({vertex_name})")
 print("Your options now:")
-for edge_id, edge_text in current_turn["edge_texts"].items():
-    print(f"{edge_text} ({edge_id})")
+for edge_name, edge_text in current_turn["edge_texts"].items():
+    print(f"{edge_text} ({edge_name})")
 
 ```
 

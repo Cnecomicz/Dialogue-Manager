@@ -75,7 +75,7 @@ def test_get_current_vertex_text(alice_graph, mock_game_state):
     graph_navigator = GraphNavigator(alice_graph, mock_game_state)
     assert graph_navigator.get_current_vertex_text() == {"vertex_0": "Hello. You have 2 gold. Want to buy a flower?"}
 
-# You can get current edge texts as {edge_id: edge.text}
+# You can get current edge texts as {edge_name: edge.text}
 def test_get_current_edge_texts(alice_graph, mock_game_state):
     graph_navigator = GraphNavigator(alice_graph, mock_game_state)
     assert graph_navigator.get_current_edge_texts() == {"edge_0": "Yes, I'll buy a flower.", "edge_3": "No thanks."}

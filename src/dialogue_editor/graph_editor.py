@@ -14,12 +14,20 @@ class VertexCannotBeDeletedError(Exception):
 class VertexNotFoundError(Exception):
     """Raised when a vertex identifier is not found in the graph."""
 
-    def __init__(self, vertex_id: str, field_name: str | None = None) -> None:
-        self.vertex_id = vertex_id
+    def __init__(self, vertex_name: str, field_name: str | None = None) -> None:
+        """Initialize the error with the offending vertex identifier and 
+        field name.
+
+        Args:
+            vertex_name (str): Identifier that does not exist in vertex_dict.
+            field_name (str | None): Reference to where the vertex is defined,
+                such as "Source" or "Target".
+        """
+        self.vertex_name = vertex_name
         self.field_name = field_name
         field_label = field_name or "Vertex"
         super().__init__(
-            f'{field_label} "{vertex_id}" does not match any vertex in the '
+            f'{field_label} "{vertex_name}" does not match any vertex in the '
             "graph."
         )
 
@@ -390,25 +398,25 @@ class GraphEditor:
         del self.graph.vertex_dict[vertex_name]
 
     def require_valid_vertex(
-        self, vertex_id: str, field_name: str | None = None
+        self, vertex_name: str, field_name: str | None = None
     ) -> None:
-        """Raise VertexNotFoundError if vertex_id is not a valid reference.
+        """Raise VertexNotFoundError if vertex_name is not a valid reference.
         "__MISSING__" is treated as valid.
 
         Args:
-            vertex_id (str): Vertex identifier to validate.
+            vertex_name (str): Vertex identifier to validate.
             field_name (str | None): Optional endpoint label used in the
                 error message (for example, "Source" or "Target").
 
         Raises:
-            VertexNotFoundError: If vertex_id is not in the graph and is not
+            VertexNotFoundError: If vertex_name is not in the graph and is not
                 "__MISSING__".
         """
         if (
-            vertex_id != "__MISSING__" 
-            and vertex_id not in self.graph.vertex_dict
+            vertex_name != "__MISSING__" 
+            and vertex_name not in self.graph.vertex_dict
         ):
-            raise VertexNotFoundError(vertex_id, field_name)
+            raise VertexNotFoundError(vertex_name, field_name)
 
 
     def save(self, yaml_file: str | PathLike | None = None) -> None:

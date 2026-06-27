@@ -9,6 +9,23 @@ class InvalidEdgeError(Exception):
 
     pass
 
+class MissingEdgeEndpointError(Exception):
+    """Raised when an edge endpoint is set to "__MISSING__"."""
+
+    def __init__(self, edge_name: str, endpoint: str) -> None:
+        """Initialize the error with the offending edge and endpoint.
+
+        Args:
+            edge_name (str): Identifier of the edge with the bad endpoint.
+            endpoint (str): Endpoint label, either "from" or "to".
+        """
+        self.edge_name = edge_name
+        self.endpoint = endpoint
+        super().__init__(
+            f'Edge "{edge_name}" has {endpoint} endpoint set to "__MISSING__".'
+        )
+
+
 class StartVertexMissingError(Exception):
     """Raised when the graph has no starting vertex (vertex_0)."""
 
@@ -51,13 +68,20 @@ class GraphNavigator:
                 when the graph is valid.
         """
         errors = []
-        vertex_ids = set(self.graph.vertex_dict.keys())
-        if "vertex_0" not in vertex_ids:
+        vertex_names = set(self.graph.vertex_dict.keys())
+        if "vertex_0" not in vertex_names:
             errors.append(
                 StartVertexMissingError(
                     'Required start vertex "vertex_0" is missing.'
                 )
             )
+        for edge_name, edge in self.graph.edge_dict.items():
+            endpoints = [("from", edge.from_vertex), ("to", edge.to_vertex)]
+            for endpoint, vertex_name in endpoints:
+                if vertex_name == "__MISSING__":
+                    errors.append(
+                        MissingEdgeEndpointError(edge_name, endpoint)
+                    )
         return errors
 
     def enter_vertex(self, vertex_name: str) -> None:
@@ -111,15 +135,15 @@ class GraphNavigator:
         return list(self.current_edges.keys())
 
     def get_current_edge_texts(self) -> dict[str, str]:
-        """Return current selectable edge text keyed by edge_id, with 
+        """Return current selectable edge text keyed by edge_name, with 
         placeholders evaluated.
 
         Returns:
-            dict[str, str]: Mapping of edge_id to edge dialogue text.
+            dict[str, str]: Mapping of edge_name to edge dialogue text.
         """
         return {
-            edge_id: evaluate_text(edge.text, self.game_state)
-            for edge_id, edge in self.current_edges.items()
+            edge_name: evaluate_text(edge.text, self.game_state)
+            for edge_name, edge in self.current_edges.items()
         }
 
     def get_current_turn(self) -> dict[str, dict[str, str]]:
@@ -135,7 +159,7 @@ class GraphNavigator:
         }
 
     def get_current_vertex_text(self) -> dict[str, str]:
-        """Return the current vertex dialogue text keyed by vertex_id, with
+        """Return the current vertex dialogue text keyed by vertex_name, with
         placeholders evaluated.
 
         Returns:
