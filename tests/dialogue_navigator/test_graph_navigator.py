@@ -2,7 +2,10 @@ from pytest import raises
 
 from dialogue_model.graph import Graph
 from dialogue_navigator.graph_navigator import (
-    GraphNavigator, InvalidEdgeError, StartVertexMissingError
+    GraphNavigator,
+    InvalidEdgeError,
+    MissingEdgeEndpointError,
+    StartVertexMissingError
 )
 
 # GraphNavigator has a current vertex that starts with "begin"
@@ -100,12 +103,19 @@ def test_getting_text_should_dynamically_evaluate_based_on_gamestate(alice_graph
 # Validation that vertex_0 exists
 def test_vertex_0_exists(mock_game_state):
     graph = Graph(
-        yaml_data={"name": "Broken", "vertices": {"vertex_1": {"text": "Orphaned.", "effects": []}}, "edges": {}}
+        yaml_data={"name": "Error", "vertices": {"vertex_1": {"text": "Orphaned.", "effects": []}}, "edges": {}}
     )
     with raises(StartVertexMissingError):
         GraphNavigator(graph, mock_game_state)
 
 # Validation that no from_vertex/to_vertex is still set to "__MISSING__"
+def test_no_missing_from_or_to_vertices(mock_game_state):
+    graph = Graph(
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start", "effects": []}}, "edges": {"edge_0": {"from": "vertex_0", "to": "__MISSING__", "text": "Missing target.", "predicates": [], "effects": []}}}
+    )
+    with raises(MissingEdgeEndpointError):
+        GraphNavigator(graph, mock_game_state)
+
 # Validation that every from_vertex/to_vertex str is actually in vertex_dict
 # Validation that every vertex is reachable from vertex_0
 # Validation that aggregates all present validation errors to display at once
