@@ -209,3 +209,15 @@ def test_runtime_validation_warnings_are_nonempty_for_invalid_graph(app):
     assert any('unknown vertex "vertex_99"' in warning for warning in warnings)
     assert any('Vertex "vertex_1" is unreachable' in warning for warning in warnings)
     assert any("Found 2 connected components" in warning for warning in warnings)
+
+# Add Player Dialogue button is disabled when vertex_dict is empty
+def test_add_player_button_enabled_state(app):
+    disabled, style, tooltip = app.get_add_player_button_state()
+    assert disabled is False
+    assert style["cursor"] == "pointer"
+    assert tooltip == ""
+    app.graph_editor.load(yaml_data={"name": "Empty", "vertices": {}, "edges": {}})
+    disabled, style, tooltip = app.get_add_player_button_state()
+    assert disabled is True
+    assert style["cursor"] == "not-allowed"
+    assert tooltip == "Add Player Dialogue: Create at least one NPC node before adding Player dialogue."

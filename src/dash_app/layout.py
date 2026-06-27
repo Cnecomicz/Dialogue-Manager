@@ -697,50 +697,65 @@ def get_left_panel(initial_name: str, author: str, version: str) -> html.Div:
                     "cursor": "pointer"
                 }
             ),
-            html.Button(
-                "Add Player Dialogue",
-                id="open-add-edge-modal",
-                n_clicks=0,
-                style={
-                    "width": "100%",
-                    "padding": "10px",
-                    "marginBottom": "8px",
-                    "backgroundColor": "#4b5563",
-                    "color": "#e6e6e6",
-                    "border": "1px solid #666",
-                    "borderRadius": "4px",
-                    "cursor": "pointer"
-                }
+            html.Div(
+                html.Button(
+                    "Add Player Dialogue",
+                    id="open-add-edge-modal",
+                    n_clicks=0,
+                    style={
+                        "width": "100%",
+                        "padding": "10px",
+                        "marginBottom": "8px",
+                        "backgroundColor": "#4b5563",
+                        "color": "#e6e6e6",
+                        "border": "1px solid #666",
+                        "borderRadius": "4px",
+                        "cursor": "pointer"
+                    }
+                ),
+                id="open-add-edge-tooltip",
+                title="",
+                style={"display": "block"}
             ),
-            html.Button(
-                "Edit Selected Node",
-                id="open-edit-modal",
-                n_clicks=0,
-                style={
-                    "width": "100%",
-                    "padding": "10px",
-                    "marginBottom": "8px",
-                    "backgroundColor": "#4b5563",
-                    "color": "#e6e6e6",
-                    "border": "1px solid #666",
-                    "borderRadius": "4px",
-                    "cursor": "pointer"
-                }
+            html.Div(
+                html.Button(
+                    "Edit Selected Node",
+                    id="open-edit-modal",
+                    n_clicks=0,
+                    style={
+                        "width": "100%",
+                        "padding": "10px",
+                        "marginBottom": "8px",
+                        "backgroundColor": "#4b5563",
+                        "color": "#e6e6e6",
+                        "border": "1px solid #666",
+                        "borderRadius": "4px",
+                        "cursor": "pointer"
+                    }
+                ),
+                id="open-edit-tooltip",
+                title="",
+                style={"display": "block"}
             ),
-            html.Button(
-                "Delete Selected Node",
-                id="open-delete-modal",
-                n_clicks=0,
-                style={
-                    "width": "100%",
-                    "padding": "10px",
-                    "marginBottom": "8px",
-                    "backgroundColor": "#7f1d1d",
-                    "color": "#e6e6e6",
-                    "border": "1px solid #c53030",
-                    "borderRadius": "4px",
-                    "cursor": "pointer"
-                }
+            html.Div(
+                html.Button(
+                    "Delete Selected Node",
+                    id="open-delete-modal",
+                    n_clicks=0,
+                    style={
+                        "width": "100%",
+                        "padding": "10px",
+                        "marginBottom": "8px",
+                        "backgroundColor": "#7f1d1d",
+                        "color": "#e6e6e6",
+                        "border": "1px solid #c53030",
+                        "borderRadius": "4px",
+                        "cursor": "pointer"
+                    }
+                ),
+                id="open-delete-tooltip",
+                title="",
+                style={"display": "block"}
             )
         ],
         style={

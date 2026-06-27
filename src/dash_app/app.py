@@ -142,6 +142,47 @@ class App(Dash):
             unresolved_count += int(edge.to_vertex == vertex_name)
         return unresolved_count
 
+    def get_add_player_button_state(
+        self
+    ) -> tuple[bool, dict[str, str | int], str]:
+        """Build disabled state, style, and tooltip for Add Player button.
+
+        Returns:
+            tuple[bool, dict[str, str | int], str]: Disabled flag, style,
+                and tooltip text.
+        """
+        base_style = {
+            "width": "100%",
+            "padding": "10px",
+            "marginBottom": "8px",
+            "border": "1px solid #666",
+            "borderRadius": "4px"
+        }
+        has_vertices = bool(self.graph_editor.graph.vertex_dict)
+        if not has_vertices:
+            return (
+                True,
+                {
+                    **base_style,
+                    "backgroundColor": "#374151",
+                    "color": "#6b7280",
+                    "cursor": "not-allowed",
+                    "opacity": 0.5
+                },
+                "Add Player Dialogue: Create at least one NPC node before "
+                "adding Player dialogue."
+            )
+        return (
+            False,
+            {
+                **base_style,
+                "backgroundColor": "#4b5563",
+                "color": "#e6e6e6",
+                "cursor": "pointer"
+            },
+            ""
+        )
+
     def get_delete_section_state(
         self, 
         selected_nodes: list[dict] | None, 
@@ -1281,10 +1322,23 @@ class App(Dash):
                 return current_style or get_modal_overlay_style(False)
             triggered_id = ctx.triggered_id
             if triggered_id == "open-add-edge-modal":
+                if not self.graph_editor.graph.vertex_dict:
+                    return get_modal_overlay_style(False)
                 return get_modal_overlay_style(True)
             if triggered_id in ["cancel-add-edge", "save-add-edge"]:
                 return get_modal_overlay_style(False)
             return current_style or get_modal_overlay_style(False)
+
+        @self.callback(
+            Output("open-add-edge-modal", "disabled"),
+            Output("open-add-edge-modal", "style"),
+            Output("open-add-edge-tooltip", "title"),
+            Input("dialogue-editor", "elements")
+        )
+        def toggle_add_player_button(
+            elements: list[dict] | None
+        ) -> tuple[bool, dict[str, str | int], str]:
+            return self.get_add_player_button_state()
         
         @self.callback(
             Output("add-vertex-modal", "style"),
@@ -1369,13 +1423,15 @@ class App(Dash):
         @self.callback(
             Output("open-edit-modal", "disabled"),
             Output("open-edit-modal", "style"),
+            Output("open-edit-tooltip", "title"),
             Output("open-delete-modal", "disabled"),
             Output("open-delete-modal", "style"),
+            Output("open-delete-tooltip", "title"),
             Input("dialogue-editor", "selectedNodeData")
         )
         def toggle_edit_delete_buttons(
             selected_nodes: list[dict] | None
-        ) -> tuple[bool, dict, bool, dict]:
+        ) -> tuple[bool, dict, str, bool, dict, str]:
             edit_base_style = {
                 "width": "100%",
                 "padding": "10px",
@@ -1399,6 +1455,7 @@ class App(Dash):
                         "cursor": "not-allowed",
                         "opacity": 0.5
                     },
+                    "Edit Selected Node: Select a node to edit.",
                     True,
                     {
                         **delete_base_style,
@@ -1407,7 +1464,8 @@ class App(Dash):
                         "border": "1px solid #7f1d1d",
                         "cursor": "not-allowed",
                         "opacity": 0.5
-                    }
+                    },
+                    "Delete Selected Node: Select a node to delete."
                 )
             return (
                 False, 
@@ -1417,6 +1475,7 @@ class App(Dash):
                     "color": "#e6e6e6",
                     "cursor": "pointer"
                 },
+                "",
                 False,
                 {
                     **delete_base_style,
@@ -1424,7 +1483,8 @@ class App(Dash):
                     "color": "#e6e6e6",
                     "border": "1px solid #c53030",
                     "cursor": "pointer"
-                }
+                },
+                ""
             )
 
         @self.callback(
