@@ -1,7 +1,7 @@
 from pytest import raises
 from yaml import safe_load
 
-from dialogue_editor.graph_editor import GraphEditor
+from dialogue_editor.graph_editor import GraphEditor, VertexNotFoundError
 from dialogue_model.edge import Edge
 from dialogue_model.vertex import Vertex
 
@@ -288,3 +288,23 @@ def test_add_after_delete_keeps_monotonic_ids():
     graph_editor.remove_vertex("vertex_2", cascade_delete=True)
     assert graph_editor.add_vertex("Replacement vertex.") == "vertex_3"
     assert graph_editor.add_edge("vertex_0", "vertex_3", "Replacement edge.") == "edge_2"
+
+# Invalid to_vertex is rejected
+def test_add_new_edge_rejects_invalid_to_vertex():
+    graph_editor = GraphEditor()
+    valid_from = graph_editor.add_vertex("Hello world.")
+    invalid_to = "vertex_99"
+    with raises(VertexNotFoundError):
+        graph_editor.add_edge(valid_from, invalid_to, "This edge won't be created.")
+    assert valid_from in graph_editor.graph.vertex_dict
+    assert len(graph_editor.graph.vertex_dict) == 1
+    assert len(graph_editor.graph.edge_dict) == 0
+
+# Invalid from_vertex is rejected and blank to_vertex does not auto generate orphaned vertex
+def test_add_new_edge_rejects_invalid_from_vertex():
+    graph_editor = GraphEditor()
+    invalid_from = "vertex_99"
+    with raises(VertexNotFoundError):
+        graph_editor.add_edge(invalid_from, text="This edge won't be created.")
+    assert len(graph_editor.graph.vertex_dict) == 0
+    assert len(graph_editor.graph.edge_dict) == 0
