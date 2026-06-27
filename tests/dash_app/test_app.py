@@ -192,3 +192,20 @@ def test_add_edge_or_edit_autofill_uses_open_click_and_selected_state(app):
     ]
     assert matching_add_edge_callbacks
     assert matching_edit_callbacks
+
+# No UI log validation is raised when valid graph is loaded/saved
+def test_runtime_validation_warnings_are_empty_for_valid_graph(app):
+    warnings = app.get_runtime_validation_warnings()
+    assert warnings == []
+
+# Validation is raised when invalid graph is loaded/saved
+def test_runtime_validation_warnings_are_nonempty_for_invalid_graph(app):
+    app.graph_editor.load(
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start.", "effects": []}, "vertex_1": {"text": "Disconnected.", "effects": []}}, "edges": {"edge_0": {"from": "vertex_0", "to": "__MISSING__", "text": "Missing target", "predicates": [], "effects": []}, "edge_1": {"from": "vertex_0", "to": "vertex_99", "text": "Missing target.", "predicates": [], "effects": []}}}
+    )
+    warnings = app.get_runtime_validation_warnings()
+    assert warnings[0] == "Runtime validation found 4 issue(s):"
+    assert any("__MISSING__" in warning for warning in warnings)
+    assert any('unknown vertex "vertex_99"' in warning for warning in warnings)
+    assert any('Vertex "vertex_1" is unreachable' in warning for warning in warnings)
+    assert any("Found 2 connected components" in warning for warning in warnings)

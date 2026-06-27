@@ -32,6 +32,7 @@ from dialogue_model.codecs import (
     convert_text_to_effect, 
     convert_text_to_predicate
 )
+from dialogue_navigator.graph_navigator import collect_validation_errors
 from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 
 class App(Dash):
@@ -291,6 +292,22 @@ class App(Dash):
         if node_id in self.graph_editor.graph.edge_dict:
             return self.graph_editor.graph.edge_dict[node_id].text
         return ""
+
+    def get_runtime_validation_warnings(self) -> list[str]:
+        """Return runtime validation warnings for the current graph.
+
+        Returns:
+            list[str]: Warning summary and full issue list, or an empty 
+                list when the graph is runtime-valid.
+        """
+        errors = collect_validation_errors(self.graph_editor.graph)
+        if not errors:
+            return []
+        warning_lines = [
+            f"Runtime validation found {len(errors)} issue(s):",
+            *[f"- {error}" for error in errors]
+        ]
+        return warning_lines
 
     def normalize_name(self, name: str | None) -> str:
         """Normalize an NPC name to a non-empty display value.
@@ -760,12 +777,15 @@ class App(Dash):
                     )
                 self.graph_editor.load(yaml_data=parsed_yaml)
                 loaded_name = self.normalize_name(self.graph_editor.graph.name)
+                new_log = self.action_logger.append_status(
+                    current_log,
+                    "Discarded unsaved changes and opened "
+                    f"{self.action_logger.quote_value(queued_filename)}."
+                )
+                for warning in self.get_runtime_validation_warnings():
+                    new_log = self.action_logger.append_status(new_log, warning)
                 return (
-                    self.action_logger.append_status(
-                        current_log,
-                        "Discarded unsaved changes and opened "
-                        f"{self.action_logger.quote_value(queued_filename)}."
-                    ),
+                    new_log,
                     self.get_fresh_graph_component(),
                     False,
                     loaded_name,
@@ -791,9 +811,12 @@ class App(Dash):
             if not download_graph_clicks:
                 raise PreventUpdate
             download_name = self.get_filename(current_document)
+            new_log = current_log
+            for warning in self.get_runtime_validation_warnings():
+                new_log = self.action_logger.append_status(new_log, warning)
             return (
                 self.action_logger.append_status(
-                    current_log,
+                    new_log,
                     "Saved a copy as "
                     f"{self.action_logger.quote_value(download_name)}."
                 ),
@@ -1164,12 +1187,15 @@ class App(Dash):
             self.graph_editor.load(yaml_data=parsed_yaml)
             loaded_name = self.normalize_name(self.graph_editor.graph.name)
             quoted_value = upload_filename or loaded_name
+            new_log = self.action_logger.append_status(
+                current_log,
+                "Opened "
+                f"{self.action_logger.quote_value(quoted_value)}."
+            )
+            for warning in self.get_runtime_validation_warnings():
+                new_log = self.action_logger.append_status(new_log, warning)
             return (
-                self.action_logger.append_status(
-                    current_log,
-                    "Opened "
-                    f"{self.action_logger.quote_value(quoted_value)}."
-                ),
+                new_log,
                 self.get_fresh_graph_component(),
                 False,
                 loaded_name,

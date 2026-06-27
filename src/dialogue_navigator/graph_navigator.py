@@ -105,6 +105,90 @@ class UnreachableVertexError(Exception):
             f'Vertex "{vertex_name}" is unreachable from vertex "vertex_0".'
         )
 
+def collect_validation_errors(graph: Graph) -> list[Exception]:
+    """Collect all runtime validation errors.
+
+    Args:
+        graph (Graph): Dialogue graph to validate.
+
+    Returns:
+        list[Exception]: All validation errors found, or an empty list
+            when the graph is valid.
+    """
+    errors = []
+    vertex_names = set(graph.vertex_dict.keys())
+    if "vertex_0" not in vertex_names:
+        errors.append(
+            StartVertexMissingError(
+                'Required start vertex "vertex_0" is missing.'
+            )
+        )
+    for edge_name, edge in graph.edge_dict.items():
+        endpoints = [("from", edge.from_vertex), ("to", edge.to_vertex)]
+        for endpoint, vertex_name in endpoints:
+            if vertex_name == "__MISSING__":
+                errors.append(
+                    MissingEdgeEndpointError(edge_name, endpoint)
+                )
+            elif vertex_name not in vertex_names:
+                errors.append(
+                    EndpointNotFoundError(edge_name, endpoint, vertex_name)
+                )
+    if "vertex_0" in vertex_names:
+        already_reachable_vertices = {"vertex_0"}
+        frontier_of_traversed_vertices = ["vertex_0"]
+        while frontier_of_traversed_vertices:
+            current_vertex = frontier_of_traversed_vertices.pop()
+            for edge in graph.edge_dict.values():
+                source = edge.from_vertex
+                target = edge.to_vertex
+                if (
+                    source == current_vertex
+                    and source in vertex_names
+                    and target in vertex_names
+                    and source != "__MISSING__"
+                    and target != "__MISSING__"
+                    and target not in already_reachable_vertices
+                ):
+                    already_reachable_vertices.add(target)
+                    frontier_of_traversed_vertices.append(target)
+        for vertex_name in sorted(
+            vertex_names - already_reachable_vertices
+        ):
+            errors.append(UnreachableVertexError(vertex_name))
+    visited_vertices = set()
+    connected_components = []
+    for vertex_name in sorted(vertex_names):
+        if vertex_name not in visited_vertices:
+            component = set()
+            frontier = [vertex_name]
+            while frontier:
+                current_vertex = frontier.pop()
+                if current_vertex in visited_vertices:
+                    continue
+                visited_vertices.add(current_vertex)
+                component.add(current_vertex)
+                for edge in graph.edge_dict.values():
+                    if (
+                        edge.from_vertex in vertex_names
+                        and edge.to_vertex in vertex_names
+                    ):
+                        if (
+                            edge.from_vertex == current_vertex
+                            and edge.to_vertex not in visited_vertices
+                        ):
+                            frontier.append(edge.to_vertex)
+                        elif (
+                            edge.to_vertex == current_vertex
+                            and edge.from_vertex not in visited_vertices
+                        ):
+                            frontier.append(edge.from_vertex)
+            if component:
+                connected_components.append(sorted(component))
+        if len(connected_components) > 1:
+            errors.append(DisconnectedGraphError(connected_components))
+    return errors
+
 class GraphNavigator:
     """Navigate a dialogue graph using predicates and effects."""
 
@@ -133,87 +217,6 @@ class GraphNavigator:
             and self.evaluate_edge_predicates(edge_name)):
                 current_edges[edge_name] = edge
         return current_edges
-
-    def collect_validation_errors(self) -> list[Exception]:
-        """Collect all runtime validation errors.
-
-        Returns:
-            list[Exception]: All validation errors found, or an empty list
-                when the graph is valid.
-        """
-        errors = []
-        vertex_names = set(self.graph.vertex_dict.keys())
-        if "vertex_0" not in vertex_names:
-            errors.append(
-                StartVertexMissingError(
-                    'Required start vertex "vertex_0" is missing.'
-                )
-            )
-        for edge_name, edge in self.graph.edge_dict.items():
-            endpoints = [("from", edge.from_vertex), ("to", edge.to_vertex)]
-            for endpoint, vertex_name in endpoints:
-                if vertex_name == "__MISSING__":
-                    errors.append(
-                        MissingEdgeEndpointError(edge_name, endpoint)
-                    )
-                elif vertex_name not in vertex_names:
-                    errors.append(
-                        EndpointNotFoundError(edge_name, endpoint, vertex_name)
-                    )
-        if "vertex_0" in vertex_names:
-            already_reachable_vertices = {"vertex_0"}
-            frontier_of_traversed_vertices = ["vertex_0"]
-            while frontier_of_traversed_vertices:
-                current_vertex = frontier_of_traversed_vertices.pop()
-                for edge in self.graph.edge_dict.values():
-                    source = edge.from_vertex
-                    target = edge.to_vertex
-                    if (
-                        source == current_vertex
-                        and source in vertex_names
-                        and target in vertex_names
-                        and source != "__MISSING__"
-                        and target != "__MISSING__"
-                        and target not in already_reachable_vertices
-                    ):
-                        already_reachable_vertices.add(target)
-                        frontier_of_traversed_vertices.append(target)
-            for vertex_name in sorted(
-                vertex_names - already_reachable_vertices
-            ):
-                errors.append(UnreachableVertexError(vertex_name))
-        visited_vertices = set()
-        connected_components = []
-        for vertex_name in sorted(vertex_names):
-            if vertex_name not in visited_vertices:
-                component = set()
-                frontier = [vertex_name]
-                while frontier:
-                    current_vertex = frontier.pop()
-                    if current_vertex in visited_vertices:
-                        continue
-                    visited_vertices.add(current_vertex)
-                    component.add(current_vertex)
-                    for edge in self.graph.edge_dict.values():
-                        if (
-                            edge.from_vertex in vertex_names
-                            and edge.to_vertex in vertex_names
-                        ):
-                            if (
-                                edge.from_vertex == current_vertex
-                                and edge.to_vertex not in visited_vertices
-                            ):
-                                frontier.append(edge.to_vertex)
-                            elif (
-                                edge.to_vertex == current_vertex
-                                and edge.from_vertex not in visited_vertices
-                            ):
-                                frontier.append(edge.from_vertex)
-                if component:
-                    connected_components.append(sorted(component))
-            if len(connected_components) > 1:
-                errors.append(DisconnectedGraphError(connected_components))
-        return errors
 
     def enter_vertex(self, vertex_name: str) -> None:
         """Enter a vertex and apply all vertex effects.
@@ -356,7 +359,7 @@ class GraphNavigator:
         Raises:
             AggregatedValidationErrors: If the graph has any validation errors.
         """
-        errors = self.collect_validation_errors()
+        errors = collect_validation_errors(self.graph)
         if errors:
             raise AggregatedValidationErrors(errors)
 
