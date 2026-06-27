@@ -11,6 +11,18 @@ class VertexCannotBeDeletedError(Exception):
 
     pass
 
+class VertexNotFoundError(Exception):
+    """Raised when a vertex identifier is not found in the graph."""
+
+    def __init__(self, vertex_id: str, field_name: str | None = None) -> None:
+        self.vertex_id = vertex_id
+        self.field_name = field_name
+        field_label = field_name or "Vertex"
+        super().__init__(
+            f'{field_label} "{vertex_id}" does not match any vertex in the '
+            "graph."
+        )
+
 class GraphEditor:
     """Provide mutation and persistence helpers for a dialogue graph."""
 
@@ -67,9 +79,15 @@ class GraphEditor:
 
         Returns:
             str: Identifier of the newly created edge.
+
+        Raises:
+            VertexNotFoundError: If from_vertex or to_vertex is not a valid
+                vertex identifier.
         """
+        self.require_valid_vertex(from_vertex, "Source")
         if to_vertex is None:
             to_vertex = self.add_vertex()
+        self.require_valid_vertex(to_vertex, "Target")
         if text is None:
             text = ""
         if predicates is None:
@@ -119,7 +137,7 @@ class GraphEditor:
         text: str | None = None, 
         effects: list[dict[str, str | int]] | None = None
     ) -> str:
-        """Create an add a new vertex to the graph.
+        """Create and add a new vertex to the graph.
 
         Args:
             text (str | None): Vertex dialogue text.
@@ -176,7 +194,12 @@ class GraphEditor:
         Args:
             edge_name (str): Edge identifier.
             from_vertex (str): New source vertex identifier.
+
+        Raises:
+            VertexNotFoundError: If from_vertex is not a valid vertex
+                identifier.
         """
+        self.require_valid_vertex(from_vertex, "Source")
         self.graph.edge_dict[edge_name].from_vertex = from_vertex
 
     def edit_name(self, name: str) -> None:
@@ -193,7 +216,11 @@ class GraphEditor:
         Args:
             edge_name (str): Edge identifier.
             to_vertex (str): New target vertex identifier.
+
+        Raises:
+            VertexNotFoundError: If to_vertex is not a valid vertex identifier.
         """
+        self.require_valid_vertex(to_vertex, "Target")
         self.graph.edge_dict[edge_name].to_vertex = to_vertex
 
     def edit_vertex_effects(
@@ -361,6 +388,28 @@ class GraphEditor:
             if edge.to_vertex == vertex_name:
                 self.edit_to_vertex(edge_name, "__MISSING__")
         del self.graph.vertex_dict[vertex_name]
+
+    def require_valid_vertex(
+        self, vertex_id: str, field_name: str | None = None
+    ) -> None:
+        """Raise VertexNotFoundError if vertex_id is not a valid reference.
+        "__MISSING__" is treated as valid.
+
+        Args:
+            vertex_id (str): Vertex identifier to validate.
+            field_name (str | None): Optional endpoint label used in the
+                error message (for example, "Source" or "Target").
+
+        Raises:
+            VertexNotFoundError: If vertex_id is not in the graph and is not
+                "__MISSING__".
+        """
+        if (
+            vertex_id != "__MISSING__" 
+            and vertex_id not in self.graph.vertex_dict
+        ):
+            raise VertexNotFoundError(vertex_id, field_name)
+
 
     def save(self, yaml_file: str | PathLike | None = None) -> None:
         """Persist the current graph to a yaml file.

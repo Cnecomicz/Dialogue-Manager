@@ -24,7 +24,7 @@ from dash_app.layout import (
 )
 from dash_app.logger import Logger
 from dialogue_editor.graph_editor import (
-    GraphEditor, VertexCannotBeDeletedError
+    GraphEditor, VertexCannotBeDeletedError, VertexNotFoundError
 )
 from dialogue_model.codecs import (
     convert_effect_to_text, 
@@ -890,6 +890,18 @@ class App(Dash):
                     new_edge_predicates_text
                 )
                 new_edge_effects = self.parse_effects(new_edge_effects_text)
+                normalized_to_vertex = (
+                    new_edge_to.strip()
+                    if new_edge_to and new_edge_to.strip()
+                    else None
+                )
+                new_edge_name = self.add_edge(
+                    new_edge_from.strip(),
+                    normalized_to_vertex,
+                    new_edge_text,
+                    new_edge_predicates,
+                    new_edge_effects
+                )
             except ValueError as exception:
                 return (
                     no_update,
@@ -901,18 +913,19 @@ class App(Dash):
                     ),
                     True
                 )
-            normalized_to_vertex = (
-                new_edge_to.strip()
-                if new_edge_to and new_edge_to.strip()
-                else None
-            )
-            new_edge_name = self.add_edge(
-                new_edge_from.strip(),
-                normalized_to_vertex,
-                new_edge_text,
-                new_edge_predicates,
-                new_edge_effects
-            )
+            except VertexNotFoundError as exception:
+                endpoint_name = exception.field_name or "Source/Target"
+                return (
+                    no_update,
+                    self.action_logger.append_status(
+                        current_log,
+                        "Could not create a Player node because "
+                        f"{endpoint_name} must be an existing NPC node ID. "
+                        f"Enter a valid NPC node ID in {endpoint_name} and "
+                        "save again."
+                    ),
+                    True
+                )
             new_log = self.action_logger.append_status(
                 current_log,
                 self.action_logger.build_create_log(
