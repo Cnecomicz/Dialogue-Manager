@@ -2,6 +2,7 @@ from pytest import raises
 
 from dialogue_model.graph import Graph
 from dialogue_navigator.graph_navigator import (
+    AggregatedValidationErrors,
     EndpointNotFoundError,
     GraphNavigator,
     InvalidEdgeError,
@@ -113,7 +114,7 @@ def test_vertex_0_exists(mock_game_state):
 # Validation that no from_vertex/to_vertex is still set to "__MISSING__"
 def test_no_missing_from_or_to_vertices(mock_game_state):
     graph = Graph(
-        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start", "effects": []}}, "edges": {"edge_0": {"from": "vertex_0", "to": "__MISSING__", "text": "Missing target.", "predicates": [], "effects": []}}}
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start.", "effects": []}}, "edges": {"edge_0": {"from": "vertex_0", "to": "__MISSING__", "text": "Missing target.", "predicates": [], "effects": []}}}
     )
     with raises(MissingEdgeEndpointError):
         GraphNavigator(graph, mock_game_state)
@@ -121,7 +122,7 @@ def test_no_missing_from_or_to_vertices(mock_game_state):
 # Validation that every from_vertex/to_vertex str is actually in vertex_dict
 def test_all_endpoints_exist_in_vertex_dict(mock_game_state):
     graph = Graph(
-        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start", "effects": []}}, "edges": {"edge_0": {"from": "vertex_0", "to": "vertex_99", "text": "Missing target.", "predicates": [], "effects": []}}}
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start.", "effects": []}}, "edges": {"edge_0": {"from": "vertex_0", "to": "vertex_99", "text": "Missing target.", "predicates": [], "effects": []}}}
     )
     with raises(EndpointNotFoundError):
         GraphNavigator(graph, mock_game_state)
@@ -129,14 +130,26 @@ def test_all_endpoints_exist_in_vertex_dict(mock_game_state):
 # Validation that every vertex is reachable from vertex_0
 def test_directed_connectivity_of_graph_starting_at_vertex_0(mock_game_state):
     graph_1 = Graph(
-        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start", "effects": []}, "vertex_1": {"text": "Disconnected.", "effects": []}}, "edges": {}}
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start.", "effects": []}, "vertex_1": {"text": "Disconnected.", "effects": []}}, "edges": {}}
     )
     with raises(UnreachableVertexError):
         GraphNavigator(graph_1, mock_game_state)
     graph_2 = Graph(
-        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start", "effects": []}, "vertex_1": {"text": "Connected, but in the wrong direction.", "effects": []}}, "edges": {"edge_0": {"from": "vertex_1", "to": "vertex_0", "text": "This sole edge ensures that in this graph, vertex_1 is not reachable FROM vertex_0.", "predicates": [], "effects": []}}}
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start.", "effects": []}, "vertex_1": {"text": "Connected, but in the wrong direction.", "effects": []}}, "edges": {"edge_0": {"from": "vertex_1", "to": "vertex_0", "text": "This sole edge ensures that in this graph, vertex_1 is not reachable FROM vertex_0.", "predicates": [], "effects": []}}}
     )
     with raises(UnreachableVertexError):
         GraphNavigator(graph_2, mock_game_state)
 
 # Validation that aggregates all present validation errors to display at once
+def test_aggregate_multiple_validations(mock_game_state):
+    graph = Graph(
+        yaml_data={"name": "Error", "vertices": {"vertex_1": {"text": "Orphaned.", "effects": []}}, "edges": {"edge_0": {"from": "vertex_1", "to": "__MISSING__", "text": "Missing target.", "predicates": [], "effects": []}, "edge_1": {"from": "vertex_1", "to": "vertex_99", "text": "Missing target.", "predicates": [], "effects": []}}}
+    )
+    errors = GraphNavigator(graph, mock_game_state).collect_validation_errors()
+    assert any(isinstance(error, StartVertexMissingError) for error in errors)
+    assert any(isinstance(error, MissingEdgeEndpointError) for error in errors)
+    assert any(isinstance(error, EndpointNotFoundError) for error in errors)
+    assert any(isinstance(UnreachableVertexError) for error in errors)
+    with raises(AggregatedValidationErrors) as exception:
+        GraphNavigator(graph, mock_game_state):
+    assert len(exception.value.errors) == len(errors)
