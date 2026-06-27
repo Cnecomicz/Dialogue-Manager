@@ -4,6 +4,27 @@ from dialogue_navigator.helper_functions import (
 from dialogue_model.edge import Edge
 from dialogue_model.graph import Graph
 
+class EndpointNotFoundError(Exception):
+    """Raised when an edge endpoint references an unknown vertex."""
+
+    def __init__(
+        self, edge_name: str, endpoint: str, vertex_name: str
+    ) -> None:
+        """Initialize the error with the offending edge, endpoint, and vertex.
+
+        Args:
+            edge_name (str): Identifier of the edge with the bad endpoint.
+            endpoint (str): Endpoint label, either "from" or "to".
+            vertex_name (str): Unknown vertex identifier that was referenced.
+        """
+        self.edge_name = edge_name
+        self.endpoint = endpoint
+        self.vertex_name = vertex_name
+        super().__init__(
+            f'Edge "{edge_name}" {endpoint} endpoint references unknown '
+            f'vertex "{vertex_name}".'
+        )
+
 class InvalidEdgeError(Exception):
     """Raised when a selected edge is not valid for the current state."""
 
@@ -81,6 +102,10 @@ class GraphNavigator:
                 if vertex_name == "__MISSING__":
                     errors.append(
                         MissingEdgeEndpointError(edge_name, endpoint)
+                    )
+                elif vertex_name not in vertex_names:
+                    errors.append(
+                        EndpointNotFoundError(edge_name, endpoint, vertex_name)
                     )
         return errors
 

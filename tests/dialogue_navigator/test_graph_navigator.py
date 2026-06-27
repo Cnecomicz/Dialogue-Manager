@@ -2,7 +2,7 @@ from pytest import raises
 
 from dialogue_model.graph import Graph
 from dialogue_navigator.graph_navigator import (
-    EndpointNotFoundError
+    EndpointNotFoundError,
     GraphNavigator,
     InvalidEdgeError,
     MissingEdgeEndpointError,
