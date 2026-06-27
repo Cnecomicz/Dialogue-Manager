@@ -52,6 +52,20 @@ class StartVertexMissingError(Exception):
 
     pass
 
+class UnreachableVertexError(Exception):
+    """Raised when a vertex is unreachable from the starting one (vertex_0)."""
+
+    def __init__(self, vertex_name: str) -> None:
+        """Initialize the error with the unreachable vertex name.
+
+        Args:
+            vertex_name (str): Identifier of the unreachable vertex.
+        """
+        self.vertex_name = vertex_name
+        super().__init__(
+            f'Vertex "{vertex_name}" is unreachable from vertex "vertex_0".'
+        )
+
 class GraphNavigator:
     """Navigate a dialogue graph using predicates and effects."""
 
@@ -107,6 +121,28 @@ class GraphNavigator:
                     errors.append(
                         EndpointNotFoundError(edge_name, endpoint, vertex_name)
                     )
+        if "vertex_0" in vertex_names:
+            already_reachable_vertices = {"vertex_0"}
+            frontier_of_traversed_vertices = ["vertex_0"]
+            while frontier_of_traversed_vertices:
+                current_vertex = frontier_of_traversed_vertices.pop()
+                for edge in self.graph.edge_dict.values():
+                    source = edge.from_vertex
+                    target = edge.to_vertex
+                    if (
+                        source == current_vertex
+                        and source in vertex_names
+                        and target in vertex_names
+                        and source != "__MISSING__"
+                        and target != "__MISSING__"
+                        and target not in already_reachable_vertices
+                    ):
+                        already_reachable_vertices.add(target)
+                        frontier_of_traversed_vertices.append(target)
+            for vertex_name in sorted(
+                vertex_names - already_reachable_vertices
+            ):
+                errors.append(UnreachableVertexError(vertex_name))
         return errors
 
     def enter_vertex(self, vertex_name: str) -> None:
