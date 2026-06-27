@@ -2,6 +2,7 @@ from pytest import raises
 
 from dialogue_model.graph import Graph
 from dialogue_navigator.graph_navigator import (
+    EndpointNotFoundError
     GraphNavigator,
     InvalidEdgeError,
     MissingEdgeEndpointError,
@@ -117,5 +118,12 @@ def test_no_missing_from_or_to_vertices(mock_game_state):
         GraphNavigator(graph, mock_game_state)
 
 # Validation that every from_vertex/to_vertex str is actually in vertex_dict
+def test_all_endpoints_exist_in_vertex_dict(mock_game_state):
+    graph = Graph(
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start", "effects": []}}, "edges": {"edge_0": {"from": "vertex_0", "to": "vertex_99", "text": "Missing target.", "predicates": [], "effects": []}}}
+    )
+    with raises(EndpointNotFoundError):
+        GraphNavigator(graph, mock_game_state)
+
 # Validation that every vertex is reachable from vertex_0
 # Validation that aggregates all present validation errors to display at once
