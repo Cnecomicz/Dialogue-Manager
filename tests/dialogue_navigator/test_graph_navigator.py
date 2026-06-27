@@ -1,7 +1,9 @@
 from pytest import raises
 
 from dialogue_model.graph import Graph
-from dialogue_navigator.graph_navigator import GraphNavigator, InvalidEdgeError
+from dialogue_navigator.graph_navigator import (
+    GraphNavigator, InvalidEdgeError, StartVertexMissingError
+)
 
 # GraphNavigator has a current vertex that starts with "begin"
 def test_starting_current_vertex(alice_graph, mock_game_state):

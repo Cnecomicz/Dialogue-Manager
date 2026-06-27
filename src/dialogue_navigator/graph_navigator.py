@@ -9,6 +9,11 @@ class InvalidEdgeError(Exception):
 
     pass
 
+class StartVertexMissingError(Exception):
+    """Raised when the graph has no starting vertex (vertex_0)."""
+
+    pass
+
 class GraphNavigator:
     """Navigate a dialogue graph using predicates and effects."""
 
@@ -21,6 +26,7 @@ class GraphNavigator:
         """
         self.graph = graph
         self.game_state = game_state
+        self.validate_graph()
         self.enter_vertex("vertex_0")
 
     @property
@@ -36,6 +42,23 @@ class GraphNavigator:
             and self.evaluate_edge_predicates(edge_name)):
                 current_edges[edge_name] = edge
         return current_edges
+
+    def collect_validation_errors(self) -> list[Exception]:
+        """Collect all runtime validation errors.
+
+        Returns:
+            list[Exception]: All validation errors found, or an empty list
+                when the graph is valid.
+        """
+        errors = []
+        vertex_ids = set(self.graph.vertex_dict.keys())
+        if "vertex_0" not in vertex_ids:
+            errors.append(
+                StartVertexMissingError(
+                    'Required start vertex "vertex_0" is missing.'
+                )
+            )
+        return errors
 
     def enter_vertex(self, vertex_name: str) -> None:
         """Enter a vertex and apply all vertex effects.
@@ -171,6 +194,16 @@ class GraphNavigator:
         for effect in edge.effects:
             self.proc_effect(effect)
         self.enter_vertex(edge.to_vertex)
+
+    def validate_graph(self) -> None:
+        """Raise errors if graph is invalid.
+
+        Raises:
+            StartVertexMissingError: If vertex_0 is not present.
+        """
+        errors = self.collect_validation_errors()
+        for error in errors:
+            raise error
 
 
     
