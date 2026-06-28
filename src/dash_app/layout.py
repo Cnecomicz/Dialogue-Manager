@@ -255,6 +255,22 @@ def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
             }
         },
         {
+            "selector": "[?is_start_vertex]",
+            "style": {
+                "border-color": "#d6c29b",
+                "border-width": 3,
+                "background-color": "#a84a07",
+                "font-weight": "bold"
+            }
+        },
+        {
+            "selector": "[?is_start_vertex]:selected",
+            "style": {
+                "border-color": "#fbbf24",
+                "border-width": 4
+            }
+        },
+        {
             "selector": "[?has_missing_endpoint]",
             "style": {
                 "border-color": "#ef4444",

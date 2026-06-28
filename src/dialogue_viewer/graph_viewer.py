@@ -91,13 +91,19 @@ class GraphViewer:
                 text = fr"{effects_text}\n{dialogue_text}"
             else:
                 text = dialogue_text
+            fill_color = "#a36a2a"
+            border_color = "#aaaaaa"
+            if vertex_name == "vertex_0":
+                text = fr"START\n\n{text}"
+                fill_color = "#a84a07"
+                border_color = "#d6c29b"
             dot.node(
                 vertex_name, 
                 text,
                 shape="box",
                 style="rounded,filled",
-                fillcolor="#a36a2a",
-                color="#aaaaaa"
+                fillcolor=fill_color,
+                color=border_color
             )
         for edge_name, edge in graph.edge_dict.items():
             dialogue_text = fr"TEXT:\n{edge.text}\n"

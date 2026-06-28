@@ -57,7 +57,19 @@ class CytoscapeAdapter:
                 text = f"{effects_text}\n{dialogue_text}"
             else:
                 text = dialogue_text
-            nodes.append({"data": {"id": vertex_name, "label": text}})
+            if vertex_name == "vertex_0":
+                text = f"START\n\n{text}"
+                nodes.append(
+                    {
+                        "data": {
+                            "id": vertex_name,
+                            "label": text,
+                            "is_start_vertex": True
+                        }
+                    }
+                )
+            else:
+                nodes.append({"data": {"id": vertex_name, "label": text}})
         # Nodes from edges
         for edge_name, edge in self.graph.edge_dict.items():
             has_missing_from = edge.from_vertex == "__MISSING__"
