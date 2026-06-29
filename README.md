@@ -59,8 +59,7 @@ and pytest-xdist, and are used for running the pytest suite.
 ## Quick start
 
 Launch the visual dialogue editor with `dialogue-editor`. This starts a 
-local Dash app and opens http://localhost:8050. To end the session, close
-the browser tab, and interrupt the terminal with `Ctrl+C`.
+local Dash app and opens http://localhost:8050. 
 
 Render a dialogue graph to svg with `render`. You will be prompted for a 
 yaml file path. An svg is generated in the same directory.

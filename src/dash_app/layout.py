@@ -549,30 +549,52 @@ def get_header() -> html.Div:
     Returns:
         html.Div: Header component with new/open/save controls.
     """
+    button_style = {
+        "padding": "8px 14px",
+        "fontSize": "16px",
+        "backgroundColor": "#374151",
+        "color": "#e5e7eb",
+        "border": "1px solid #4b5563",
+        "borderRadius": "4px",
+        "cursor": "pointer"
+    }
     return html.Div(
         [
             html.Button(
                 "New",
                 id="new-graph",
-                n_clicks=0
+                n_clicks=0,
+                style=button_style
             ),
             html.Div(
-                get_upload_graph(),
+                get_upload_graph(button_style),
                 id="upload-graph-container",
                 style={"display": "inline-block"}
             ),
             html.Button(
                 "Save",
                 id="download-graph",
-                n_clicks=0
+                n_clicks=0,
+                style=button_style
             ),
             html.Div(
                 "Document: Untitled",
                 id="current-document-label",
                 style={
-                    "fontSize": "14px",
+                    "fontSize": "16px",
                     "color": "#d1d5db",
                     "marginLeft": "8px"
+                }
+            ),
+            html.Div(style={"flex": "1"}),
+            html.Button(
+                "Quit",
+                id="quit-editor",
+                n_clicks=0,
+                style={
+                    **button_style,
+                    "backgroundColor": "#7f1d1d",
+                    "border": "1px solid #c53030"
                 }
             )
         ],
@@ -585,7 +607,8 @@ def get_header() -> html.Div:
             "overflow": "hidden",
             "backgroundColor": "#1f252b",
             "borderBottom": "1px solid #444",
-            "flexShrink": 0
+            "flexShrink": 0,
+            "padding": "8px 10px"
         }
     )
 
@@ -975,8 +998,14 @@ def get_textarea_style(height: str = "auto") -> dict[str, str | int]:
         "boxSizing": "border-box"
     }
 
-def get_upload_graph() -> dcc.Upload:
+def get_upload_graph(
+    button_style: dict[str, str | int] | None = None
+) -> dcc.Upload:
     """Build the upload control used to load graph yaml files.
+
+    Args:
+        button_style (dict[str, str | int] | None): Optional style mapping
+            for the Open button.
 
     Returns:
         dcc.Upload: Dash upload component for yaml files.
@@ -986,7 +1015,8 @@ def get_upload_graph() -> dcc.Upload:
         children=html.Button(
             "Open",
             id="upload-graph-button",
-            n_clicks=0
+            n_clicks=0,
+            style=button_style
         ),
         multiple=False,
         style={"display": "inline-block"}

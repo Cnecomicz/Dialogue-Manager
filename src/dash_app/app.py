@@ -3,8 +3,10 @@ from binascii import Error as BinasciiError
 from dash import Dash, Input, Output, State, ctx, dcc, html, no_update
 from dash.exceptions import PreventUpdate
 from dash_cytoscape import load_extra_layouts
-from os import PathLike
+from flask import request
+from os import PathLike, _exit
 from re import sub
+from threading import Timer
 from webbrowser import open as open_url
 from yaml import YAMLError, safe_load
 
@@ -40,6 +42,7 @@ class App(Dash):
 
     MISSING_VERTEX = "__MISSING__"
     PENDING_ACTION_NEW = "new"
+    PENDING_ACTION_QUIT = "quit"
     PENDING_ACTION_UPLOAD = "upload"
 
     def __init__(self, yaml_file: str | PathLike | None = None) -> None:
@@ -71,12 +74,14 @@ class App(Dash):
                 dcc.Store(id="current-document", data=initial_name),
                 dcc.Store(id="pending-action", data=""),
                 dcc.Store(id="pending-upload", data={}),
+                dcc.Store(id="quit-signal", data=0),
                 dcc.Store(id="selected-node-id", data=None),
                 dcc.Download(id="download-yaml"),
                 dcc.ConfirmDialog(
                     id="confirm-unsaved-work",
                     message="You have unsaved changes. Continue?"
-                )
+                ),
+                html.Div(id="quit-client-trigger", style={"display": "none"})
             ],
             style={
                 "display": "flex",
@@ -495,6 +500,23 @@ class App(Dash):
             Input("action-status", "value")
         )
 
+        self.clientside_callback(
+            """
+            function(quitSignal) {
+                if (!quitSignal) {
+                    return "";
+                }
+                window.setTimeout(function() {
+                    window.close();
+                }, 0);
+                return "";
+            }
+            """,
+            Output("quit-client-trigger", "children"),
+            Input("quit-signal", "data"),
+            prevent_initial_call=True
+        )
+
         @self.callback(
             Output("new-edge-from", "value"),
             Input("open-add-edge-modal", "n_clicks"),
@@ -754,18 +776,21 @@ class App(Dash):
             Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
             Output("pending-action", "data", allow_duplicate=True),
             Output("pending-upload", "data", allow_duplicate=True),
+            Output("quit-signal", "data", allow_duplicate=True),
             Input("confirm-unsaved-work", "submit_n_clicks"),
             State("pending-action", "data"),
             State("pending-upload", "data"),
             State("action-status", "value"),
+            State("quit-signal", "data"),
             prevent_initial_call=True
         )
         def on_confirm_unsaved_submit(
             confirm_unsaved_submit_clicks: int,
             pending_action: str | None,
             pending_upload: dict | None,
-            current_log: str | None
-        ) -> tuple[object, object, object, object, bool, str, dict]:
+            current_log: str | None,
+            quit_signal: int | None
+        ) -> tuple[object, object, object, object, bool, str, dict, object]:
             if not confirm_unsaved_submit_clicks:
                 raise PreventUpdate
             if pending_action == self.PENDING_ACTION_NEW:
@@ -781,7 +806,8 @@ class App(Dash):
                     self.normalize_name(self.graph_editor.graph.name),
                     False,
                     "",
-                    {}
+                    {},
+                    no_update
                 )
             if pending_action == self.PENDING_ACTION_UPLOAD:
                 queued_upload = pending_upload or {}
@@ -800,7 +826,8 @@ class App(Dash):
                         no_update,
                         False,
                         "",
-                        {}
+                        {},
+                        no_update
                     )
                 try:
                     parsed_yaml = self.parse_uploaded_yaml(queued_contents)
@@ -814,7 +841,8 @@ class App(Dash):
                         no_update,
                         False,
                         "",
-                        {}
+                        {},
+                        no_update
                     )
                 self.graph_editor.load(yaml_data=parsed_yaml)
                 loaded_name = self.normalize_name(self.graph_editor.graph.name)
@@ -832,7 +860,24 @@ class App(Dash):
                     loaded_name,
                     False,
                     "",
-                    {}
+                    {},
+                    no_update
+                )
+            if pending_action == self.PENDING_ACTION_QUIT:
+                self.request_app_shutdown()
+                return (
+                    self.action_logger.append_status(
+                        current_log,
+                        "Discarded unsaved changes and quit the dialogue "
+                        "editor session."
+                    ),
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    "",
+                    {},
+                    (quit_signal or 0) + 1
                 )
             raise PreventUpdate
 
@@ -912,6 +957,49 @@ class App(Dash):
                 no_update,
                 "",
                 {}
+            )
+
+        @self.callback(
+            Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
+            Output("confirm-unsaved-work", "message", allow_duplicate=True),
+            Output("pending-action", "data", allow_duplicate=True),
+            Output("pending-upload", "data", allow_duplicate=True),
+            Output("action-status", "value", allow_duplicate=True),
+            Output("quit-signal", "data", allow_duplicate=True),
+            Input("quit-editor", "n_clicks"),
+            State("unsaved-changes", "data"),
+            State("action-status", "value"),
+            State("quit-signal", "data"),
+            prevent_initial_call=True
+        )
+        def on_quit_editor(
+            quit_editor_clicks: int,
+            unsaved_changes: bool,
+            current_log: str | None,
+            quit_signal: int | None
+        ) -> tuple[bool, object, str, dict, object, object]:
+            if not quit_editor_clicks:
+                raise PreventUpdate
+            if unsaved_changes:
+                return (
+                    True,
+                    "You have unsaved changes. Quit anyway?",
+                    self.PENDING_ACTION_QUIT,
+                    {},
+                    no_update,
+                    no_update
+                )
+            self.request_app_shutdown()
+            return (
+                False,
+                no_update,
+                "",
+                {},
+                self.action_logger.append_status(
+                    current_log,
+                    "Quit the dialogue editor session."
+                ),
+                (quit_signal or 0) + 1
             )
 
         @self.callback(
@@ -1541,6 +1629,14 @@ class App(Dash):
             self.graph_editor.remove_edge(node_id)
             return True
         return False
+
+    def request_app_shutdown(self) -> None:
+        """Stop the server after the current callback response is sent."""
+        shutdown_server = request.environ.get("werkzeug.server.shutdown")
+        if shutdown_server:
+            Timer(0.1, shutdown_server).start()
+            return
+        Timer(0.1, _exit, args=(0,)).start()
 
     def update_edge_endpoints(
         self, 
