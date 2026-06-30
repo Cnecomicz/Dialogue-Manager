@@ -3,175 +3,287 @@ from dash_cytoscape import Cytoscape
 from pathlib import Path
 from tomllib import load as toml_load
 
-def get_add_edge_modal() -> html.Div:
-    """Build the complete Add Edge modal.
+def get_bottom_panel() -> html.Div:
+    """Build the bottom panel for form editing with flexible field layout.
 
     Returns:
-        html.Div: Modal overlay div for adding edges.
+        html.Div: Bottom panel component containing all form fields.
     """
+    primary_button_style = {
+        "padding": "8px 14px",
+        "backgroundColor": "#4b5563",
+        "color": "#e6e6e6",
+        "border": "1px solid #666",
+        "borderRadius": "4px",
+        "cursor": "pointer"
+    }
+    secondary_button_style = {
+        "padding": "8px 14px",
+        "backgroundColor": "#333",
+        "color": "#e6e6e6",
+        "border": "1px solid #555",
+        "borderRadius": "4px",
+        "cursor": "pointer"
+    }
     return html.Div(
         [
             html.Div(
                 [
-                    html.H2("Add Player Dialogue", style={"color": "#e6e6e6"}),
-                    html.Div(
-                        get_add_edge_modal_content(),
-                        style={"marginBottom": "16px"}
+                    html.H2(
+                        "Form",
+                        id="bottom-panel-title",
+                        style={
+                            "margin": "0",
+                            "fontSize": "18px",
+                            "color": "#e6e6e6",
+                            "flex": "1"
+                        }
                     ),
                     html.Div(
                         [
                             html.Button(
                                 "Save",
-                                id="save-add-edge",
+                                id="bottom-panel-save",
                                 n_clicks=0,
-                                style={
-                                    "marginRight": "8px",
-                                    "padding": "8px 16px",
-                                    "backgroundColor": "#4b5563",
-                                    "color": "#e6e6e6",
-                                    "border": "1px solid #666",
-                                    "borderRadius": "4px",
-                                    "cursor": "pointer"
-                                }
+                                style=primary_button_style
                             ),
                             html.Button(
                                 "Cancel",
-                                id="cancel-add-edge",
+                                id="bottom-panel-close",
                                 n_clicks=0,
-                                style={
-                                    "padding": "8px 16px",
-                                    "backgroundColor": "#333",
-                                    "color": "#e6e6e6",
-                                    "border": "1px solid #555",
-                                    "borderRadius": "4px",
-                                    "cursor": "pointer"
-                                }
+                                style=secondary_button_style
                             )
-                        ]
+                        ],
+                        style={"display": "flex", "gap": "8px"}
                     )
                 ],
-                style=get_modal_card_style()
-            )
-        ],
-        id="add-edge-modal",
-        style=get_modal_overlay_style(False)
-    )
-
-def get_add_edge_modal_content() -> list:
-    """Build form content for adding a player edge (used in modal).
-
-    Returns:
-        list: Dash components for edge creation form.
-    """
-    return [
-        html.Label("Dialogue", style=get_label_style()),
-        dcc.Textarea(
-            id="new-edge-text",
-            placeholder="Dialogue",
-            style=get_textarea_style()
-        ),
-        html.Label("Source NPC Node", style=get_label_style()),
-        dcc.Input(
-            id="new-edge-from",
-            type="text",
-            placeholder="Source NPC node",
-            style=get_input_style()
-        ),
-        html.Label("Target NPC Node", style=get_label_style()),
-        dcc.Input(
-            id="new-edge-to",
-            type="text",
-            placeholder="Target NPC node",
-            style=get_input_style()
-        ),
-        html.Label("Predicates", style=get_label_style()),
-        dcc.Textarea(
-            id="new-edge-predicates",
-            placeholder="Predicates (one per line)",
-            style=get_textarea_style("70px")
-        ),
-        html.Label("Effects", style=get_label_style()),
-        dcc.Textarea(
-            id="new-edge-effects",
-            placeholder="Effects (one per line)",
-            style=get_textarea_style("70px")
-        )
-    ]
-
-def get_add_vertex_modal() -> html.Div:
-    """ Build the complete Add Vertex modal.
-
-    Returns:
-        html.Div: Modal overlay div for adding vertices.
-    """
-    return html.Div(
-        [
+                style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center",
+                    "marginBottom": "16px",
+                    "paddingBottom": "12px",
+                    "borderBottom": "1px solid #444"
+                }
+            ),
             html.Div(
                 [
-                    html.H2("Add NPC Dialogue", style={"color": "#e6e6e6"}),
+                    html.Label("Dialogue", style=get_label_style()),
+                    dcc.Textarea(
+                        id="bottom-form-dialogue",
+                        placeholder="Dialogue",
+                        style=get_textarea_style("100px")
+                    )
+                ],
+                id="bottom-form-dialogue-container",
+                style={"marginBottom": "12px"}
+            ),
+            html.Div(
+                [
                     html.Div(
-                        get_add_vertex_modal_content(),
-                        style={"marginBottom": "16px"}
+                        [
+                            html.Label(
+                                "Source NPC Node", style=get_label_style()
+                            ),
+                            html.Div(
+                                [
+                                    dcc.Input(
+                                        id="bottom-form-source",
+                                        type="text",
+                                        placeholder="Source NPC node",
+                                        style={
+                                            **get_input_style(),
+                                            "flex": "1",
+                                            "minWidth": "150px"
+                                        }
+                                    ),
+                                    html.Button(
+                                        "Select From Graph",
+                                        id="bottom-form-pick-source",
+                                        n_clicks=0,
+                                        style={
+                                            "padding": "6px 10px",
+                                            "backgroundColor": "#5a6370",
+                                            "color": "#e6e6e6",
+                                            "border": "1px solid #777",
+                                            "borderRadius": "4px",
+                                            "cursor": "pointer",
+                                            "fontSize": "12px",
+                                            "marginLeft": "8px"
+                                        }
+                                    )
+                                ],
+                                style={
+                                    "display": "flex", 
+                                    "gap": "4px", 
+                                    "alignItems": "flex-end"
+                                }
+                            )
+                        ],
+                        style={
+                            "flex": "1",
+                            "minWidth": "280px",
+                            "marginRight": "8px"
+                        },
+                        id="bottom-form-source-container"
                     ),
                     html.Div(
                         [
-                            html.Button(
-                                "Save",
-                                id="save-add-vertex",
-                                n_clicks=0,
-                                style={
-                                    "marginRight": "8px",
-                                    "padding": "8px 16px",
-                                    "backgroundColor": "#4b5563",
-                                    "color": "#e6e6e6",
-                                    "border": "1px solid #666",
-                                    "borderRadius": "4px",
-                                    "cursor": "pointer"
-                                }
+                            html.Label(
+                                "Target NPC Node", style=get_label_style()
                             ),
-                            html.Button(
-                                "Cancel",
-                                id="cancel-add-vertex",
-                                n_clicks=0,
+                            html.Div(
+                                [
+                                    dcc.Input(
+                                        id="bottom-form-target",
+                                        type="text",
+                                        placeholder="Target NPC node",
+                                        style={
+                                            **get_input_style(),
+                                            "flex": "1",
+                                            "minWidth": "150px"
+                                        }
+                                    ),
+                                    html.Button(
+                                        "Select From Graph",
+                                        id="bottom-form-pick-target",
+                                        n_clicks=0,
+                                        style={
+                                            "padding": "6px 10px",
+                                            "backgroundColor": "#5a6370",
+                                            "color": "#e6e6e6",
+                                            "border": "1px solid #777",
+                                            "borderRadius": "4px",
+                                            "cursor": "pointer",
+                                            "fontSize": "12px",
+                                            "marginLeft": "8px"
+                                        }
+                                    )
+                                ],
                                 style={
-                                    "padding": "8px 16px",
-                                    "backgroundColor": "#333",
-                                    "color": "#e6e6e6",
-                                    "border": "1px solid #555",
-                                    "borderRadius": "4px",
-                                    "cursor": "pointer"
+                                    "display": "flex",
+                                    "gap": "4px",
+                                    "alignItems": "flex-end"
                                 }
+                            )
+                        ],
+                        style={
+                            "flex": "1",
+                            "minWidth": "280px"
+                        },
+                        id="bottom-form-target-container"
+                    )
+                ],
+                style={
+                    "display": "flex",
+                    "gap": "8px",
+                    "marginBottom": "12px",
+                    "flexWrap": "wrap"
+                }
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Label("Predicates", style=get_label_style()),
+                            dcc.Textarea(
+                                id="bottom-form-predicates",
+                                placeholder="Predicates (one per line)",
+                                style=get_textarea_style("70px")
+                            )
+                        ],
+                        id="bottom-form-predicates-container",
+                        style={
+                            "flex": "1", 
+                            "minWidth": "300px", 
+                            "marginRight": "8px"
+                        }
+                    ),
+                    html.Div(
+                        [
+                            html.Label("Effects", style=get_label_style()),
+                            dcc.Textarea(
+                                id="bottom-form-effects",
+                                placeholder="Effects (one per line)",
+                                style=get_textarea_style("70px")
+                            )
+                        ],
+                        id="bottom-form-effects-container",
+                        style={"flex": "1", "minWidth": "300px"}
+                    )
+                ],
+                style={
+                    "display": "flex",
+                    "gap": "8px",
+                    "marginBottom": "12px",
+                    "flexWrap": "wrap"
+                }
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        "Are you sure you want to delete the selected node?",
+                        id="bottom-form-delete-message-container",
+                        style={
+                            "display": "none",
+                            "marginBottom": "12px",
+                            "color": "#e6e6e6"
+                        }
+                    ),
+                    html.Div(
+                        [
+                            dcc.Checklist(
+                                id="bottom-form-cascade",
+                                options=[
+                                    {
+                                        "label": (
+                                            "Delete all connected player "
+                                            "nodes? If you do not, you may "
+                                            "need to repair unresolved "
+                                            "connections."
+                                        ),
+                                        "value": "cascade"
+                                    }
+                                ],
+                                value=[],
+                                labelStyle={"color": "#e5e7eb"},
+                                style={"color": "#e5e7eb"}
                             )
                         ]
                     )
                 ],
-                style=get_modal_card_style()
+                id="bottom-form-cascade-container",
+                style={"display": "none"}
             )
         ],
-        id="add-vertex-modal",
-        style=get_modal_overlay_style(False)
+        id="bottom-panel",
+        style=get_bottom_panel_style(False)
     )
 
-def get_add_vertex_modal_content() -> list:
-    """Build form content for adding an NPC vertex (used in modal).
+def get_bottom_panel_style(is_open: bool) -> dict[str, str]:
+    """Return style for the bottom panel while preserving fixed placement.
+
+    Args:
+        is_open (bool): Whether the panel is visible.
 
     Returns:
-        list: Dash components for vertex creation form.
+        dict[str, str | int]: Style mapping for bottom panel container.
     """
-    return [
-        html.Label("Dialogue", style=get_label_style()),
-        dcc.Textarea(
-            id="new-vertex-text",
-            placeholder="Dialogue",
-            style=get_textarea_style()
-        ),
-        html.Label("Effects", style=get_label_style()),
-        dcc.Textarea(
-            id="new-vertex-effects",
-            placeholder="Effects (one per line)",
-            style=get_textarea_style("70px")
-        )
-    ]
+    return {
+        "display": "block" if is_open else "none",
+        "position": "absolute",
+        "bottom": "0",
+        "left": "0",
+        "right": "0",
+        "backgroundColor": "#252d35",
+        "borderTop": "1px solid #444",
+        "padding": "16px",
+        "boxSizing": "border-box",
+        "maxHeight": "45vh",
+        "overflowY": "auto",
+        "zIndex": "999",
+        "boxShadow": "0 -4px 12px rgba(0, 0, 0, 0.3)"
+    }
 
 def get_center_panel(initial_elements: list) -> html.Div:
     """Build the center graph panel with Cytoscape visualization.
@@ -186,9 +298,22 @@ def get_center_panel(initial_elements: list) -> html.Div:
         [
             get_header(),
             html.Div(
-                get_graph_component(initial_elements),
-                id="graph-container",
-                style={"flex": "1", "minHeight": 0}
+                [
+                    html.Div(
+                        get_graph_component(initial_elements),
+                        id="graph-container",
+                        style={"flex": "1", "minHeight": 0}
+                    ),
+                    get_bottom_panel()
+                ],
+                style={
+                    "flex": "1",
+                    "minHeight": 0,
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "position": "relative",
+                    "overflow": "hidden"
+                }
             )
         ],
         style={
@@ -285,206 +410,6 @@ def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
                 "border-width": 6
             }
         }
-    ]
-
-def get_delete_confirmation_modal_content() -> list:
-    """Build content for delete confirmation modal.
-
-    Returns: 
-        list: Dash components for delete confirmation.
-    """
-    return [
-        html.Div(
-            "Are you sure you want to delete the selected node?",
-            style={
-                "marginBottom": "16px",
-                "color": "#e6e6e6"
-            }
-        ),
-        dcc.Checklist(
-            id="delete-cascade",
-            options=[
-                {
-                    "label": (
-                        "Delete all connected player nodes? If you do not, "
-                        "you may need to repair unresolved connections."
-                    ), 
-                    "value": "cascade"
-                }
-            ],
-            value=[],
-            labelStyle={"color": "#e5e7eb"},
-            style={
-                "marginBottom": "16px",
-                "color": "#e5e7eb"
-            }
-        )
-    ]
-
-def get_delete_node_modal() -> html.Div:
-    """Build the complete Delete Node modal.
-
-    Returns:
-        html.Div: Modal overlay div for deleting nodes.
-    """
-    return html.Div(
-        [
-            html.Div(
-                [
-                    html.H2("Delete Node", style={"color": "#e6e6e6"}),
-                    html.Div(
-                        get_delete_confirmation_modal_content(),
-                        style={"marginBottom": "16px"},
-                        id="delete-modal-content-container"
-                    ),
-                    html.Div(
-                        [
-                            html.Button(
-                                "Confirm Delete",
-                                id="confirm-delete-node-modal",
-                                n_clicks=0,
-                                style={
-                                    "marginRight": "8px",
-                                    "padding": "8px 16px",
-                                    "backgroundColor": "#7f1d1d",
-                                    "color": "#e6e6e6",
-                                    "border": "1px solid #c53030",
-                                    "borderRadius": "4px",
-                                    "cursor": "pointer"
-                                }
-                            ),
-                            html.Button(
-                                "Cancel",
-                                id="cancel-delete-node-modal",
-                                n_clicks=0,
-                                style={
-                                    "padding": "8px 16px",
-                                    "backgroundColor": "#333",
-                                    "color": "#e6e6e6",
-                                    "border": "1px solid #555",
-                                    "borderRadius": "4px",
-                                    "cursor": "pointer"
-                                }
-                            )
-                        ]
-                    )
-                ],
-                style=get_modal_card_style()
-            )
-        ],
-        id="delete-node-modal",
-        style=get_modal_overlay_style(False)
-    )
-
-def get_edit_node_modal() -> html.Div:
-    """Build the complete Edit Node modal.
-
-    Returns:
-        html.Div: Modal overlay div for editing nodes.
-    """
-    return html.Div(
-        [
-            html.Div(
-                [
-                    html.H2("Edit Node", style={"color": "#e6e6e6"}),
-                    html.Div(
-                        get_edit_node_modal_content(),
-                        style={"marginBottom": "16px"},
-                        id="edit-modal-content-container"
-                    ),
-                    html.Div(
-                        [
-                            html.Button(
-                                "Save",
-                                id="save-edit-node",
-                                n_clicks=0,
-                                style={
-                                    "marginRight": "8px",
-                                    "padding": "8px 16px",
-                                    "backgroundColor": "#4b5563",
-                                    "color": "#e6e6e6",
-                                    "border": "1px solid #666",
-                                    "borderRadius": "4px",
-                                    "cursor": "pointer"
-                                }
-                            ),
-                            html.Button(
-                                "Cancel",
-                                id="cancel-edit-node",
-                                n_clicks=0,
-                                style={
-                                    "padding": "8px 16px",
-                                    "backgroundColor": "#333",
-                                    "color": "#e6e6e6",
-                                    "border": "1px solid #555",
-                                    "borderRadius": "4px",
-                                    "cursor": "pointer"
-                                }
-                            )
-                        ]
-                    )
-                ],
-                style=get_modal_card_style()
-            )
-        ],
-        id="edit-node-modal",
-        style=get_modal_overlay_style(False)
-    )
-
-def get_edit_node_modal_content() -> list:
-    """Build form content for editing a node (used in modal).
-
-    Returns:
-        list: Dash components for node edit form.
-    """
-    return [
-        html.Label("Dialogue", style=get_label_style()),
-        dcc.Textarea(
-            id="edit-text",
-            placeholder="Dialogue",
-            style=get_textarea_style()
-        ),
-        html.Div(
-            [
-                html.Label("Source NPC Node", style=get_label_style()),
-                dcc.Input(
-                    id="edit-from-vertex",
-                    type="text",
-                    placeholder="Source NPC node",
-                    style=get_input_style()
-                )
-            ],
-            id="edit-from-vertex-container"
-        ),
-        html.Div(
-            [
-                html.Label("Target NPC Node", style=get_label_style()),
-                dcc.Input(
-                    id="edit-to-vertex",
-                    type="text",
-                    placeholder="Target NPC node",
-                    style=get_input_style()
-                ),
-            ],
-            id="edit-to-vertex-container"
-        ),
-        html.Div(
-            [
-                html.Label("Predicates", style=get_label_style()),
-                dcc.Textarea(
-                    id="edit-predicates",
-                    placeholder="Predicates (one per line)",
-                    style=get_textarea_style("70px")
-                ),
-            ],
-            id="edit-predicates-container"
-        ),
-        html.Label("Effects", style=get_label_style()),
-        dcc.Textarea(
-            id="edit-effects",
-            placeholder="Effects (one per line)",
-            style=get_textarea_style("70px")
-        )
     ]
 
 def get_edit_section() -> list:
@@ -843,44 +768,6 @@ def get_log() -> list:
         )
     ]
 
-def get_modal_card_style() -> dict[str, str | int]:
-    """Return shared card styling for modal-like dialogs.
-
-    Returns:
-        dict[str, str | int]: Inline style for modal cards.
-    """
-    return {
-        "width": "min(520px, 100%)",
-        "maxHeight": "calc(100vh - 48px)",
-        "overflowY": "auto",
-        "padding": "16px",
-        "backgroundColor": "#252d35",
-        "border": "1px solid #444",
-        "borderRadius": "8px",
-        "boxShadow": "0 12px 32px rgba(0, 0, 0, 0.35)"
-    }
-
-def get_modal_overlay_style(is_open: bool) -> dict[str, str | int]:
-    """Return the overlay style for modal-like dialogs.
-
-    Args:
-        is_open (bool): Whether the overlay should be visible.
-
-    Returns:
-        dict[str, str | int]: Dash inline style mapping.
-    """
-    return {
-        "position": "fixed",
-        "inset": 0,
-        "display": "flex" if is_open else "none",
-        "alignItems": "center",
-        "justifyContent": "center",
-        "backgroundColor": "rgba(15, 23, 42, 0.55)",
-        "zIndex": 1000,
-        "padding": "24px",
-        "boxSizing": "border-box"
-    }
-
 def get_name_section(initial_value: str = "Untitled") -> list:
     """Build the sidebar controls for editing NPC name.
 
@@ -994,7 +881,8 @@ def get_textarea_style(height: str = "auto") -> dict[str, str | int]:
         "border": "1px solid #9ca3af",
         "fontSize": "14px",
         "padding": "6px 8px",
-        "resize": "vertical",
+        "resize": "none",
+        "overflowY": "auto",
         "boxSizing": "border-box"
     }
 
@@ -1010,13 +898,22 @@ def get_upload_graph(
     Returns:
         dcc.Upload: Dash upload component for yaml files.
     """
+    resolved_button_style = button_style or {
+        "padding": "8px 14px",
+        "fontSize": "16px",
+        "backgroundColor": "#374151",
+        "color": "#e5e7eb",
+        "border": "1px solid #4b5563",
+        "borderRadius": "4px",
+        "cursor": "pointer"
+    }
     return dcc.Upload(
         id="upload-graph",
         children=html.Button(
             "Open",
             id="upload-graph-button",
             n_clicks=0,
-            style=button_style
+            style=resolved_button_style
         ),
         multiple=False,
         style={"display": "inline-block"}

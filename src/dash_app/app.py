@@ -11,15 +11,11 @@ from webbrowser import open as open_url
 from yaml import YAMLError, safe_load
 
 from dash_app.layout import (
-    get_add_edge_modal,
-    get_add_vertex_modal,
+    get_bottom_panel_style,
     get_center_panel,
-    get_delete_node_modal,
-    get_edit_node_modal,
     get_graph_component,
     get_index_string,
     get_left_panel,
-    get_modal_overlay_style,
     get_project_metadata,
     get_right_panel,
     get_upload_graph
@@ -66,16 +62,16 @@ class App(Dash):
                 get_left_panel(initial_name, author, version),
                 get_center_panel(self.get_elements()),
                 get_right_panel(),
-                get_add_vertex_modal(),
-                get_add_edge_modal(),
-                get_edit_node_modal(),
-                get_delete_node_modal(),
                 dcc.Store(id="unsaved-changes", data=False),
                 dcc.Store(id="current-document", data=initial_name),
                 dcc.Store(id="pending-action", data=""),
                 dcc.Store(id="pending-upload", data={}),
                 dcc.Store(id="quit-signal", data=0),
                 dcc.Store(id="selected-node-id", data=None),
+                dcc.Store(id="bottom-panel-visible", data=False),
+                dcc.Store(id="bottom-panel-form-type", data=""),
+                dcc.Store(id="pick-mode-active", data=False),
+                dcc.Store(id="pick-mode-field", data=""),
                 dcc.Download(id="download-yaml"),
                 dcc.ConfirmDialog(
                     id="confirm-unsaved-work",
@@ -518,241 +514,779 @@ class App(Dash):
         )
 
         @self.callback(
-            Output("new-edge-from", "value"),
+            Output("pick-mode-active", "data"),
+            Output("pick-mode-field", "data"),
+            Input("bottom-form-pick-source", "n_clicks"),
+            Input("bottom-form-pick-target", "n_clicks"),
+            State("pick-mode-active", "data"),
+            prevent_initial_call=True
+        )
+        def activate_pick_mode(
+            pick_source_clicks: int,
+            pick_target_clicks: int,
+            is_active: bool
+        ) -> tuple[bool, str]:
+            if not ctx.triggered:
+                raise PreventUpdate
+            triggered_id = ctx.triggered_id
+            if triggered_id == "bottom-form-pick-source":
+                return True, "source"
+            if triggered_id == "bottom-form-pick-target":
+                return True, "target"
+            raise PreventUpdate
+
+        @self.callback(
+            Output("bottom-panel", "style"),
+            Output("bottom-panel-visible", "data"),
+            Output("bottom-panel-form-type", "data"),
+            Output("bottom-panel-title", "children"),
+            Output("bottom-form-dialogue", "value"),
+            Output("bottom-form-source", "value"),
+            Output("bottom-form-target", "value"),
+            Output("bottom-form-predicates", "value"),
+            Output("bottom-form-effects", "value"),
+            Output("bottom-form-cascade", "value"),
+            Output("pick-mode-active", "data"),
+            Output("pick-mode-field", "data"),
+            Output("bottom-panel-save", "children"),
+            Output("bottom-panel-save", "style"),
+            Output("bottom-panel-close", "children"),
+            Output("bottom-panel-close", "style"),
+            Input("bottom-panel-close", "n_clicks"),
+            Input("bottom-panel-save", "n_clicks"),
             Input("open-add-edge-modal", "n_clicks"),
-            State("dialogue-editor", "selectedNodeData"),
-            prevent_initial_call=True
-        )
-        def autofill_add_edge_from_field(
-            open_clicks: int, selected_nodes: list[dict] | None
-        ) -> str:
-            if not selected_nodes:
-                return ""
-            node_id = selected_nodes[0].get("id")
-            if not node_id:
-                return ""
-            is_vertex = node_id in self.graph_editor.graph.vertex_dict
-            return node_id if is_vertex else ""
-
-        @self.callback(
-            Output("edit-text", "value"),
-            Output("edit-predicates", "value"),
-            Output("edit-effects", "value"),
-            Output("edit-from-vertex", "value"),
-            Output("edit-to-vertex", "value"),
+            Input("open-add-vertex-modal", "n_clicks"),
             Input("open-edit-modal", "n_clicks"),
+            Input("open-delete-modal", "n_clicks"),
+            State("bottom-panel-visible", "data"),
             State("dialogue-editor", "selectedNodeData"),
             prevent_initial_call=True
         )
-        def autofill_edit_modal_fields(
-            open_clicks: int, selected_nodes: list[dict] | None
-        ) -> tuple[str, str, str, str, str]:
-            if not selected_nodes:
-                return "", "", "", "", ""
-            node_id = selected_nodes[0].get("id")
-            if not node_id:
-                return "", "", "", "", ""
-            node_text = self.get_node_text(node_id)
-            if node_text is None:
-                return "", "", "", "", ""
-            predicates_text = self.get_node_predicates(node_id)
-            effects_text = self.get_node_effects(node_id)
-            edit_from_vertex, edit_to_vertex = (
-                self.get_edge_endpoints_for_edit(node_id)
-            )
-            return (
-                node_text,
-                predicates_text,
-                effects_text,
-                edit_from_vertex,
-                edit_to_vertex
-            )
+        def manage_bottom_panel(
+            close_clicks: int,
+            save_clicks: int,
+            open_edge_clicks: int,
+            open_vertex_clicks: int,
+            open_edit_clicks: int,
+            open_delete_clicks: int,
+            is_visible: bool,
+            selected_nodes: list[dict] | None
+        ) -> tuple[
+            dict[str, str],
+            bool,
+            str,
+            str,
+            str,
+            str,
+            str,
+            str,
+            str,
+            list,
+            bool,
+            str,
+            str,
+            dict[str, str],
+            str,
+            dict[str, str]
+        ]:
+            if not ctx.triggered:
+                raise PreventUpdate
+            default_save_button_style = {
+                "padding": "8px 14px",
+                "backgroundColor": "#4b5563",
+                "color": "#e6e6e6",
+                "border": "1px solid #666",
+                "borderRadius": "4px",
+                "cursor": "pointer"
+            }
+            delete_save_button_style = {
+                "padding": "8px 14px",
+                "backgroundColor": "#7f1d1d",
+                "color": "#e6e6e6",
+                "border": "1px solid #c53030",
+                "borderRadius": "4px",
+                "cursor": "pointer"
+            }
+            close_button_style = {
+                "padding": "8px 14px",
+                "backgroundColor": "#333",
+                "color": "#e6e6e6",
+                "border": "1px solid #555",
+                "borderRadius": "4px",
+                "cursor": "pointer"
+            }
+            triggered_id = ctx.triggered_id
+            if triggered_id == "bottom-panel-close":
+                return (
+                    get_bottom_panel_style(False),
+                    False,
+                    "",
+                    "Form",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    [],
+                    False,
+                    "",
+                    "Save",
+                    default_save_button_style,
+                    "Cancel",
+                    close_button_style
+                )
+            if triggered_id == "bottom-panel-save":
+                return (
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    False,
+                    "",
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update
+                )
+            if triggered_id == "open-add-edge-modal":
+                if not self.graph_editor.graph.vertex_dict:
+                    raise PreventUpdate
+
+                return (
+                    get_bottom_panel_style(True),
+                    True,
+                    "add-edge",
+                    "Add Player Dialogue",
+                    "",
+                    (
+                        selected_nodes[0].get("id", "")
+                        if (
+                            selected_nodes
+                            and selected_nodes[0].get("id", "")
+                            in self.graph_editor.graph.vertex_dict
+                        )
+                        else ""
+                    ),
+                    "",
+                    "",
+                    "",
+                    [],
+                    False,
+                    "",
+                    "Save",
+                    default_save_button_style,
+                    "Cancel",
+                    close_button_style
+                )
+            if triggered_id == "open-add-vertex-modal":
+                return (
+                    get_bottom_panel_style(True),
+                    True,
+                    "add-vertex",
+                    "Add NPC Dialogue",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    [],
+                    False,
+                    "",
+                    "Save",
+                    default_save_button_style,
+                    "Cancel",
+                    close_button_style
+                )
+            if triggered_id == "open-edit-modal":
+                if not selected_nodes:
+                    raise PreventUpdate
+                node_id = selected_nodes[0].get("id", "")
+                if not node_id:
+                    raise PreventUpdate
+                node_text = self.get_node_text(node_id)
+                predicates_text = self.get_node_predicates(node_id)
+                effects_text = self.get_node_effects(node_id)
+                edit_from_vertex, edit_to_vertex = (
+                    self.get_edge_endpoints_for_edit(node_id)
+                )
+                is_edge = node_id in self.graph_editor.graph.edge_dict
+                form_type = "edit-edge" if is_edge else "edit-vertex"
+                title = "Edit Node"
+                return (
+                    get_bottom_panel_style(True),
+                    True,
+                    form_type,
+                    title,
+                    node_text or "",
+                    edit_from_vertex,
+                    edit_to_vertex,
+                    predicates_text,
+                    effects_text,
+                    [],
+                    False,
+                    "",
+                    "Save",
+                    default_save_button_style,
+                    "Cancel",
+                    close_button_style
+                )
+            if triggered_id == "open-delete-modal":
+                if not selected_nodes:
+                    raise PreventUpdate
+                return (
+                    get_bottom_panel_style(True),
+                    True,
+                    "delete",
+                    "Delete Node",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    [],
+                    False,
+                    "",
+                    "Confirm Delete",
+                    delete_save_button_style,
+                    "Cancel",
+                    close_button_style
+                )
+            raise PreventUpdate
 
         @self.callback(
-            Output("new-edge-from", "value"),
-            Output("new-edge-to", "value"),
-            Output("new-edge-text", "value"),
-            Output("new-edge-predicates", "value"),
-            Output("new-edge-effects", "value"),
-            Input("cancel-add-edge", "n_clicks"),
-            Input("save-add-edge", "n_clicks"),
-            prevent_initial_call=True
+            Output("bottom-form-dialogue-container", "style"),
+            Output("bottom-form-effects-container", "style"),
+            Output("bottom-form-source-container", "style"),
+            Output("bottom-form-target-container", "style"),
+            Output("bottom-form-predicates-container", "style"),
+            Output("bottom-form-cascade-container", "style"),
+            Output("bottom-form-delete-message-container", "style"),
+            Input("bottom-panel-form-type", "data")
         )
-        def clear_add_edge_form(
-            cancel_clicks: int, save_clicks: int
-        ) -> tuple[str, str, str, str, str]:
-            return "", "", "", "", ""
+        def manage_bottom_panel_fields(
+            form_type: str
+        ) -> tuple[dict, dict, dict, dict, dict, dict, dict]:
+            hidden_style = {"display": "none"}
+            dialogue_visible = {"marginBottom": "12px"}
+            source_visible = {
+                "flex": "1", 
+                "minWidth": "280px", 
+                "marginRight": "8px"
+            }
+            target_visible = {"flex": "1", "minWidth": "280px"}
+            predicates_visible = {
+                "flex": "1", 
+                "minWidth": "300px", 
+                "marginRight": "8px"
+            }
+            effects_visible = {"flex": "1", "minWidth": "300px"}
+            if form_type in ("add-edge", "edit-edge"):
+                return (
+                    dialogue_visible,
+                    effects_visible,
+                    source_visible,
+                    target_visible,
+                    predicates_visible,
+                    hidden_style,
+                    hidden_style
+                )
+            if form_type in ("add-vertex", "edit-vertex"):
+                return (
+                    dialogue_visible,
+                    effects_visible,
+                    hidden_style,
+                    hidden_style,
+                    hidden_style,
+                    hidden_style,
+                    hidden_style
+                )
+            if form_type == "delete":
+                return (
+                    hidden_style,
+                    hidden_style,
+                    hidden_style,
+                    hidden_style,
+                    hidden_style,
+                    {"display": "block"},
+                    {
+                        "display": "block",
+                        "marginBottom": "12px",
+                        "color": "#e6e6e6"
+                    }
+                )
+            return (hidden_style,) * 7
 
         @self.callback(
-            Output("new-vertex-text", "value"),
-            Output("new-vertex-effects", "value"),
-            Input("cancel-add-vertex", "n_clicks"),
-            Input("save-add-vertex", "n_clicks"),
+            Output("graph-container", "style"),
+            Input("pick-mode-active", "data"),
+            Input("bottom-panel-visible", "data"),
             prevent_initial_call=True
         )
-        def clear_add_vertex_form(
-            cancel_clicks: int, save_clicks: int
-        ) -> tuple[str, str]:
-            return "", ""
-
-        @self.callback(
-            Output("delete-cascade", "value"),
-            Input("cancel-delete-node-modal", "n_clicks"),
-            Input("confirm-delete-node-modal", "n_clicks"),
-            prevent_initial_call=True
-        )
-        def clear_delete_form(
-                cancel_clicks: int, confirm_clicks: int
-        ) -> list:
-            return []
-
-        @self.callback(
-            Output("edit-text", "value"),
-            Output("edit-from-vertex", "value"),
-            Output("edit-to-vertex", "value"),
-            Output("edit-predicates", "value"),
-            Output("edit-effects", "value"),
-            Input("cancel-edit-node", "n_clicks"),
-            Input("save-edit-node", "n_clicks"),
-            prevent_initial_call=True
-        )
-        def clear_edit_form(
-            cancel_clicks: int, save_clicks: int
-        ) -> tuple[str, str, str, str, str]:
-            return "", "", "", "", ""
+        def manage_graph_graying(
+            pick_mode_active: bool,
+            bottom_panel_visible: bool
+        ) -> dict[str, str | int]:
+            base_style = {"flex": "1", "minHeight": 0}
+            if pick_mode_active:
+                return base_style
+            elif bottom_panel_visible:
+                return {
+                    **base_style,
+                    "opacity": "0.5",
+                    "pointerEvents": "none"
+                }
+            else:
+                return base_style
 
         @self.callback(
             Output("dialogue-editor", "elements", allow_duplicate=True),
             Output("action-status", "value", allow_duplicate=True),
             Output("unsaved-changes", "data", allow_duplicate=True),
-            Input("confirm-delete-node-modal", "n_clicks"),
+            Output("bottom-panel", "style", allow_duplicate=True),
+            Output("bottom-panel-visible", "data", allow_duplicate=True),
+            Output("bottom-form-dialogue", "value", allow_duplicate=True),
+            Output("bottom-form-source", "value", allow_duplicate=True),
+            Output("bottom-form-target", "value", allow_duplicate=True),
+            Output("bottom-form-predicates", "value", allow_duplicate=True),
+            Output("bottom-form-effects", "value", allow_duplicate=True),
+            Output("bottom-form-cascade", "value", allow_duplicate=True),
+            Input("bottom-panel-save", "n_clicks"),
+            State("bottom-panel-form-type", "data"),
             State("dialogue-editor", "selectedNodeData"),
-            State("delete-cascade", "value"),
+            State("bottom-form-dialogue", "value"),
+            State("bottom-form-source", "value"),
+            State("bottom-form-target", "value"),
+            State("bottom-form-predicates", "value"),
+            State("bottom-form-effects", "value"),
+            State("bottom-form-cascade", "value"),
             State("action-status", "value"),
             prevent_initial_call=True
         )
-        def on_confirm_delete_node(
-            confirm_delete_clicks: int,
+        def on_bottom_panel_save(
+            save_clicks: int,
+            form_type: str,
             selected_nodes: list[dict] | None,
-            delete_cascade: list[str] | None,
+            form_dialogue: str | None,
+            form_source: str | None,
+            form_target: str | None,
+            form_predicates: str | None,
+            form_effects: str | None,
+            form_cascade: list[str] | None,
             current_log: str | None
-        ) -> tuple[object, str, object]:
-            if not confirm_delete_clicks:
+        ) -> tuple[
+            object, str, bool, dict, bool, str, str, str, str, str, list
+        ]:
+            if not save_clicks:
                 raise PreventUpdate
-            if not selected_nodes:
-                return (
-                    no_update,
-                    self.action_logger.append_status(
-                        current_log,
-                        "Could not delete a node because nothing is "
-                        "selected. Select a node and try again."
-                    ),
-                    no_update
-                )
-            node_id = selected_nodes[0].get("id")
-            if not node_id:
-                raise PreventUpdate
-            was_edge_delete = node_id in self.graph_editor.graph.edge_dict
-            was_vertex_delete = node_id in self.graph_editor.graph.vertex_dict
-            cascade_delete_enabled = "cascade" in (delete_cascade or [])
-            delete_messages = []
-            if was_vertex_delete and cascade_delete_enabled:
-                delete_messages.append(
-                    self.action_logger.build_delete_log(
-                        "NPC node",
-                        node_id,
-                        self.action_logger.get_npc_log_fields(
-                            node_id,
-                            include_empty=True
-                        )
+            if form_type == "add-edge":
+                if not form_source or not form_source.strip():
+                    return (
+                        no_update,
+                        self.action_logger.append_status(
+                            current_log,
+                            "Could not create a Player node because Source "
+                            "is required. Enter an NPC node ID in Source "
+                            "and save again."
+                        ),
+                        True,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update
                     )
-                )
-            if was_edge_delete:
-                delete_messages.append(
-                    self.action_logger.build_delete_log(
+                try:
+                    new_edge_predicates = self.parse_predicates(
+                        form_predicates
+                    )
+                    new_edge_effects = self.parse_effects(form_effects)
+                    normalized_to_vertex = (
+                        form_target.strip()
+                        if form_target and form_target.strip()
+                        else None
+                    )
+                    new_edge_name = self.add_edge(
+                        form_source.strip(),
+                        normalized_to_vertex,
+                        form_dialogue,
+                        new_edge_predicates,
+                        new_edge_effects
+                    )
+                except ValueError as exception:
+                    return (
+                        no_update,
+                        self.action_logger.append_status(
+                            current_log,
+                            "Could not create a Player node because "
+                            f"{exception}. Fix Predicates/Effects and save "
+                            "again."
+                        ),
+                        True,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update
+                    )
+                except VertexNotFoundError as exception:
+                    endpoint_name = exception.field_name or "Source/Target"
+                    return (
+                        no_update,
+                        self.action_logger.append_status(
+                            current_log,
+                            "Could not create a Player node because "
+                            f"{endpoint_name} must be an existing NPC node "
+                            "ID. Enter a valid NPC node ID in "
+                            f"{endpoint_name} and save again."
+                        ),
+                        True,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update
+                    )
+                new_log = self.action_logger.append_status(
+                    current_log,
+                    self.action_logger.build_create_log(
                         "Player node",
-                        node_id,
-                        self.action_logger.get_player_log_fields(
-                            node_id,
-                            include_empty=True
-                        )
+                        new_edge_name,
+                        self.action_logger.get_player_log_fields(new_edge_name)
                     )
                 )
-            if was_vertex_delete and cascade_delete_enabled:
-                connected_player_ids = sorted(
-                    edge_name
-                    for edge_name, edge 
-                    in self.graph_editor.graph.edge_dict.items()
-                    if edge.from_vertex == node_id 
-                    or edge.to_vertex == node_id
-                )
-                for edge_name in connected_player_ids:
-                    delete_messages.append(
-                        self.action_logger.build_delete_log(
-                            "Player node",
-                            edge_name,
-                            self.action_logger.get_player_log_fields(
-                                edge_name,
-                                include_empty=True
+                if normalized_to_vertex is None:
+                    new_edge = self.graph_editor.graph.edge_dict[new_edge_name]
+                    auto_created_npc = new_edge.to_vertex
+                    new_log = self.action_logger.append_status(
+                        new_log,
+                        self.action_logger.build_create_log(
+                            "NPC node",
+                            auto_created_npc,
+                            self.action_logger.get_npc_log_fields(
+                                auto_created_npc
                             )
                         )
                     )
-            unresolved_connections_created = (
-                self.count_unresolved_connections(node_id)
-                if was_vertex_delete and not cascade_delete_enabled
-                else 0
-            )
-            npc_log_fields_before_delete = None
-            if was_vertex_delete and not cascade_delete_enabled:
-                npc_log_fields_before_delete = (
-                    self.action_logger.get_npc_log_fields(
-                    node_id, include_empty=True
+                return (
+                    self.get_elements(),
+                    new_log,
+                    True,
+                    get_bottom_panel_style(False),
+                    False,
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    []
+                )
+            if form_type == "add-vertex":
+                if not form_dialogue:
+                    raise PreventUpdate
+                try:
+                    new_vertex_effects = self.parse_effects(form_effects)
+                except ValueError as exception:
+                    return (
+                        no_update,
+                        self.action_logger.append_status(
+                            current_log,
+                            "Could not create an NPC node because "
+                            f"{exception}. Fix the Effects field and save "
+                            "again."
+                        ),
+                        True,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update
+                    )
+                new_vertex_name = self.add_vertex(
+                    form_dialogue, new_vertex_effects
+                )
+                create_log = self.action_logger.build_create_log(
+                    "NPC node",
+                    new_vertex_name,
+                    self.action_logger.get_npc_log_fields(new_vertex_name)
+                )
+                return (
+                    self.get_elements(),
+                    self.action_logger.append_status(current_log, create_log),
+                    True,
+                    get_bottom_panel_style(False),
+                    False,
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    []
+                )
+            if form_type in ["edit-edge", "edit-vertex"]:
+                if not selected_nodes:
+                    raise PreventUpdate
+                node_id = selected_nodes[0].get("id", "")
+                if not node_id:
+                    raise PreventUpdate
+                node_type, before_fields = (
+                    self.action_logger.get_node_log_fields(
+                        node_id, include_empty=False
                     )
                 )
-            try:
-                was_removed = self.remove_node(node_id, cascade_delete_enabled)
-            except VertexCannotBeDeletedError:
-                return (
-                    no_update,
-                    self.action_logger.append_status(
-                        current_log,
-                        "You could not delete NPC node "
-                        f"{self.action_logger.quote_value(node_id)} "
-                        "because the first NPC node cannot be deleted."
-                    ),
-                    no_update
+                try:
+                    predicates = self.parse_predicates(form_predicates)
+                    effects = self.parse_effects(form_effects)
+                except ValueError as exception:
+                    return (
+                        no_update,
+                        self.action_logger.append_status(
+                            current_log,
+                            f"Could not save changes for {node_type} "
+                            f"{self.action_logger.quote_value(node_id)} "
+                            f"because {exception}. Fix the invalid field "
+                            "and save again."
+                        ),
+                        True,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update
+                    )
+                was_updated = self.update_node(
+                    node_id, form_dialogue or "", predicates, effects
                 )
-            if not was_removed:
-                return (
-                    no_update,
-                    self.action_logger.append_status(
-                        current_log,
-                        "Could not delete "
-                        f"{self.action_logger.quote_value(node_id)} "
-                        "because it no longer exists. Select a current "
-                        "node and try again."
-                    ),
-                    no_update
+                if not was_updated:
+                    return (
+                        no_update,
+                        self.action_logger.append_status(
+                            current_log,
+                            f"Could not save changes for {node_type} "
+                            f"{self.action_logger.quote_value(node_id)} "
+                            "because it no longer exists. Select a current "
+                            "node and try again."
+                        ),
+                        True,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update
+                    )
+                if form_type == "edit-edge":
+                    try:
+                        from_vertex_str = (
+                            form_source.strip() if form_source else ""
+                        )
+                        to_vertex_str = (
+                            form_target.strip() if form_target else ""
+                        )
+                        was_updated = self.graph_editor.update_edge_endpoints(
+                            node_id, 
+                            from_vertex_str or None, 
+                            to_vertex_str or None
+                        )
+                    except VertexNotFoundError as exception:
+                        endpoint_name = exception.field_name or "Source/Target"
+                        return (
+                            no_update,
+                            self.action_logger.append_status(
+                                current_log,
+                                "Could not update Player node "
+                                f"{self.action_logger.quote_value(node_id)} "
+                                f"because {endpoint_name} must be an existing "
+                                "NPC node ID. Enter a valid NPC node ID "
+                                f"in {endpoint_name} and save again."
+                            ),
+                            True,
+                            no_update,
+                            no_update,
+                            no_update,
+                            no_update,
+                            no_update,
+                            no_update,
+                            no_update,
+                            no_update
+                        )
+                after_fields = self.action_logger.get_node_log_fields(
+                    node_id, include_empty=False
+                )[1]
+                update_log = self.action_logger.build_update_log(
+                    node_type, node_id, before_fields, after_fields
                 )
-            new_log = self.action_logger.append_statuses(
-                current_log,
-                delete_messages
-            )
-            if was_vertex_delete and not cascade_delete_enabled:
-                npc_delete_message = self.action_logger.build_delete_log(
-                    "NPC node",
-                    node_id,
-                    npc_log_fields_before_delete
-                ).removesuffix(".")
-                new_log = self.action_logger.append_status(
+                return (
+                    self.get_elements(),
+                    self.action_logger.append_status(current_log, update_log),
+                    True,
+                    get_bottom_panel_style(False),
+                    False,
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    []
+                )
+            if form_type == "delete":
+                if not selected_nodes:
+                    raise PreventUpdate
+                node_id = selected_nodes[0].get("id", "")
+                if not node_id:
+                    raise PreventUpdate
+                cascade_delete_enabled = "cascade" in (form_cascade or [])
+                was_edge_delete = node_id in self.graph_editor.graph.edge_dict
+                was_vertex_delete = (
+                    node_id in self.graph_editor.graph.vertex_dict
+                )
+                delete_messages = []
+                if was_vertex_delete and cascade_delete_enabled:
+                    delete_messages.append(
+                        self.action_logger.build_delete_log(
+                            "NPC node",
+                            node_id,
+                            self.action_logger.get_npc_log_fields(
+                                node_id, include_empty=True
+                            )
+                        )
+                    )
+                if was_edge_delete:
+                    delete_messages.append(
+                        self.action_logger.build_delete_log(
+                            "Player node",
+                            node_id,
+                            self.action_logger.get_player_log_fields(
+                                node_id, include_empty=True
+                            )
+                        )
+                    )
+                if was_vertex_delete and cascade_delete_enabled:
+                    connected_player_ids = sorted(
+                        edge_name
+                        for edge_name, edge 
+                        in self.graph_editor.graph.edge_dict.items()
+                        if edge.from_vertex == node_id 
+                        or edge.to_vertex == node_id
+                    )
+                    for edge_name in connected_player_ids:
+                        delete_messages.append(
+                            self.action_logger.build_delete_log(
+                                "Player node",
+                                edge_name,
+                                self.action_logger.get_player_log_fields(
+                                    edge_name, include_empty=True
+                                )
+                            )
+                        )
+                unresolved_connections_created = (
+                    self.count_unresolved_connections(node_id)
+                    if was_vertex_delete and not cascade_delete_enabled
+                    else 0
+                )
+                npc_log_fields_before_delete = None
+                if was_vertex_delete and not cascade_delete_enabled:
+                    npc_log_fields_before_delete = (
+                        self.action_logger.get_npc_log_fields(
+                            node_id, include_empty=True
+                        )
+                    )
+                try:
+                    was_removed = self.remove_node(
+                        node_id, cascade_delete_enabled
+                    )
+                except VertexCannotBeDeletedError:
+                    return (
+                        no_update,
+                        self.action_logger.append_status(
+                            current_log,
+                            "You could not delete NPC node "
+                            f"{self.action_logger.quote_value(node_id)} "
+                            "because the first NPC node cannot be deleted."
+                        ),
+                        True,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update
+                    )
+                if not was_removed:
+                    return (
+                        no_update,
+                        self.action_logger.append_status(
+                            current_log,
+                            "Could not delete "
+                            f"{self.action_logger.quote_value(node_id)} "
+                            "because it no longer exists. Select a current "
+                            "node and try again."
+                        ),
+                        True,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update,
+                        no_update
+                    )
+                new_log = self.action_logger.append_statuses(
+                    current_log, delete_messages
+                )
+                if was_vertex_delete and not cascade_delete_enabled:
+                    npc_delete_message = self.action_logger.build_delete_log(
+                        "NPC node",
+                        node_id,
+                        npc_log_fields_before_delete
+                    ).removesuffix(".")
+                    new_log = self.action_logger.append_status(
+                        new_log,
+                        f"{npc_delete_message}. "
+                        f"{unresolved_connections_created} unresolved "
+                        "connections were left behind. Open each affected "
+                        "Player node and set Source/Target to a valid NPC "
+                        "node."
+                    )
+                return (
+                    self.get_elements(),
                     new_log,
-                    f"{npc_delete_message}. "
-                    f"{unresolved_connections_created} unresolved "
-                    "connections were left behind. Open each affected "
-                    "Player node and set Source/Target to a valid NPC "
-                    "node."
+                    True,
+                    get_bottom_panel_style(False),
+                    False,
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    []
                 )
-            return (self.get_elements(), new_log, True)
+            raise PreventUpdate
 
         @self.callback(
             Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
@@ -913,6 +1447,46 @@ class App(Dash):
             )
 
         @self.callback(
+            Output("bottom-form-source", "value"),
+            Output("bottom-form-target", "value"),
+            Output("pick-mode-active", "data", allow_duplicate=True),
+            Output("pick-mode-field", "data", allow_duplicate=True),
+            Input("dialogue-editor", "tapNodeData"),
+            State("pick-mode-active", "data"),
+            State("pick-mode-field", "data"),
+            State("bottom-form-source", "value"),
+            State("bottom-form-target", "value"),
+            prevent_initial_call=True
+        )
+        def on_graph_click_during_pick_mode(
+            tapped_node: dict | None,
+            pick_mode_active: bool,
+            pick_field: str,
+            current_source: str | None,
+            current_target: str | None
+        ) -> tuple[str, str, bool, str]:
+            if not pick_mode_active or not tapped_node:
+                raise PreventUpdate
+            node_id = tapped_node.get("id", "")
+            if not node_id:
+                raise PreventUpdate
+            if pick_field == "source":
+                return (
+                    node_id,
+                    current_target or "",
+                    False,
+                    ""
+                )
+            if pick_field == "target":
+                return (
+                    current_source or "",
+                    node_id,
+                    False,
+                    ""
+                )
+            raise PreventUpdate
+
+        @self.callback(
             Output("action-status", "value", allow_duplicate=True),
             Output("graph-container", "children", allow_duplicate=True),
             Output("unsaved-changes", "data", allow_duplicate=True),
@@ -1000,237 +1574,6 @@ class App(Dash):
                     "Quit the dialogue editor session."
                 ),
                 (quit_signal or 0) + 1
-            )
-
-        @self.callback(
-            Output("dialogue-editor", "elements", allow_duplicate=True),
-            Output("action-status", "value", allow_duplicate=True),
-            Output("unsaved-changes", "data", allow_duplicate=True),
-            Input("save-add-edge", "n_clicks"),
-            State("new-edge-from", "value"),
-            State("new-edge-to", "value"),
-            State("new-edge-text", "value"),
-            State("new-edge-predicates", "value"),
-            State("new-edge-effects", "value"),
-            State("action-status", "value"),
-            prevent_initial_call=True
-        )
-        def on_save_add_edge(
-            save_add_edge_clicks: int,
-            new_edge_from: str | None,
-            new_edge_to: str | None,
-            new_edge_text: str | None,
-            new_edge_predicates_text: str | None,
-            new_edge_effects_text: str | None,
-            current_log: str | None
-        ) -> tuple[object, str, bool]:
-            if not save_add_edge_clicks:
-                raise PreventUpdate
-            if not new_edge_from or not new_edge_from.strip():
-                return (
-                    no_update,
-                    self.action_logger.append_status(
-                        current_log,
-                        "Could not create a Player node because Source "
-                        "is required. Enter an NPC node ID in Source and "
-                        "save again."
-                    ),
-                    True
-                )
-            try:
-                new_edge_predicates = self.parse_predicates(
-                    new_edge_predicates_text
-                )
-                new_edge_effects = self.parse_effects(new_edge_effects_text)
-                normalized_to_vertex = (
-                    new_edge_to.strip()
-                    if new_edge_to and new_edge_to.strip()
-                    else None
-                )
-                new_edge_name = self.add_edge(
-                    new_edge_from.strip(),
-                    normalized_to_vertex,
-                    new_edge_text,
-                    new_edge_predicates,
-                    new_edge_effects
-                )
-            except ValueError as exception:
-                return (
-                    no_update,
-                    self.action_logger.append_status(
-                        current_log,
-                        "Could not create a Player node because "
-                        f"{exception}. Fix Predicates/Effects and save "
-                        "again."
-                    ),
-                    True
-                )
-            except VertexNotFoundError as exception:
-                endpoint_name = exception.field_name or "Source/Target"
-                return (
-                    no_update,
-                    self.action_logger.append_status(
-                        current_log,
-                        "Could not create a Player node because "
-                        f"{endpoint_name} must be an existing NPC node ID. "
-                        f"Enter a valid NPC node ID in {endpoint_name} and "
-                        "save again."
-                    ),
-                    True
-                )
-            new_log = self.action_logger.append_status(
-                current_log,
-                self.action_logger.build_create_log(
-                    "Player node",
-                    new_edge_name,
-                    self.action_logger.get_player_log_fields(new_edge_name)
-                )
-            )
-            if normalized_to_vertex is None:
-                new_edge = self.graph_editor.graph.edge_dict[new_edge_name]
-                auto_created_npc = new_edge.to_vertex
-                new_log = self.action_logger.append_status(
-                    new_log,
-                    self.action_logger.build_create_log(
-                        "NPC node",
-                        auto_created_npc,
-                        self.action_logger.get_npc_log_fields(
-                            auto_created_npc
-                        )
-                    )
-                )
-            return (self.get_elements(), new_log, True)
-
-        @self.callback(
-            Output("dialogue-editor", "elements", allow_duplicate=True),
-            Output("action-status", "value", allow_duplicate=True),
-            Output("unsaved-changes", "data", allow_duplicate=True),
-            Input("save-add-vertex", "n_clicks"),
-            State("new-vertex-text", "value"),
-            State("new-vertex-effects", "value"),
-            State("action-status", "value"),
-            prevent_initial_call=True
-        )
-        def on_save_add_vertex(
-            save_add_vertex_clicks: int,
-            new_vertex_text: str | None,
-            new_vertex_effects_text: str | None,
-            current_log: str | None
-        ) -> tuple[object, str, object]:
-            if not save_add_vertex_clicks or not new_vertex_text:
-                raise PreventUpdate
-            try:
-                new_vertex_effects = self.parse_effects(
-                    new_vertex_effects_text
-                )
-            except ValueError as exception:
-                return (
-                    no_update,
-                    self.action_logger.append_status(
-                        current_log,
-                        "Could not create an NPC node because "
-                        f"{exception}. Fix the Effects field and save "
-                        "again."
-                    ),
-                    True
-                )
-            new_vertex_name = self.add_vertex(
-                new_vertex_text, new_vertex_effects
-            )
-            create_log = self.action_logger.build_create_log(
-                "NPC node",
-                new_vertex_name,
-                self.action_logger.get_npc_log_fields(new_vertex_name)
-            )
-            return (
-                self.get_elements(),
-                self.action_logger.append_status(current_log, create_log),
-                True
-            )
-
-        @self.callback(
-            Output("dialogue-editor", "elements", allow_duplicate=True),
-            Output("action-status", "value", allow_duplicate=True),
-            Output("unsaved-changes", "data", allow_duplicate=True),
-            Input("save-edit-node", "n_clicks"),
-            State("dialogue-editor", "selectedNodeData"),
-            State("edit-text", "value"),
-            State("edit-predicates", "value"),
-            State("edit-effects", "value"),
-            State("edit-from-vertex", "value"),
-            State("edit-to-vertex", "value"),
-            State("action-status", "value"),
-            prevent_initial_call=True
-        )
-        def on_save_edit_node(
-            save_edit_clicks: int,
-            selected_nodes: list[dict] | None,
-            edit_text: str | None,
-            edit_predicates_text: str | None,
-            edit_effects_text: str | None,
-            edit_from_vertex: str | None,
-            edit_to_vertex: str | None,
-            current_log: str | None
-        ) -> tuple[object, str, object]:
-            if not save_edit_clicks or not selected_nodes:
-                raise PreventUpdate
-            node_id = selected_nodes[0].get("id")
-            if not node_id:
-                raise PreventUpdate
-            node_type, before_fields = self.action_logger.get_node_log_fields(
-                node_id,
-                include_empty=False
-            )
-            try:
-                predicates = self.parse_predicates(edit_predicates_text)
-                effects = self.parse_effects(edit_effects_text)
-            except ValueError as exception:
-                return (
-                    no_update,
-                    self.action_logger.append_status(
-                        current_log,
-                        f"Could not save changes for {node_type} "
-                        f"{self.action_logger.quote_value(node_id)} "
-                        f"because {exception}. Fix the invalid field "
-                        "and save again."
-                    ),
-                    True
-                )
-            was_updated = self.update_node(
-                node_id, edit_text or "", predicates, effects
-            )
-            endpoint_warnings = []
-            endpoint_updated = False
-            if node_id in self.graph_editor.graph.edge_dict:
-                endpoint_updated, endpoint_warnings = (
-                    self.update_edge_endpoints(
-                        node_id, edit_from_vertex, edit_to_vertex
-                    )
-                )
-            was_anything_updated = was_updated or endpoint_updated
-            if not was_anything_updated and not endpoint_warnings:
-                raise PreventUpdate
-            new_log = current_log
-            if was_anything_updated:
-                _, after_fields = self.action_logger.get_node_log_fields(
-                    node_id,
-                    include_empty=False
-                )
-                new_log = self.action_logger.append_status(
-                    new_log,
-                    self.action_logger.build_update_log(
-                        node_type,
-                        node_id,
-                        before_fields,
-                        after_fields
-                    )
-                )
-            for warning in endpoint_warnings:
-                new_log = self.action_logger.append_status(new_log, warning)
-            return (
-                self.get_elements() if was_anything_updated else no_update,
-                new_log,
-                True if was_anything_updated else no_update
             )
 
         @self.callback(
@@ -1358,64 +1701,11 @@ class App(Dash):
             return get_upload_graph()
 
         @self.callback(
-            Output("edit-predicates-container", "style"),
-            Output("edit-from-vertex-container", "style"),
-            Output("edit-to-vertex-container", "style"),
-            Input("dialogue-editor", "selectedNodeData")
-        )
-        def show_hide_edge_only_fields(
-            selected_nodes: list[dict] | None
-        ) -> tuple[dict, dict, dict]:
-            if not selected_nodes:
-                return (
-                    {"display": "none"},
-                    {"display": "none"},
-                    {"display": "none"}
-                )
-            node_id = selected_nodes[0].get("id")
-            if not node_id or node_id in self.graph_editor.graph.vertex_dict:
-                return (
-                    {"display": "none"},
-                    {"display": "none"},
-                    {"display": "none"}
-                )
-            return (
-                {"display": "block"},
-                {"display": "block"},
-                {"display": "block"}
-            )
-
-        @self.callback(
             Output("document-name", "value"),
             Input("current-document", "data")
         )
         def sync_document_name(current_document: str | None) -> str:
             return self.normalize_name(current_document)
-
-        @self.callback(
-            Output("add-edge-modal", "style"),
-            Input("open-add-edge-modal", "n_clicks"),
-            Input("cancel-add-edge", "n_clicks"),
-            Input("save-add-edge", "n_clicks"),
-            State("add-edge-modal", "style"),
-            prevent_initial_call=True
-        )
-        def toggle_add_edge_modal(
-            open_clicks: int, 
-            cancel_clicks: int, 
-            save_clicks: int, 
-            current_style: dict | None
-        ) -> dict[str, str | int]:
-            if not ctx.triggered:
-                return current_style or get_modal_overlay_style(False)
-            triggered_id = ctx.triggered_id
-            if triggered_id == "open-add-edge-modal":
-                if not self.graph_editor.graph.vertex_dict:
-                    return get_modal_overlay_style(False)
-                return get_modal_overlay_style(True)
-            if triggered_id in ["cancel-add-edge", "save-add-edge"]:
-                return get_modal_overlay_style(False)
-            return current_style or get_modal_overlay_style(False)
 
         @self.callback(
             Output("open-add-edge-modal", "disabled"),
@@ -1427,86 +1717,6 @@ class App(Dash):
             elements: list[dict] | None
         ) -> tuple[bool, dict[str, str | int], str]:
             return self.get_add_player_button_state()
-        
-        @self.callback(
-            Output("add-vertex-modal", "style"),
-            Input("open-add-vertex-modal", "n_clicks"),
-            Input("cancel-add-vertex", "n_clicks"),
-            Input("save-add-vertex", "n_clicks"),
-            State("add-vertex-modal", "style"),
-            prevent_initial_call=True
-        )
-        def toggle_add_vertex_modal(
-            open_clicks: int, 
-            cancel_clicks: int, 
-            save_clicks: int, 
-            current_style: dict | None
-        ) -> dict[str, str | int]:
-            if not ctx.triggered:
-                return current_style or get_modal_overlay_style(False)
-            triggered_id = ctx.triggered_id
-            if triggered_id == "open-add-vertex-modal":
-                return get_modal_overlay_style(True)
-            if triggered_id in ["cancel-add-vertex", "save-add-vertex"]:
-                return get_modal_overlay_style(False)
-            return current_style or get_modal_overlay_style(False)
-        
-        @self.callback(
-            Output("delete-cascade", "style"),
-            Output("delete-cascade", "value"),
-            Input("dialogue-editor", "selectedNodeData")
-        )
-        def toggle_cascade_delete(
-            selected_nodes: list[dict] | None
-        ) -> tuple[dict, list]:
-            if not selected_nodes:
-                is_vertex = False
-            else:
-                node_id = selected_nodes[0].get("id")
-                is_vertex = (
-                    node_id is not None
-                    and node_id in self.graph_editor.graph.vertex_dict
-                )
-            if is_vertex:
-                return (
-                    {
-                        "marginBottom": "16px", 
-                        "color": "#e5e7eb", 
-                        "display": "block"
-                    },
-                    []
-                )
-            return (
-                {"display": "none"},
-                []
-            )
-
-        @self.callback(
-            Output("delete-node-modal", "style"),
-            Input("open-delete-modal", "n_clicks"),
-            Input("cancel-delete-node-modal", "n_clicks"),
-            Input("confirm-delete-node-modal", "n_clicks"),
-            State("delete-node-modal", "style"),
-            State("dialogue-editor", "selectedNodeData"),
-            prevent_initial_call=True
-        )
-        def toggle_delete_modal(
-            open_clicks: int,
-            cancel_clicks: int,
-            confirm_clicks: int,
-            current_style: dict | None,
-            selected_nodes: list[dict] | None
-        ) -> dict[str, str | int]:
-            if not ctx.triggered:
-                return current_style or get_modal_overlay_style(False)
-            triggered_id = ctx.triggered_id
-            if triggered_id == "open-delete-modal" and selected_nodes:
-                return get_modal_overlay_style(True)
-            if triggered_id in [
-                "cancel-delete-node-modal", "confirm-delete-node-modal"
-            ]:
-                return get_modal_overlay_style(False)
-            return current_style or get_modal_overlay_style(False)
         
         @self.callback(
             Output("open-edit-modal", "disabled"),
@@ -1574,31 +1784,6 @@ class App(Dash):
                 },
                 ""
             )
-
-        @self.callback(
-            Output("edit-node-modal", "style"),
-            Input("open-edit-modal", "n_clicks"),
-            Input("cancel-edit-node", "n_clicks"),
-            Input("save-edit-node", "n_clicks"),
-            State("edit-node-modal", "style"),
-            State("dialogue-editor", "selectedNodeData"),
-            prevent_initial_call=True
-        )
-        def toggle_edit_modal(
-            open_clicks: int,
-            cancel_clicks: int,
-            save_clicks: int,
-            current_style: dict | None,
-            selected_nodes: list[dict] | None
-        ) -> dict[str, str | int]:
-            if not ctx.triggered:
-                return current_style or get_modal_overlay_style(False)
-            triggered_id = ctx.triggered_id
-            if triggered_id == "open-edit-modal" and selected_nodes:
-                return get_modal_overlay_style(True)
-            if triggered_id in ["cancel-edit-node", "save-edit-node"]:
-                return get_modal_overlay_style(False)
-            return current_style or get_modal_overlay_style(False)
         
         @self.callback(
             Output("selected-node-display", "children"),
