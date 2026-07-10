@@ -260,7 +260,7 @@ def get_bottom_panel() -> html.Div:
         style=get_bottom_panel_style(False)
     )
 
-def get_bottom_panel_style(is_open: bool) -> dict[str, str]:
+def get_bottom_panel_style(is_open: bool) -> dict[str, str | int]:
     """Return style for the bottom panel while preserving fixed placement.
 
     Args:
@@ -285,11 +285,16 @@ def get_bottom_panel_style(is_open: bool) -> dict[str, str]:
         "boxShadow": "0 -4px 12px rgba(0, 0, 0, 0.3)"
     }
 
-def get_center_panel(initial_elements: list) -> html.Div:
+def get_center_panel(
+    initial_elements: list,
+    context_menu: list[dict[str, str | list[str]]] | None = None
+) -> html.Div:
     """Build the center graph panel with Cytoscape visualization.
 
     Args:
         initial_elements (list): Initial Cytoscape graph elements.
+        context_menu (list[dict[str, str | list[str]]] | None): Context menu
+            items passed to the Cytoscape component.
 
     Returns:
         html.Div: Center panel component.
@@ -300,7 +305,7 @@ def get_center_panel(initial_elements: list) -> html.Div:
             html.Div(
                 [
                     html.Div(
-                        get_graph_component(initial_elements),
+                        get_graph_component(initial_elements, context_menu),
                         id="graph-container",
                         style={"flex": "1", "minHeight": 0}
                     ),
@@ -435,7 +440,11 @@ def get_edit_section() -> list:
         )
     ]
 
-def get_graph_component(elements: list, key: str | None = None) -> html.Div:
+def get_graph_component(
+    elements: list, 
+    key: str | None = None, 
+    context_menu: list[dict[str, str | list[str]]] | None = None
+) -> html.Div:
     """ Build the Cytoscape graph wrapped in a keyed container.
 
     The key is placed on the wrapping Div (dash_cytoscape rejects unknown
@@ -448,6 +457,8 @@ def get_graph_component(elements: list, key: str | None = None) -> html.Div:
     Args:
         elements (list): Cytoscape graph elements.
         key (str | None): React key on the wrapper. Change to force remount.
+        context_menu (list[dict[str, str | list[str]]] | None): Context menu
+            items passed through to Cytoscape.
 
     Returns:
         html.Div: The keyed wrapper containing the graph component.
@@ -456,12 +467,14 @@ def get_graph_component(elements: list, key: str | None = None) -> html.Div:
         Cytoscape(
             id="dialogue-editor",
             layout={"name": "dagre", "rankDir": "TB"},
+            clearOnUnhover=True,
             style={
                 "width": "100%",
                 "height": "100%",
                 "backgroundColor": "#303841"
             },
             elements=elements,
+            contextMenu=context_menu or [],
             stylesheet=get_cytoscape_stylesheet()
         ),
         key=key,
@@ -559,6 +572,16 @@ def get_index_string() -> str:
                         height: 100%;
                         overflow: hidden;
                         background-color: #1f252b;
+                    }
+                    .cy-context-menus-cxt-menu,
+                    .cy-context-menus-cxt-menuitem,
+                    .custom-menu-item {
+                        min-width: 220px !important;
+                        width: max-content !important;
+                        white-space: nowrap !important;
+                        padding-left: 12px !important;
+                        padding-right: 12px !important;
+                        box-sizing: border-box !important;
                     }
                 </style>
             </head>

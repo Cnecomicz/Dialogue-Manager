@@ -7,6 +7,7 @@ from flask import request
 from os import PathLike, _exit
 from re import sub
 from threading import Timer
+from typing import Any
 from webbrowser import open as open_url
 from yaml import YAMLError, safe_load
 
@@ -60,7 +61,7 @@ class App(Dash):
         self.layout = html.Div(
             [
                 get_left_panel(initial_name, author, version),
-                get_center_panel(self.get_elements()),
+                get_center_panel(self.get_elements(), self.get_context_menu()),
                 get_right_panel(),
                 dcc.Store(id="unsaved-changes", data=False),
                 dcc.Store(id="current-document", data=initial_name),
@@ -128,6 +129,36 @@ class App(Dash):
         """
         return self.graph_editor.add_vertex(text, effects)
 
+    def build_context_menu_selection(
+        self,
+        elements: list[dict[str, Any]] | None,
+        element_id: str
+    ) -> list[dict[str, Any]]:
+        """Select one node and explicitly deselect all other elements.
+
+        Args:
+            elements (list[dict[str, Any]] | None): Current Cytoscape elements.
+            element_id (str): Node id selected through the context menu.
+
+        Returns: 
+            list[dict[str, Any]]: Updated Cytoscape elements with the target
+                node selected.
+        """
+        if not elements:
+            return []
+        selected_elements = []
+        for element in elements:
+            updated_element = dict(element)
+            if (
+                element_id 
+                and updated_element.get("data", {}).get("id") == element_id
+            ):
+                updated_element["selected"] = True
+            else:
+                updated_element["selected"] = False
+            selected_elements.append(updated_element)
+        return selected_elements
+
     def count_unresolved_connections(self, vertex_name: str) -> int:
         """Count edges referencing a vertex that is about to be removed.
 
@@ -183,6 +214,279 @@ class App(Dash):
             },
             ""
         )
+
+    def get_context_action_panel_outputs(
+        self,
+        menu_item_id: str,
+        element_id: str | None,
+        current_log: str | None
+    ) -> tuple[
+        str | Any,
+        dict[str, str],
+        bool,
+        str,
+        str,
+        str,
+        str,
+        str,
+        str,
+        str,
+        list[str],
+        bool,
+        str,
+        str,
+        dict[str, str],
+        str,
+        dict[str, str]
+    ]:
+        """Translate a context menu action into bottom panel state.
+
+        Args:
+            menu_item_id (str): Identifier of the clicked context menu item.
+            element_id (str | None): Node id associated with the menu click.
+            current_log (str | None): Current action-status log text.
+
+        Returns:
+            tuple[str | Any, dict[str, str], bool, str, str, str, str, str,
+            str, str, list[str], bool, str, str, dict[str, str], str,
+            dict[str, str]]: Action-status text followed by bottom panel
+                outputs in callback order.
+
+        Raises:
+            PreventUpdate: If no action should be performed.
+        """
+        default_save_button_style = {
+            "padding": "8px 14px",
+            "backgroundColor": "#4b5563",
+            "color": "#e6e6e6",
+            "border": "1px solid #666",
+            "borderRadius": "4px",
+            "cursor": "pointer"
+        }
+        delete_save_button_style = {
+            "padding": "8px 14px",
+            "backgroundColor": "#7f1d1d",
+            "color": "#e6e6e6",
+            "border": "1px solid #c53030",
+            "borderRadius": "4px",
+            "cursor": "pointer"
+        }
+        close_button_style = {
+            "padding": "8px 14px",
+            "backgroundColor": "#333",
+            "color": "#e6e6e6",
+            "border": "1px solid #555",
+            "borderRadius": "4px",
+            "cursor": "pointer"
+        }
+        if menu_item_id == "add-npc":
+            return (
+                no_update,
+                get_bottom_panel_style(True),
+                True,
+                "add-vertex",
+                "Add NPC Dialogue",
+                "",
+                "",
+                "",
+                "",
+                "",
+                [],
+                False,
+                "",
+                "Save",
+                default_save_button_style,
+                "Cancel",
+                close_button_style
+            )
+        if menu_item_id == "add-player":
+            return (
+                no_update,
+                get_bottom_panel_style(True),
+                True,
+                "add-edge",
+                "Add Player Dialogue",
+                "",
+                "",
+                "",
+                "",
+                "",
+                [],
+                False,
+                "",
+                "Save",
+                default_save_button_style,
+                "Cancel",
+                close_button_style
+            )
+        if menu_item_id == "add-player-dialogue":
+            if (
+                not element_id 
+                or element_id in self.graph_editor.graph.edge_dict
+            ):
+                return (
+                    self.action_logger.append_status(
+                        current_log,
+                        "Could not create a Player node from this selection "
+                        "because the source must be an NPC node."
+                    ),
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update
+                )
+            return (
+                no_update,
+                get_bottom_panel_style(True),
+                True,
+                "add-edge",
+                "Add Player Dialogue",
+                "",
+                element_id or "",
+                "",
+                "",
+                "",
+                [],
+                False,
+                "",
+                "Save",
+                default_save_button_style,
+                "Cancel",
+                close_button_style
+            )
+        if menu_item_id == "edit-node" and element_id:
+            node_text = self.get_node_text(element_id)
+            predicates_text = self.get_node_predicates(element_id)
+            effects_text = self.get_node_effects(element_id)
+            edit_from_vertex, edit_to_vertex = (
+                self.get_edge_endpoints_for_edit(element_id)
+            )
+            is_edge = element_id in self.graph_editor.graph.edge_dict
+            return (
+                no_update,
+                get_bottom_panel_style(True),
+                True,
+                "edit-edge" if is_edge else "edit-vertex",
+                "Edit Node",
+                node_text or "",
+                edit_from_vertex,
+                edit_to_vertex,
+                predicates_text,
+                effects_text,
+                [],
+                False,
+                "",
+                "Save",
+                default_save_button_style,
+                "Cancel",
+                close_button_style
+            )
+        if menu_item_id == "delete-node" and element_id:
+            if element_id == "vertex_0":
+                return (
+                    self.action_logger.append_status(
+                        current_log,
+                        'You could not delete NPC node "vertex_0" because '
+                        "the first NPC node cannot be deleted."
+                    ),
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update
+                )
+            return (
+                no_update,
+                get_bottom_panel_style(True),
+                True,
+                "delete",
+                "Delete Node",
+                "",
+                "",
+                "",
+                "",
+                "",
+                [],
+                False,
+                "",
+                "Confirm Delete",
+                delete_save_button_style,
+                "Cancel",
+                close_button_style
+            )
+        raise PreventUpdate
+
+    def get_context_menu(self) -> list[dict[str, str | list[str]]]:
+        """Build the right click context menu for the graph.
+
+        The menu is defined once and never changes during a session. Each
+        item uses availableOn to scope visibility to the correct target
+        type. 
+
+        Returns:
+            list[dict[str, str | list[str]]]: Context menu item mappings.
+        """
+        return [
+            {
+                "id": "edit-node",
+                "label": "Edit Selected Node",
+                "tooltipText": "Open edit form",
+                "availableOn": ["node"]
+            },
+            {
+                "id": "add-player-dialogue",
+                "label": "Add Player Dialogue",
+                "tooltipText": "Create a Player node from this NPC node",
+                "availableOn": ["node"]
+            },
+            {
+                "id": "delete-node",
+                "label": "Delete Selected Node",
+                "tooltipText": "Open delete confirmation",
+                "availableOn": ["node"]
+            },
+            {
+                "id": "add-npc",
+                "label": "Add NPC Dialogue",
+                "tooltipText": "Add a new NPC node",
+                "availableOn": ["canvas", "edge"]
+            },
+            {
+                "id": "add-player",
+                "label": "Add Player Dialogue",
+                "tooltipText": "Add a new Player node",
+                "availableOn": ["canvas", "edge"]
+            },
+            {
+                "id": "cancel",
+                "label": "Cancel",
+                "tooltipText": "Close menu",
+                "availableOn": ["canvas", "edge", "node"]
+            }
+        ]
 
     def get_delete_section_state(
         self, 
@@ -279,7 +583,9 @@ class App(Dash):
         """
         self.graph_render_count += 1
         return get_graph_component(
-            self.get_elements(), key=str(self.graph_render_count)
+            self.get_elements(), 
+            str(self.graph_render_count), 
+            self.get_context_menu()
         )
 
     def get_node_effects(self, node_id: str) -> str:
@@ -534,6 +840,36 @@ class App(Dash):
             if triggered_id == "bottom-form-pick-target":
                 return True, "target"
             raise PreventUpdate
+
+        @self.callback(
+            Output("dialogue-editor", "elements", allow_duplicate=True),
+            Input("dialogue-editor", "selectedNodeData"),
+            State("dialogue-editor", "elements"),
+            prevent_initial_call=True
+        )
+        def enforce_single_selection(
+            selected_nodes: list[dict[str, Any]] | None,
+            elements: list[dict[str, Any]] | None
+        ) -> list[dict[str, Any]]:
+            if not elements:
+                raise PreventUpdate
+            selected_ids_in_elements = [
+                element.get("data", {}).get("id", "")
+                for element in elements
+                if element.get("selected") is True
+            ]
+            if not selected_nodes:
+                if not selected_ids_in_elements:
+                    raise PreventUpdate
+                return self.build_context_menu_selection(elements, "")
+            last_selected_id = selected_nodes[-1].get("id", "")
+            if not last_selected_id:
+                raise PreventUpdate
+            if selected_ids_in_elements == [last_selected_id]:
+                raise PreventUpdate
+            return self.build_context_menu_selection(
+                elements, last_selected_id
+            )
 
         @self.callback(
             Output("bottom-panel", "style"),
@@ -865,6 +1201,7 @@ class App(Dash):
             State("bottom-form-predicates", "value"),
             State("bottom-form-effects", "value"),
             State("bottom-form-cascade", "value"),
+            State("selected-node-id", "data"),
             State("action-status", "value"),
             prevent_initial_call=True
         )
@@ -878,12 +1215,16 @@ class App(Dash):
             form_predicates: str | None,
             form_effects: str | None,
             form_cascade: list[str] | None,
+            selected_node_id: str | None,
             current_log: str | None
         ) -> tuple[
             object, str, bool, dict, bool, str, str, str, str, str, list
         ]:
             if not save_clicks:
                 raise PreventUpdate
+            resolved_selected_nodes = selected_nodes
+            if selected_node_id and not resolved_selected_nodes:
+                resolved_selected_nodes = [{"id": selected_node_id}]
             if form_type == "add-edge":
                 if not form_source or not form_source.strip():
                     return (
@@ -1041,9 +1382,9 @@ class App(Dash):
                     []
                 )
             if form_type in ["edit-edge", "edit-vertex"]:
-                if not selected_nodes:
+                if not resolved_selected_nodes:
                     raise PreventUpdate
-                node_id = selected_nodes[0].get("id", "")
+                node_id = resolved_selected_nodes[0].get("id", "")
                 if not node_id:
                     raise PreventUpdate
                 node_type, before_fields = (
@@ -1152,9 +1493,9 @@ class App(Dash):
                     []
                 )
             if form_type == "delete":
-                if not selected_nodes:
+                if not resolved_selected_nodes:
                     raise PreventUpdate
-                node_id = selected_nodes[0].get("id", "")
+                node_id = resolved_selected_nodes[0].get("id", "")
                 if not node_id:
                     raise PreventUpdate
                 cascade_delete_enabled = "cascade" in (form_cascade or [])
@@ -1678,6 +2019,73 @@ class App(Dash):
             )
 
         @self.callback(
+            Output("dialogue-editor", "elements", allow_duplicate=True),
+            Output("selected-node-id", "data", allow_duplicate=True),
+            Output("action-status", "value", allow_duplicate=True),
+            Output("bottom-panel", "style", allow_duplicate=True),
+            Output("bottom-panel-visible", "data", allow_duplicate=True),
+            Output("bottom-panel-form-type", "data", allow_duplicate=True),
+            Output("bottom-panel-title", "children", allow_duplicate=True),
+            Output("bottom-form-dialogue", "value", allow_duplicate=True),
+            Output("bottom-form-source", "value", allow_duplicate=True),
+            Output("bottom-form-target", "value", allow_duplicate=True),
+            Output("bottom-form-predicates", "value", allow_duplicate=True),
+            Output("bottom-form-effects", "value", allow_duplicate=True),
+            Output("bottom-form-cascade", "value", allow_duplicate=True),
+            Output("pick-mode-active", "data", allow_duplicate=True),
+            Output("pick-mode-field", "data", allow_duplicate=True),
+            Output("bottom-panel-save", "children", allow_duplicate=True),
+            Output("bottom-panel-save", "style", allow_duplicate=True),
+            Output("bottom-panel-close", "children", allow_duplicate=True),
+            Output("bottom-panel-close", "style", allow_duplicate=True),
+            Input("dialogue-editor", "contextMenuData"),
+            State("dialogue-editor", "elements"),
+            State("action-status", "value"),
+            prevent_initial_call=True
+        )
+        def open_bottom_panel_from_context_menu(
+            context_menu_data: dict | None,
+            elements: list[dict[str, Any]] | None,
+            current_log: str | None
+        ) -> tuple[
+            list[dict[str, Any]],
+            str | None,
+            str,
+            dict[str, str],
+            bool,
+            str,
+            str,
+            str,
+            str,
+            str,
+            str,
+            list[str],
+            bool,
+            str,
+            str,
+            dict[str, str],
+            str,
+            dict[str, str]
+        ]:
+            if not context_menu_data:
+                raise PreventUpdate
+            menu_item_id = context_menu_data.get("menuItemId", "")
+            if menu_item_id == "cancel":
+                raise PreventUpdate
+            element_id = context_menu_data.get("elementId") or ""
+            selected_elements = no_update
+            selected_node_id = no_update
+            if element_id:
+                selected_elements = self.build_context_menu_selection(
+                    elements, element_id
+                )
+                selected_node_id = element_id
+            panel_outputs = self.get_context_action_panel_outputs(
+                menu_item_id, element_id or None, current_log
+            )
+            return (selected_elements, selected_node_id, *panel_outputs)
+
+        @self.callback(
             Output("current-document-label", "children"),
             Input("current-document", "data"),
             Input("unsaved-changes", "data")
@@ -1699,6 +2107,25 @@ class App(Dash):
             action_log: str | None
         ) -> dcc.Upload:
             return get_upload_graph()
+
+        @self.callback(
+            Output("dialogue-editor", "elements", allow_duplicate=True),
+            Input("dialogue-editor", "contextMenuData"),
+            State("dialogue-editor", "elements"),
+            prevent_initial_call=True
+        )
+        def select_context_menu_target(
+            context_menu_data: dict | None,
+            elements: list[dict] | None
+        ) -> list[dict]:
+            if not context_menu_data:
+                raise PreventUpdate
+            if context_menu_data.get("menuItemId") == "cancel":
+                raise PreventUpdate
+            element_id = context_menu_data.get("elementId") or ""
+            if not element_id:
+                raise PreventUpdate
+            return self.build_context_menu_selection(elements, element_id)
 
         @self.callback(
             Output("document-name", "value"),
@@ -1784,6 +2211,20 @@ class App(Dash):
                 },
                 ""
             )
+
+        @self.callback(
+            Output("dialogue-editor", "contextMenu"),
+            Input("pick-mode-active", "data"),
+            Input("bottom-panel-visible", "data"),
+            prevent_initial_call=True
+        )
+        def update_context_menu(
+            pick_mode_active: bool,
+            bottom_panel_visible: bool
+        ) -> list[dict[str, str | list[str]]]:
+            if pick_mode_active or bottom_panel_visible:
+                return []
+            return self.get_context_menu()
         
         @self.callback(
             Output("selected-node-display", "children"),
