@@ -1236,6 +1236,7 @@ class App(Dash):
             Output("bottom-panel-save", "style"),
             Output("bottom-panel-close", "children"),
             Output("bottom-panel-close", "style"),
+            Output("selected-node-id", "data", allow_duplicate=True),
             Input("bottom-panel-close", "n_clicks"),
             Input("bottom-panel-save", "n_clicks"),
             Input("open-add-edge-modal", "n_clicks"),
@@ -1271,7 +1272,8 @@ class App(Dash):
             str,
             dict[str, str],
             str,
-            dict[str, str]
+            dict[str, str],
+            str | None
         ]:
             if not ctx.triggered:
                 raise PreventUpdate
@@ -1317,7 +1319,8 @@ class App(Dash):
                     "Save",
                     default_save_button_style,
                     "Cancel",
-                    close_button_style
+                    close_button_style,
+                    None
                 )
             if triggered_id == "bottom-panel-save":
                 return (
@@ -1333,6 +1336,7 @@ class App(Dash):
                     no_update,
                     False,
                     "",
+                    no_update,
                     no_update,
                     no_update,
                     no_update,
@@ -1366,7 +1370,8 @@ class App(Dash):
                     "Save",
                     default_save_button_style,
                     "Cancel",
-                    close_button_style
+                    close_button_style,
+                    None
                 )
             if triggered_id == "open-add-vertex-modal":
                 return (
@@ -1385,7 +1390,8 @@ class App(Dash):
                     "Save",
                     default_save_button_style,
                     "Cancel",
-                    close_button_style
+                    close_button_style,
+                    None
                 )
             if triggered_id == "open-edit-modal":
                 if not selected_nodes:
@@ -1418,7 +1424,8 @@ class App(Dash):
                     "Save",
                     default_save_button_style,
                     "Cancel",
-                    close_button_style
+                    close_button_style,
+                    node_id
                 )
             if triggered_id == "open-delete-modal":
                 if not selected_nodes:
@@ -1439,7 +1446,8 @@ class App(Dash):
                     "Confirm Delete",
                     delete_save_button_style,
                     "Cancel",
-                    close_button_style
+                    close_button_style,
+                    selected_nodes[0].get("id", "")
                 )
             raise PreventUpdate
 
@@ -1509,14 +1517,17 @@ class App(Dash):
         @self.callback(
             Output("bottom-panel", "style", allow_duplicate=True),
             Input("pick-mode-active", "data"),
+            Input("bottom-panel-visible", "data"),
             State("bottom-panel", "style"),
             prevent_initial_call=True
         )
         def manage_bottom_panel_graying(
             pick_mode_active: bool,
+            bottom_panel_visible: bool,
             bottom_panel_style: dict[str, str] | None
         ) -> dict[str, str]:
             style = dict(bottom_panel_style or {})
+            style["display"] = "block" if bottom_panel_visible else "none"
             if pick_mode_active:
                 style["opacity"] = "0.5"
                 style["pointerEvents"] = "none"
@@ -1605,7 +1616,7 @@ class App(Dash):
             if not save_clicks:
                 raise PreventUpdate
             resolved_selected_nodes = selected_nodes
-            if selected_node_id and not resolved_selected_nodes:
+            if selected_node_id:
                 resolved_selected_nodes = [{"id": selected_node_id}]
             if form_type == "add-edge":
                 if not form_source or not form_source.strip():
@@ -1797,10 +1808,11 @@ class App(Dash):
                         no_update,
                         no_update
                     )
-                was_updated = self.update_node(
-                    node_id, form_dialogue or "", predicates, effects
+                node_exists = (
+                    node_id in self.graph_editor.graph.vertex_dict
+                    or node_id in self.graph_editor.graph.edge_dict
                 )
-                if not was_updated:
+                if not node_exists:
                     return (
                         no_update,
                         self.action_logger.append_status(
@@ -1820,32 +1832,37 @@ class App(Dash):
                         no_update,
                         no_update
                     )
+                was_updated = self.update_node(
+                    node_id, form_dialogue or "", predicates, effects
+                )
                 if form_type == "edit-edge":
-                    try:
-                        from_vertex_str = (
-                            form_source.strip() if form_source else ""
-                        )
-                        to_vertex_str = (
-                            form_target.strip() if form_target else ""
-                        )
-                        was_updated = self.graph_editor.update_edge_endpoints(
+                    from_vertex_str = (
+                        form_source.strip() if form_source else ""
+                    )
+                    to_vertex_str = (
+                        form_target.strip() if form_target else ""
+                    )
+                    was_updated_endpoints, endpoint_warnings = (
+                        self.update_edge_endpoints(
                             node_id, 
                             from_vertex_str or None, 
                             to_vertex_str or None
                         )
-                    except VertexNotFoundError as exception:
-                        endpoint_name = exception.field_name or "Source/Target"
+                    )
+                    if endpoint_warnings:
+                        new_log = current_log
+                        for warning in endpoint_warnings:
+                            new_log = self.action_logger.append_status(
+                                new_log, warning
+                            )
+                        anything_saved = was_updated or was_updated_endpoints
                         return (
-                            no_update,
-                            self.action_logger.append_status(
-                                current_log,
-                                "Could not update Player node "
-                                f"{self.action_logger.quote_value(node_id)} "
-                                f"because {endpoint_name} must be an existing "
-                                "NPC node ID. Enter a valid NPC node ID "
-                                f"in {endpoint_name} and save again."
+                            (
+                                self.get_elements() 
+                                if anything_saved else no_update
                             ),
-                            True,
+                            new_log,
+                            True if anything_saved else no_update,
                             no_update,
                             no_update,
                             no_update,
@@ -1855,6 +1872,25 @@ class App(Dash):
                             no_update,
                             no_update
                         )
+                    was_updated = was_updated or was_updated_endpoints
+                if not was_updated:
+                    return (
+                        no_update,
+                        self.action_logger.append_status(
+                            current_log,
+                            f"No changes were made to {node_type} "
+                            f"{self.action_logger.quote_value(node_id)}."
+                        ),
+                        no_update,
+                        get_bottom_panel_style(False),
+                        False,
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        []
+                    )
                 after_fields = self.action_logger.get_node_log_fields(
                     node_id, include_empty=False
                 )[1]
@@ -2174,11 +2210,13 @@ class App(Dash):
             Output("bottom-form-target", "value"),
             Output("pick-mode-active", "data", allow_duplicate=True),
             Output("pick-mode-field", "data", allow_duplicate=True),
+            Output("action-status", "value", allow_duplicate=True),
             Input("dialogue-editor", "tapNodeData"),
             State("pick-mode-active", "data"),
             State("pick-mode-field", "data"),
             State("bottom-form-source", "value"),
             State("bottom-form-target", "value"),
+            State("action-status", "value"),
             prevent_initial_call=True
         )
         def on_graph_click_during_pick_mode(
@@ -2186,26 +2224,42 @@ class App(Dash):
             pick_mode_active: bool,
             pick_field: str,
             current_source: str | None,
-            current_target: str | None
-        ) -> tuple[str, str, bool, str]:
+            current_target: str | None,
+            current_log: str | None
+        ) -> tuple[str, str, bool, str, Any]:
             if not pick_mode_active or not tapped_node:
                 raise PreventUpdate
             node_id = tapped_node.get("id", "")
             if not node_id:
                 raise PreventUpdate
+            if tapped_node.get("is_edge_node", False):
+                field_label = "Source" if pick_field == "source" else "Target"
+                return (
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    self.action_logger.append_status(
+                        current_log,
+                        f"Pick mode: {field_label} must be an NPC node. "
+                        "Click an NPC node to select it."
+                    )
+                )
             if pick_field == "source":
                 return (
                     node_id,
                     current_target or "",
                     False,
-                    ""
+                    "",
+                    no_update
                 )
             if pick_field == "target":
                 return (
                     current_source or "",
                     node_id,
                     False,
-                    ""
+                    "",
+                    no_update
                 )
             raise PreventUpdate
 
