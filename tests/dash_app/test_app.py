@@ -170,7 +170,7 @@ def test_upload_reset_callback_registered(app):
     callback_key = "upload-graph-container.children"
     assert callback_key in app.callback_map
     callback_inputs = app.callback_map[callback_key]["inputs"]
-    assert {"id": "action-status", "property": "value"} in callback_inputs
+    assert {"id": "action-log", "property": "data"} in callback_inputs
 
 # Opening the add or edit modals autofills the fields (no matter how many times you do it)
 def test_add_edge_or_edit_autofill_uses_open_click_and_selected_state(app):

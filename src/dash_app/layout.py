@@ -1,7 +1,37 @@
 from dash import dcc, html
 from dash_cytoscape import Cytoscape
+from datetime import datetime
 from pathlib import Path
 from tomllib import load as toml_load
+
+def build_log_children(entries: list[dict[str, str]] | None) -> list[html.Div]:
+    """Build log row components from entries in reverse-chronological order.
+
+    Args:
+        entries (list[dict[str, str]] | None): Structured log entries.
+
+    Returns:
+        list: Log row components, newest first.
+    """
+    if not entries:
+        return []
+    return [get_log_row(entry) for entry in reversed(entries)]
+
+def format_log_timestamp(timestamp: str) -> str:
+    """Format an ISO timestamp as a standard hr:min:sec time.
+
+    Args:
+        timestamp (str): ISO 8601 timestamp string.
+
+    Returns:
+        str: Time formatted as "HH:MM:SS", or an empty string if invalid.
+    """
+    if not timestamp:
+        return ""
+    try:
+        return datetime.fromisoformat(timestamp).strftime("%H:%M:%S")
+    except ValueError:
+        return ""
 
 def get_bottom_panel() -> html.Div:
     """Build the bottom panel for form editing with flexible field layout.
@@ -770,37 +800,39 @@ def get_left_panel(initial_name: str, author: str, version: str) -> html.Div:
         }
     )
 
-def get_log() -> list:
-    """Build the sidebar log section.
+def get_log_row(entry: dict[str, str]) -> html.Div:
+    """Build a single log row with a timestamp and message.
+
+    Args:
+        entry (dict[str, str]): Structured log entry.
 
     Returns:
-        list: Dash components that display action logs.
+        html.Div: Row component displaying the entry.
     """
-    return [
-        html.H3("Log"),
-        dcc.Textarea(
-            value="Ready.",
-            id="action-status",
-            readOnly=True,
-            style={
-                "width": "100%",
-                "height": "70px",
-                "marginTop": "12px",
-                "fontSize": "14px",
-                "backgroundColor": "#111827",
-                "color": "#e5e7eb",
-                "border": "1px solid #4b5563",
-                "padding": "8px",
-                "resize": "none",
-                "overflowY": "auto",
-                "whiteSpace": "pre-wrap"
-            }
-        ),
-        html.Div(
-            id="action-status-scroll-trigger", 
-            style={"display": "none"}
-        )
-    ]
+    return html.Div(
+        [
+            html.Span(
+                format_log_timestamp(entry.get("timestamp", "")),
+                style={
+                    "color": "#9ca3af",
+                    "fontFamily": "monospace",
+                    "fontSize": "12px",
+                    "marginRight": "8px",
+                    "flexShrink": 0
+                }
+            ),
+            html.Span(
+                entry.get("message", ""),
+                style={"whiteSpace": "pre-wrap", "flex": "1"}
+            )
+        ],
+        style={
+            "display": "flex",
+            "alignItems": "baseline",
+            "paddingBottom": "6px",
+            "borderBottom": "1px solid #1f2a37"
+        }
+    )
 
 def get_name_section(initial_value: str = "Untitled") -> list:
     """Build the sidebar controls for editing NPC name.
@@ -859,10 +891,8 @@ def get_right_panel() -> html.Div:
     return html.Div(
         [
             html.H3("Log", style={"marginTop": "0"}),
-            dcc.Textarea(
-                value="Ready.",
-                id="action-status",
-                readOnly=True,
+            html.Div(
+                id="action-log-display",
                 style={
                     "width": "100%",
                     "flex": "1",
@@ -871,15 +901,20 @@ def get_right_panel() -> html.Div:
                     "color": "#e5e7eb",
                     "border": "1px solid #4b5563",
                     "padding": "8px",
-                    "resize": "none",
                     "overflowY": "auto",
-                    "whiteSpace": "pre-wrap",
-                    "boxSizing": "border-box"
+                    "boxSizing": "border-box",
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "gap": "8px",
+                    "maskImage": (
+                        "linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, "
+                        "rgba(0, 0, 0, 0.3) 100%)"
+                    ),
+                    "WebKitMaskImage": (
+                        "linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, "
+                        "rgba(0, 0, 0, 0.3) 100%)"
+                    )
                 }
-            ),
-            html.Div(
-                id="action-status-scroll-trigger",
-                style={"display": "none"}
             )
         ],
         style={

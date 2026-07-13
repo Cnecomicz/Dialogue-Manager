@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from dialogue_model.codecs import (
@@ -20,39 +21,54 @@ class Logger:
         """
         self.graph_editor = graph_editor
 
+    def append_grouped_status(
+        self,
+        current_log: list[dict[str, str]] | None,
+        lines: list[str],
+        level: str = "info"
+    ) -> list[dict[str, str]] | None:
+        """Append multiple lines as a single multi-line log entry.
+
+        Grouping related lines into one entry keeps their internal order
+        stable under reverse-chronological rendering and gives them a shared
+        timestamp. This is used wherever one user action produces several
+        related lines (e.g., a validation summary with its issue list).
+
+        Args:
+            current_log (list[dict[str, str]] | None): Existing log entries.
+            lines (list[str]): Ordered lines to combine into one entry.
+            level (str): Severity level for the entry (default: "info").
+
+        Returns:
+            list[dict[str, str]] | None: Updated log entries, or the original
+                log unchanged when no non-empty lines are provided.
+        """
+        non_empty_lines = [line for line in lines if line]
+        if not non_empty_lines:
+            return current_log
+        return self.append_status(
+            current_log, "\n".join(non_empty_lines), level
+        )
+
     def append_status(
-        self, current_log: str | None, new_message: str
-    ) -> str:
-        """Append a message to the action log text.
+        self, 
+        current_log: list[dict[str, str]] | None, 
+        new_message: str,
+        level: str = "info"
+    ) -> list[dict[str, str]]:
+        """Append a message to the action log.
 
         Args:
-            current_log (str | None): Existing log text.
+            current_log (list[dict[str, str]] | None): Existing log entries.
             new_message (str): Message to append.
+            level (str): Severity level for the entry (default "info").
 
         Returns:
-            str: Updated multiline log text.
+            list[dict[str, str]]: Updated list of log entries.
         """
-        if not current_log:
-            return new_message
-        return f"{current_log}\n\n{new_message}"
-
-    def append_statuses(
-        self, current_log: str | None, new_messages: list[str]
-    ) -> str:
-        """Syntactic sugar to append multiple messages to the action log
-        text.
-
-        Args:
-            current_log (str | None): Existing log text.
-            new_messages (list[str]): Messages to append, in order.
-
-        Returns:
-            str: Updated multiline log text.
-        """
-        new_log = current_log
-        for new_message in new_messages:
-            new_log = self.append_status(new_log, new_message)
-        return new_log
+        entries = list(current_log) if current_log else []
+        entries.append(self.build_log_entry(new_message, level))
+        return entries
 
     def build_create_log(
         self, 
@@ -91,6 +107,25 @@ class Logger:
         """
         base_message = f"Deleted {node_type} {self.quote_value(node_id)}"
         return f"{base_message}{self.format_fields(fields)}."
+
+    def build_log_entry(
+        self, message: str, level: str = "info"
+    ) -> dict[str, str]:
+        """Build a single structured log entry, carrying the message, severity
+        level, and a timestamp.
+
+        Args:
+            message (str): User-facing log message.
+            level (str): Severity level for the entry (default "info").
+
+        Returns:
+            dict[str, str]: Structured log entry.
+        """
+        return {
+            "message": message,
+            "level": level,
+            "timestamp": datetime.now().isoformat(timespec="seconds")
+        }
 
     def build_update_log(
         self,

@@ -12,6 +12,7 @@ from webbrowser import open as open_url
 from yaml import YAMLError, safe_load
 
 from dash_app.layout import (
+    build_log_children,
     get_bottom_panel_style,
     get_center_panel,
     get_graph_component,
@@ -59,6 +60,9 @@ class App(Dash):
         load_extra_layouts()
         author, version = get_project_metadata()
         initial_name = self.normalize_name(self.graph_editor.graph.name)
+        initial_log_entries = self.action_logger.append_status(
+            None, "Ready."
+        )
         self.layout = html.Div(
             [
                 get_left_panel(initial_name, author, version),
@@ -67,6 +71,7 @@ class App(Dash):
                 dcc.Store(id="unsaved-changes", data=False),
                 dcc.Store(id="current-document", data=initial_name),
                 dcc.Store(id="pending-action", data=""),
+                dcc.Store(id="action-log", data=initial_log_entries),
                 dcc.Store(id="pending-upload", data={}),
                 dcc.Store(id="quit-signal", data=0),
                 dcc.Store(id="selected-node-id", data=None),
@@ -224,9 +229,9 @@ class App(Dash):
         self,
         menu_item_id: str,
         element_id: str | None,
-        current_log: str | None
+        current_log: list[dict[str, str]] | None
     ) -> tuple[
-        str | Any,
+        list[dict[str, str]] | Any,
         dict[str, str],
         bool,
         str,
@@ -249,13 +254,14 @@ class App(Dash):
         Args:
             menu_item_id (str): Identifier of the clicked context menu item.
             element_id (str | None): Node id associated with the menu click.
-            current_log (str | None): Current action-status log text.
+            current_log (list[dict[str, str]] | None): Current action log
+                entries.
 
         Returns:
-            tuple[str | Any, dict[str, str], bool, str, str, str, str, str,
-            str, str, list[str], bool, str, str, dict[str, str], str,
-            dict[str, str]]: Action-status text followed by bottom panel
-                outputs in callback order.
+            tuple[list[dict[str, str]] | Any, dict[str, str], bool, str, 
+            str, str, str, str, str, str, list[str], bool, str, str, 
+            dict[str, str], str, dict[str, str]]: Action log entries 
+                followed by bottom panel outputs in callback order.
 
         Raises:
             PreventUpdate: If no action should be performed.
@@ -791,22 +797,6 @@ class App(Dash):
 
     def register_callbacks(self) -> None:
         """Register all Dash callbacks for graph editing actions."""
-        self.clientside_callback(
-            """
-            function(actionLog) {
-                const logBox = document.getElementById("action-status");
-                if (logBox) {
-                    window.requestAnimationFrame(function() {
-                        logBox.scrollTop = logBox.scrollHeight;
-                    });
-                }
-                return "";
-            }
-            """,
-            Output("action-status-scroll-trigger", "children"),
-            Input("action-status", "value")
-        )
-
         self.clientside_callback(
             """
             function(quitSignal) {
@@ -1569,7 +1559,7 @@ class App(Dash):
 
         @self.callback(
             Output("dialogue-editor", "elements", allow_duplicate=True),
-            Output("action-status", "value", allow_duplicate=True),
+            Output("action-log", "data", allow_duplicate=True),
             Output("unsaved-changes", "data", allow_duplicate=True),
             Output("bottom-panel", "style", allow_duplicate=True),
             Output("bottom-panel-visible", "data", allow_duplicate=True),
@@ -1589,7 +1579,7 @@ class App(Dash):
             State("bottom-form-effects", "value"),
             State("bottom-form-cascade", "value"),
             State("selected-node-id", "data"),
-            State("action-status", "value"),
+            State("action-log", "data"),
             prevent_initial_call=True
         )
         def on_bottom_panel_save(
@@ -1603,7 +1593,7 @@ class App(Dash):
             form_effects: str | None,
             form_cascade: list[str] | None,
             selected_node_id: str | None,
-            current_log: str | None
+            current_log: list[dict[str, str]] | None
         ) -> tuple[
             object, str, bool, dict, bool, str, str, str, str, str, list
         ]:
@@ -1689,19 +1679,17 @@ class App(Dash):
                         no_update,
                         no_update
                     )
-                new_log = self.action_logger.append_status(
-                    current_log,
+                create_lines = [
                     self.action_logger.build_create_log(
                         "Player node",
                         new_edge_name,
                         self.action_logger.get_player_log_fields(new_edge_name)
                     )
-                )
+                ]
                 if normalized_to_vertex is None:
                     new_edge = self.graph_editor.graph.edge_dict[new_edge_name]
                     auto_created_npc = new_edge.to_vertex
-                    new_log = self.action_logger.append_status(
-                        new_log,
+                    create_lines.append(
                         self.action_logger.build_create_log(
                             "NPC node",
                             auto_created_npc,
@@ -1710,6 +1698,9 @@ class App(Dash):
                             )
                         )
                     )
+                new_log = self.action_logger.append_grouped_status(
+                    current_log, create_lines
+                )
                 return (
                     self.get_elements(),
                     new_log,
@@ -1844,11 +1835,9 @@ class App(Dash):
                         )
                     )
                     if endpoint_warnings:
-                        new_log = current_log
-                        for warning in endpoint_warnings:
-                            new_log = self.action_logger.append_status(
-                                new_log, warning
-                            )
+                        new_log = self.action_logger.append_grouped_status(
+                            current_log, endpoint_warnings
+                        )
                         anything_saved = was_updated or was_updated_endpoints
                         return (
                             (
@@ -2009,7 +1998,7 @@ class App(Dash):
                         no_update,
                         no_update
                     )
-                new_log = self.action_logger.append_statuses(
+                new_log = self.action_logger.append_grouped_status(
                     current_log, delete_messages
                 )
                 if was_vertex_delete and not cascade_delete_enabled:
@@ -2056,7 +2045,7 @@ class App(Dash):
             return False, "", {}
 
         @self.callback(
-            Output("action-status", "value", allow_duplicate=True),
+            Output("action-log", "data", allow_duplicate=True),
             Output("graph-container", "children", allow_duplicate=True),
             Output("unsaved-changes", "data", allow_duplicate=True),
             Output("current-document", "data", allow_duplicate=True),
@@ -2067,7 +2056,7 @@ class App(Dash):
             Input("confirm-unsaved-work", "submit_n_clicks"),
             State("pending-action", "data"),
             State("pending-upload", "data"),
-            State("action-status", "value"),
+            State("action-log", "data"),
             State("quit-signal", "data"),
             prevent_initial_call=True
         )
@@ -2075,7 +2064,7 @@ class App(Dash):
             confirm_unsaved_submit_clicks: int,
             pending_action: str | None,
             pending_upload: dict | None,
-            current_log: str | None,
+            current_log: list[dict[str, str]] | None,
             quit_signal: int | None
         ) -> tuple[object, object, object, object, bool, str, dict, object]:
             if not confirm_unsaved_submit_clicks:
@@ -2133,13 +2122,15 @@ class App(Dash):
                     )
                 self.graph_editor.load(yaml_data=parsed_yaml)
                 loaded_name = self.normalize_name(self.graph_editor.graph.name)
-                new_log = self.action_logger.append_status(
+                new_log = self.action_logger.append_grouped_status(
                     current_log,
+                    self.get_runtime_validation_warnings()
+                )
+                new_log = self.action_logger.append_status(
+                    new_log,
                     "Discarded unsaved changes and opened "
                     f"{self.action_logger.quote_value(queued_filename)}."
                 )
-                for warning in self.get_runtime_validation_warnings():
-                    new_log = self.action_logger.append_status(new_log, warning)
                 return (
                     new_log,
                     self.get_fresh_graph_component(),
@@ -2169,24 +2160,25 @@ class App(Dash):
             raise PreventUpdate
 
         @self.callback(
-            Output("action-status", "value", allow_duplicate=True),
+            Output("action-log", "data", allow_duplicate=True),
             Output("download-yaml", "data", allow_duplicate=True),
             Input("download-graph", "n_clicks"),
-            State("action-status", "value"),
+            State("action-log", "data"),
             State("current-document", "data"),
             prevent_initial_call=True
         )
         def on_download_graph(
             download_graph_clicks: int,
-            current_log: str | None,
+            current_log: list[dict[str, str]] | None,
             current_document: str | None
         ) -> tuple[str, object]:
             if not download_graph_clicks:
                 raise PreventUpdate
             download_name = self.get_filename(current_document)
-            new_log = current_log
-            for warning in self.get_runtime_validation_warnings():
-                new_log = self.action_logger.append_status(new_log, warning)
+            new_log = self.action_logger.append_grouped_status(
+                current_log,
+                self.get_runtime_validation_warnings()
+            )
             return (
                 self.action_logger.append_status(
                     new_log,
@@ -2204,13 +2196,13 @@ class App(Dash):
             Output("bottom-form-target", "value"),
             Output("pick-mode-active", "data", allow_duplicate=True),
             Output("pick-mode-field", "data", allow_duplicate=True),
-            Output("action-status", "value", allow_duplicate=True),
+            Output("action-log", "data", allow_duplicate=True),
             Input("dialogue-editor", "tapNodeData"),
             State("pick-mode-active", "data"),
             State("pick-mode-field", "data"),
             State("bottom-form-source", "value"),
             State("bottom-form-target", "value"),
-            State("action-status", "value"),
+            State("action-log", "data"),
             prevent_initial_call=True
         )
         def on_graph_click_during_pick_mode(
@@ -2219,7 +2211,7 @@ class App(Dash):
             pick_field: str,
             current_source: str | None,
             current_target: str | None,
-            current_log: str | None
+            current_log: list[dict[str, str]] | None
         ) -> tuple[str, str, bool, str, Any]:
             if not pick_mode_active or not tapped_node:
                 raise PreventUpdate
@@ -2258,7 +2250,7 @@ class App(Dash):
             raise PreventUpdate
 
         @self.callback(
-            Output("action-status", "value", allow_duplicate=True),
+            Output("action-log", "data", allow_duplicate=True),
             Output("graph-container", "children", allow_duplicate=True),
             Output("unsaved-changes", "data", allow_duplicate=True),
             Output("current-document", "data", allow_duplicate=True),
@@ -2267,13 +2259,13 @@ class App(Dash):
             Output("pending-action", "data", allow_duplicate=True),
             Output("pending-upload", "data", allow_duplicate=True),
             Input("new-graph", "n_clicks"),
-            State("action-status", "value"),
+            State("action-log", "data"),
             State("unsaved-changes", "data"),
             prevent_initial_call=True
         )
         def on_new_graph(
             new_graph_clicks: int,
-            current_log: str | None,
+            current_log: list[dict[str, str]] | None,
             unsaved_changes: bool
         ) -> tuple[object, object, object, object, bool, object, str, dict]:
             if not new_graph_clicks:
@@ -2309,18 +2301,18 @@ class App(Dash):
             Output("confirm-unsaved-work", "message", allow_duplicate=True),
             Output("pending-action", "data", allow_duplicate=True),
             Output("pending-upload", "data", allow_duplicate=True),
-            Output("action-status", "value", allow_duplicate=True),
+            Output("action-log", "data", allow_duplicate=True),
             Output("quit-signal", "data", allow_duplicate=True),
             Input("quit-editor", "n_clicks"),
             State("unsaved-changes", "data"),
-            State("action-status", "value"),
+            State("action-log", "data"),
             State("quit-signal", "data"),
             prevent_initial_call=True
         )
         def on_quit_editor(
             quit_editor_clicks: int,
             unsaved_changes: bool,
-            current_log: str | None,
+            current_log: list[dict[str, str]] | None,
             quit_signal: int | None
         ) -> tuple[bool, object, str, dict, object, object]:
             if not quit_editor_clicks:
@@ -2348,17 +2340,17 @@ class App(Dash):
             )
 
         @self.callback(
-            Output("action-status", "value", allow_duplicate=True),
+            Output("action-log", "data", allow_duplicate=True),
             Output("unsaved-changes", "data", allow_duplicate=True),
             Output("current-document", "data", allow_duplicate=True),
             Input("save-name", "n_clicks"),
-            State("action-status", "value"),
+            State("action-log", "data"),
             State("document-name", "value"),
             prevent_initial_call=True
         )
         def on_save_name(
             save_name_clicks: int,
-            current_log: str | None,
+            current_log: list[dict[str, str]] | None,
             document_name: str | None
         ) -> tuple[str, bool, str]:
             if not save_name_clicks:
@@ -2376,7 +2368,7 @@ class App(Dash):
             )
 
         @self.callback(
-            Output("action-status", "value", allow_duplicate=True),
+            Output("action-log", "data", allow_duplicate=True),
             Output("graph-container", "children", allow_duplicate=True),
             Output("unsaved-changes", "data", allow_duplicate=True),
             Output("current-document", "data", allow_duplicate=True),
@@ -2386,14 +2378,14 @@ class App(Dash):
             Output("pending-upload", "data", allow_duplicate=True),
             Input("upload-graph", "contents"),
             State("upload-graph", "filename"),
-            State("action-status", "value"),
+            State("action-log", "data"),
             State("unsaved-changes", "data"),
             prevent_initial_call=True
         )
         def on_upload_graph(
             upload_contents: str | None,
             upload_filename: str | None,
-            current_log: str | None,
+            current_log: list[dict[str, str]] | None,
             unsaved_changes: bool
         ) -> tuple[object, object, object, object, bool, object, str, dict]:
             if not upload_contents:
@@ -2430,13 +2422,15 @@ class App(Dash):
             self.graph_editor.load(yaml_data=parsed_yaml)
             loaded_name = self.normalize_name(self.graph_editor.graph.name)
             quoted_value = upload_filename or loaded_name
-            new_log = self.action_logger.append_status(
+            new_log = self.action_logger.append_grouped_status(
                 current_log,
+                self.get_runtime_validation_warnings()
+            )
+            new_log = self.action_logger.append_status(
+                new_log,
                 "Opened "
                 f"{self.action_logger.quote_value(quoted_value)}."
             )
-            for warning in self.get_runtime_validation_warnings():
-                new_log = self.action_logger.append_status(new_log, warning)
             return (
                 new_log,
                 self.get_fresh_graph_component(),
@@ -2451,7 +2445,7 @@ class App(Dash):
         @self.callback(
             Output("dialogue-editor", "elements", allow_duplicate=True),
             Output("selected-node-id", "data", allow_duplicate=True),
-            Output("action-status", "value", allow_duplicate=True),
+            Output("action-log", "data", allow_duplicate=True),
             Output("bottom-panel", "style", allow_duplicate=True),
             Output("bottom-panel-visible", "data", allow_duplicate=True),
             Output("bottom-panel-form-type", "data", allow_duplicate=True),
@@ -2470,13 +2464,13 @@ class App(Dash):
             Output("bottom-panel-close", "style", allow_duplicate=True),
             Input("dialogue-editor", "contextMenuData"),
             State("dialogue-editor", "elements"),
-            State("action-status", "value"),
+            State("action-log", "data"),
             prevent_initial_call=True
         )
         def open_bottom_panel_from_context_menu(
             context_menu_data: dict | None,
             elements: list[dict[str, Any]] | None,
-            current_log: str | None
+            current_log: list[dict[str, str]] | None
         ) -> tuple[
             list[dict[str, Any]],
             str | None,
@@ -2516,6 +2510,15 @@ class App(Dash):
             return (selected_elements, selected_node_id, *panel_outputs)
 
         @self.callback(
+            Output("action-log-display", "children"),
+            Input("action-log", "data")
+        )
+        def render_action_log(
+            log_entries: list[dict[str, str]] | None
+        ) -> list[html.Div]:
+            return build_log_children(log_entries)
+
+        @self.callback(
             Output("current-document-label", "children"),
             Input("current-document", "data"),
             Input("unsaved-changes", "data")
@@ -2530,11 +2533,11 @@ class App(Dash):
 
         @self.callback(
             Output("upload-graph-container", "children"),
-            Input("action-status", "value"),
+            Input("action-log", "data"),
             prevent_initial_call=True
         )
         def reset_upload_contents_after_actions(
-            action_log: str | None
+            action_log: list[dict[str, str]] | None
         ) -> dcc.Upload:
             return get_upload_graph()
 
