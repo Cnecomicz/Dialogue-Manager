@@ -221,3 +221,33 @@ def test_add_player_button_enabled_state(app):
     assert disabled is True
     assert style["cursor"] == "not-allowed"
     assert tooltip == "Create at least one NPC node first."
+
+# When the bottom panel is open, you can still pan and zoom the graph
+def test_graph_interaction_lock_callback_registered(app):
+    callback_keys = app.callback_map.keys()
+    matching_callbacks = [
+        key
+        for key in callback_keys
+        if "dialogue-editor.autoungrabify" in key
+        and "dialogue-editor.autounselectify" in key
+    ]
+    assert matching_callbacks
+    callback = app.callback_map[matching_callbacks[0]]
+    callback_inputs = callback["inputs"]
+    assert {"id": "bottom-panel-visible", "property": "data"} in callback_inputs
+    assert {"id": "pick-mode-active", "property": "data"} in callback_inputs
+
+# When pick mode is open, the bottom panel is grayed out
+def test_pick_mode_bottom_panel_graying_callback_registered(app):
+    callback_keys = app.callback_map.keys()
+    matching_callbacks = [
+        key
+        for key in callback_keys
+        if key.startswith("bottom-panel.style@")
+    ]
+    assert matching_callbacks
+    callback = app.callback_map[matching_callbacks[0]]
+    callback_inputs = callback["inputs"]
+    callback_state = callback["state"]
+    assert {"id": "pick-mode-active", "property": "data"} in callback_inputs
+    assert {"id": "bottom-panel", "property": "style"} in callback_state
