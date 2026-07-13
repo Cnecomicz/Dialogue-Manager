@@ -1507,6 +1507,25 @@ class App(Dash):
             return (hidden_style,) * 7
 
         @self.callback(
+            Output("bottom-panel", "style", allow_duplicate=True),
+            Input("pick-mode-active", "data"),
+            State("bottom-panel", "style"),
+            prevent_initial_call=True
+        )
+        def manage_bottom_panel_graying(
+            pick_mode_active: bool,
+            bottom_panel_style: dict[str, str] | None
+        ) -> dict[str, str]:
+            style = dict(bottom_panel_style or {})
+            if pick_mode_active:
+                style["opacity"] = "0.5"
+                style["pointerEvents"] = "none"
+            else:
+                style.pop("opacity", None)
+                style.pop("pointerEvents", None)
+            return style
+
+        @self.callback(
             Output("graph-container", "style"),
             Input("pick-mode-active", "data"),
             Input("bottom-panel-visible", "data"),
@@ -1522,11 +1541,26 @@ class App(Dash):
             elif bottom_panel_visible:
                 return {
                     **base_style,
-                    "opacity": "0.5",
-                    "pointerEvents": "none"
+                    "opacity": "0.5"
                 }
             else:
                 return base_style
+
+        @self.callback(
+            Output("dialogue-editor", "autoungrabify"),
+            Output("dialogue-editor", "autounselectify"),
+            Input("bottom-panel-visible", "data"),
+            Input("pick-mode-active", "data"),
+            prevent_initial_call=True
+        )
+        def manage_graph_interactions(
+            bottom_panel_visible: bool,
+            pick_mode_active: bool
+        ) -> tuple[bool, bool]:
+            lock_graph_interactions = (
+                bottom_panel_visible and not pick_mode_active
+            )
+            return lock_graph_interactions, lock_graph_interactions
 
         @self.callback(
             Output("dialogue-editor", "elements", allow_duplicate=True),
