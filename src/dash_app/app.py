@@ -1022,12 +1022,6 @@ class App(Dash):
                     }
                     if (target) { selectOnly(cy, source, target); }
                 };
-                var openFileDialog = function() {
-                    var input = document.querySelector(
-                        "#upload-graph input[type=file]"
-                    );
-                    if (input) { input.click(); }
-                };
                 document.addEventListener("keydown", function(event) {
                     var state = window.dmShortcuts.state || {};
                     var key = event.key;
@@ -1077,7 +1071,7 @@ class App(Dash):
                         }
                         if (lowered === "o") {
                             event.preventDefault();
-                            openFileDialog();
+                            clickById("upload-graph-button");
                             return;
                         }
                         if (lowered === "s") {
