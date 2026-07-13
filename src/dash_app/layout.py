@@ -502,6 +502,7 @@ def get_header() -> html.Div:
                 "New",
                 id="new-graph",
                 n_clicks=0,
+                title="Start a new empty graph (Ctrl+N)",
                 style=button_style
             ),
             html.Div(
@@ -513,6 +514,7 @@ def get_header() -> html.Div:
                 "Save",
                 id="download-graph",
                 n_clicks=0,
+                title="Download a copy of this graph as yaml (Ctrl+S)",
                 style=button_style
             ),
             html.Div(
@@ -526,9 +528,17 @@ def get_header() -> html.Div:
             ),
             html.Div(style={"flex": "1"}),
             html.Button(
+                "Shortcuts",
+                id="open-shortcuts-help",
+                n_clicks=0,
+                title="Show all keyboard shortcuts (?)",
+                style=button_style
+            ),
+            html.Button(
                 "Quit",
                 id="quit-editor",
                 n_clicks=0,
+                title="Close the editor (Ctrl+Q)",
                 style={
                     **button_style,
                     "backgroundColor": "#7f1d1d",
@@ -673,6 +683,7 @@ def get_left_panel(initial_name: str, author: str, version: str) -> html.Div:
                 "Add NPC Dialogue",
                 id="open-add-vertex-modal",
                 n_clicks=0,
+                title="Create a new NPC dialogue node (N)",
                 style={
                     "width": "100%",
                     "padding": "10px",
@@ -886,6 +897,141 @@ def get_right_panel() -> html.Div:
         }
     )
 
+def get_shortcuts_overlay() -> html.Div:
+    """Build the modal overlay that lists all keyboard shortcuts.
+
+    Returns:
+        html.Div: Full-screen overlay component listing keyboard shortcuts.
+    """
+    shortcuts = [
+        ("New graph", "Ctrl+N"),
+        ("Open a graph", "Ctrl+O"),
+        ("Save a copy", "Ctrl+S"),
+        ("Quit the editor", "Ctrl+Q"),
+        ("Add NPC dialogue", "N"),
+        ("Add Player dialogue", "P"),
+        ("Edit selected node", "E"),
+        ("Delete selected node", "Delete / Backspace"),
+        ("Navigate between nodes", "\u2190 \u2191 \u2192 \u2193"),
+        ("Confirm delete", "Enter"),
+        ("Cancel, close panel, or exit node picking", "Esc"),
+        ("Show this help", "?")
+    ]
+    key_style = {
+        "backgroundColor": "#111827",
+        "color": "#e5e7eb",
+        "border": "1px solid #4b5563",
+        "borderRadius": "4px",
+        "padding": "2px 8px",
+        "fontFamily": "monospace",
+        "fontSize": "13px",
+        "whiteSpace": "nowrap"
+    }
+    row_style = {
+        "display": "flex",
+        "justifyContent": "space-between",
+        "alignItems": "center",
+        "gap": "16px",
+        "padding": "8px 0",
+        "borderBottom": "1px solid #333",
+    }
+    rows = [
+        html.Div(
+            [
+                html.Span(description, style={"color": "#e6e6e6"}),
+                html.Span(keys, style=key_style)
+            ],
+            style=row_style
+        )
+        for description, keys in shortcuts
+    ]
+    return html.Div(
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.H2(
+                            "Keyboard Shortcuts",
+                            style={
+                                "margin": "0",
+                                "fontSize": "20px",
+                                "color": "#e6e6e6",
+                                "flex": "1"
+                            }
+                        ),
+                        html.Button(
+                            "Close",
+                            id="shortcuts-help-close",
+                            n_clicks=0,
+                            style={
+                                "padding": "8px 14px",
+                                "backgroundColor": "#333",
+                                "color": "#e6e6e6",
+                                "border": "1px solid #555",
+                                "borderRadius": "4px",
+                                "cursor": "pointer"
+                            }
+                        )
+                    ],
+                    style={
+                        "display": "flex",
+                        "justifyContent": "space-between",
+                        "alignItems": "center",
+                        "marginBottom": "12px",
+                        "paddingBottom": "12px",
+                        "borderBottom": "1px solid #444"
+                    }
+                ),
+                *rows,
+                html.P(
+                    "Shortcuts work whhile the graph is in focus and you "
+                    "are not typing in a text field.",
+                    style={
+                        "marginTop": "16px",
+                        "marginBottom": "0",
+                        "color": "#9ca3af",
+                        "fontSize": "12px"
+                    }
+                )
+            ],
+            style={
+                "width": "min(480px, 90vw)",
+                "maxHeight": "80vh",
+                "overflowY": "auto",
+                "backgroundColor": "#252d35",
+                "border": "1px solid #444",
+                "borderRadius": "8px",
+                "padding": "20px",
+                "boxSizing": "border-box",
+                "boxShadow": "0 8px 32px rgba(0, 0, 0, 0.5)"
+            }
+        ),
+        id="shortcuts-overlay",
+        style=get_shortcuts_overlay_style(False)
+    )
+
+def get_shortcuts_overlay_style(is_open: bool) -> dict[str, str | int]:
+    """Return style for the shortcuts overlay backdrop.
+
+    Args:
+        is_open (bool): Whether the overlay is visible.
+
+    Returns:
+        dict[str, str | int]: Style mapping for the overlay container.
+    """
+    return {
+        "display": "flex" if is_open else "none",
+        "position": "fixed",
+        "top": "0",
+        "left": "0",
+        "right": "0",
+        "bottom": "0",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "backgroundColor": "rgba(0, 0, 0, 0.6)",
+        "zIndex": "1000"
+    }
+
 def get_textarea_style(height: str = "auto") -> dict[str, str | int]:
     """Return consistent styling for textarea fields.
 
@@ -936,6 +1082,7 @@ def get_upload_graph(
             "Open",
             id="upload-graph-button",
             n_clicks=0,
+            title="Open a graph from a yaml file (Ctrl+O)",
             style=resolved_button_style
         ),
         multiple=False,

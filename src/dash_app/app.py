@@ -19,6 +19,7 @@ from dash_app.layout import (
     get_left_panel,
     get_project_metadata,
     get_right_panel,
+    get_shortcuts_overlay,
     get_upload_graph
 )
 from dash_app.logger import Logger
@@ -73,12 +74,17 @@ class App(Dash):
                 dcc.Store(id="bottom-panel-form-type", data=""),
                 dcc.Store(id="pick-mode-active", data=False),
                 dcc.Store(id="pick-mode-field", data=""),
+                dcc.Store(id="shortcuts-help-visible", data=False),
                 dcc.Download(id="download-yaml"),
                 dcc.ConfirmDialog(
                     id="confirm-unsaved-work",
                     message="You have unsaved changes. Continue?"
                 ),
-                html.Div(id="quit-client-trigger", style={"display": "none"})
+                html.Div(id="quit-client-trigger", style={"display": "none"}),
+                html.Div(
+                    id="shortcut-listener-dummy", style={"display": "none"}
+                ),
+                get_shortcuts_overlay()
             ],
             style={
                 "display": "flex",
@@ -201,8 +207,7 @@ class App(Dash):
                     "cursor": "not-allowed",
                     "opacity": 0.5
                 },
-                "Add Player Dialogue: Create at least one NPC node before "
-                "adding Player dialogue."
+                "Create at least one NPC node first."
             )
         return (
             False,
@@ -212,7 +217,7 @@ class App(Dash):
                 "color": "#e6e6e6",
                 "cursor": "pointer"
             },
-            ""
+            "Create a player choice linking two NPC nodes (P)"
         )
 
     def get_context_action_panel_outputs(
@@ -816,6 +821,349 @@ class App(Dash):
             """,
             Output("quit-client-trigger", "children"),
             Input("quit-signal", "data"),
+            prevent_initial_call=True
+        )
+
+        self.clientside_callback(
+            """
+            function(bottomPanelVisible, pickModeActive, formType,
+                     helpVisible) {
+                if (!window.dmShortcuts) {
+                    window.dmShortcuts = {installed: false, state: {}};
+                }
+                window.dmShortcuts.state = {
+                    bottomPanelVisible: !!bottomPanelVisible,
+                    pickModeActive: !!pickModeActive,
+                    formType: formType || "",
+                    helpVisible: !!helpVisible
+                };
+                if (window.dmShortcuts.installed) {
+                    return "";
+                }
+                window.dmShortcuts.installed = true;
+                var setProps = function(id, props) {
+                    if (window.dash_clientside
+                        && window.dash_clientside.set_props) {
+                        window.dash_clientside.set_props(id, props);
+                    }
+                };
+                var clickById = function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.click(); }
+                };
+                var isEditableTarget = function() {
+                    var el = document.activeElement;
+                    if (!el) { return false; }
+                    var tag = el.tagName;
+                    return (
+                        tag === "INPUT" || tag === "TEXTAREA"
+                        || el.isContentEditable
+                    );
+                };
+                var getCy = function() {
+                    var container = document.getElementById(
+                        "dialogue-editor"
+                    );
+                    if (!container || !container._cyreg
+                        || !container._cyreg.cy) {
+                        return null;
+                    }
+                    return container._cyreg.cy;
+                };
+                var arrowKeys = {
+                    ArrowUp: true,
+                    ArrowDown: true,
+                    ArrowLeft: true,
+                    ArrowRight: true
+                };
+                var recenterIfOffscreen = function(cy, node) {
+                    var extent = cy.extent();
+                    var position = node.position();
+                    var outside = (
+                        position.x < extent.x1 || position.x > extent.x2
+                        || position.y < extent.y1 || position.y > extent.y2
+                    );
+                    if (outside) {
+                        cy.animate({center: {eles: node}}, {duration: 150});
+                    }
+                };
+                var selectOnly = function(cy, previous, node) {
+                    cy.batch(function() {
+                        if (previous) { previous.unselect(); }
+                        node.select();
+                    });
+                    recenterIfOffscreen(cy, node);
+                };
+                var selectNearestVertexToCenter = function(cy) {
+                    var vertices = cy.nodes().filter(function(node) {
+                        return !node.data("is_edge_node");
+                    });
+                    if (vertices.length === 0) { return; }
+                    var extent = cy.extent();
+                    var centerX = (extent.x1 + extent.x2) / 2;
+                    var centerY = (extent.y1 + extent.y2) / 2;
+                    var best = null;
+                    var bestDistance = Infinity;
+                    vertices.forEach(function(node) {
+                        var position = node.position();
+                        var distance = Math.hypot(
+                            position.x - centerX, position.y - centerY
+                        );
+                        if (distance < bestDistance) {
+                            bestDistance = distance;
+                            best = node;
+                        }
+                    });
+                    if (best) { selectOnly(cy, null, best); }
+                };
+                var findVerticalNeighbor = function(cy, source, goingUp) {
+                    var origin = source.position();
+                    var tolerance = computeRowTolerance(cy);
+                    var pickFrom = function(nodes) {
+                        var candidates = [];
+                        nodes.forEach(function(node) {
+                            if (node.id() === source.id()) { return; }
+                            var position = node.position();
+                            var forward = goingUp
+                            ? -(position.y - origin.y)
+                            : (position.y - origin.y);
+                            if (forward <= tolerance) { return; }
+                            candidates.push({
+                                node: node,
+                                forward: forward,
+                                dx: Math.abs(position.x - origin.x),
+                                x: position.x
+                            });
+                        });
+                        if (candidates.length === 0) { return null; }
+                        var nearestForward = Infinity;
+                        candidates.forEach(function(candidate) {
+                            if (candidate.forward < nearestForward) {
+                                nearestForward = candidate.forward;
+                            }
+                        });
+                        var best = null;
+                        candidates.forEach(function(candidate) {
+                            if (candidate.forward - nearestForward > tolerance) {
+                                return;
+                            }
+                            if (best === null
+                                || candidate.dx < best.dx - 1e-9
+                                || (Math.abs(candidate.dx - best.dx) <= 1e-9
+                                    && candidate.x < best.x)) {
+                                best = candidate;
+                            }
+                        });
+                        return best ? best.node : null;
+                    };
+                    var connected = pickFrom(source.neighborhood().nodes());
+                    return connected !== null
+                        ? connected
+                        : pickFrom(cy.nodes());
+                };
+                var computeRowTolerance = function(cy) {
+                    var ys = cy.nodes().map(function(node) {
+                        return node.position().y;
+                    });
+                    ys.sort(function(a, b) { return a - b; });
+                    var minGap = Infinity;
+                    for (var i = 1; i < ys.length; i++) {
+                        var gap = ys[i] - ys[i - 1];
+                        if (gap > 1e-6 && gap < minGap) { minGap = gap; }
+                    }
+                    return isFinite(minGap) ? minGap / 2 : Infinity;
+                };
+                var findRowNeighbor = function(cy, source, goingRight) {
+                    var origin = source.position();
+                    var tolerance = computeRowTolerance(cy);
+                    var members = [];
+                    cy.nodes().forEach(function(node) {
+                        if (Math.abs(node.position().y - origin.y)
+                            <= tolerance) {
+                            members.push(node);
+                        }
+                    });
+                    if (members.length <= 1) { return null; }
+                    members.sort(function(a, b) {
+                        return a.position().x - b.position().x;
+                    });
+                    var index = -1;
+                    for (var i = 0; i < members.length; i++) {
+                        if (members[i].id() === source.id()) {
+                            index = i;
+                            break;
+                        }
+                    }
+                    if (index === -1) { return null; }
+                    var count = members.length;
+                    var nextIndex = goingRight
+                        ? (index + 1) % count
+                        : (index - 1 + count) % count;
+                    return members[nextIndex];
+                };
+                var navigateSelection = function(direction) {
+                    var cy = getCy();
+                    if (!cy) { return; }
+                    var selected = cy.nodes(":selected");
+                    if (selected.length === 0) {
+                        selectNearestVertexToCenter(cy);
+                        return;
+                    }
+                    var source = selected[0];
+                    var target = null;
+                    if (direction === "ArrowUp") {
+                        target = findVerticalNeighbor(cy, source, true);
+                    } else if (direction === "ArrowDown") {
+                        target = findVerticalNeighbor(cy, source, false);
+                    } else if (direction === "ArrowRight") {
+                        target = findRowNeighbor(cy, source, true);
+                    } else if (direction === "ArrowLeft") {
+                        target = findRowNeighbor(cy, source, false);
+                    }
+                    if (target) { selectOnly(cy, source, target); }
+                };
+                var openFileDialog = function() {
+                    var input = document.querySelector(
+                        "#upload-graph input[type=file]"
+                    );
+                    if (input) { input.click(); }
+                };
+                document.addEventListener("keydown", function(event) {
+                    var state = window.dmShortcuts.state || {};
+                    var key = event.key;
+                    if (key === "Escape") {
+                        if (state.helpVisible) {
+                            setProps(
+                                "shortcuts-help-visible", {data: false}
+                            );
+                            return;
+                        }
+                        if (state.pickModeActive) {
+                            setProps("pick-mode-active", {data: false});
+                            setProps("pick-mode-field", {data: ""});
+                            return;
+                        }
+                        if (state.bottomPanelVisible) {
+                            clickById("bottom-panel-close");
+                            return;
+                        }
+                        return;
+                    }
+                    if (key === "?" && state.helpVisible) {
+                        event.preventDefault();
+                        setProps("shortcuts-help-visible", {data: false});
+                        return;
+                    }
+                    if (state.helpVisible) {
+                        return;
+                    }
+                    if (state.bottomPanelVisible) {
+                        if (state.formType === "delete" && key === "Enter") {
+                            event.preventDefault();
+                            clickById("bottom-panel-save");
+                        }
+                        return;
+                    }
+                    if (isEditableTarget()) {
+                        return;
+                    }
+                    if (event.ctrlKey && !event.metaKey
+                        && !event.altKey && !event.shiftKey) {
+                        var lowered = key.toLowerCase();
+                        if (lowered === "n") {
+                            event.preventDefault();
+                            clickById("new-graph");
+                            return;
+                        }
+                        if (lowered === "o") {
+                            event.preventDefault();
+                            openFileDialog();
+                            return;
+                        }
+                        if (lowered === "s") {
+                            event.preventDefault();
+                            clickById("download-graph");
+                            return;
+                        }
+                        if (lowered === "q") {
+                            event.preventDefault();
+                            clickById("quit-editor");
+                            return;
+                        }
+                        return;
+                    }
+                    if (event.ctrlKey || event.metaKey || event.altKey) {
+                        return;
+                    }
+                    if (key === "n" || key === "N") {
+                        clickById("open-add-vertex-modal");
+                    } else if (key === "p" || key === "P") {
+                        clickById("open-add-edge-modal");
+                    } else if (key === "e" || key === "E") {
+                        clickById("open-edit-modal");
+                    } else if (key === "Delete" || key === "Backspace") {
+                        event.preventDefault();
+                        clickById("open-delete-modal");
+                    } else if (arrowKeys.hasOwnProperty(key)) {
+                        event.preventDefault();
+                        navigateSelection(key);
+                    } else if (key === "?") {
+                        event.preventDefault();
+                        setProps("shortcuts-help-visible", {data: true});
+                    }
+                });
+                return "";
+            }
+            """,
+            Output("shortcut-listener-dummy", "children"),
+            Input("bottom-panel-visible", "data"),
+            Input("pick-mode-active", "data"),
+            Input("bottom-panel-form-type", "data"),
+            Input("shortcuts-help-visible", "data")
+        )
+
+        self.clientside_callback(
+            """
+            function(helpVisible) {
+                return {
+                    "display": helpVisible ? "flex" : "none",
+                    "position": "fixed",
+                    "top": "0",
+                    "left": "0",
+                    "right": "0",
+                    "bottom": "0",
+                    "alignItems": "center",
+                    "justifyContent": "center",
+                    "backgroundColor": "rgba(0, 0, 0, 0.6)",
+                    "zIndex": "1000"
+                };
+            }
+            """,
+            Output("shortcuts-overlay", "style"),
+            Input("shortcuts-help-visible", "data")
+        )
+
+        self.clientside_callback(
+            """
+            function(openClicks, closeClicks) {
+                var context = window.dash_clientside.callback_context;
+                var triggered = context ? context.triggered : [];
+                if (!triggered || triggered.length === 0) {
+                    return window.dash_clientside.no_update;
+                }
+                var triggeredId = triggered[0].prop_id.split(".")[0];
+                if (triggeredId === "open-shortcuts-help") {
+                    return true;
+                }
+                if (triggeredId === "shortcuts-help-close") {
+                    return false;
+                }
+                return window.dash_clientside.no_update;
+            }
+            """,
+            Output("shortcuts-help-visible", "data"),
+            Input("open-shortcuts-help", "n_clicks"),
+            Input("shortcuts-help-close", "n_clicks"),
             prevent_initial_call=True
         )
 
@@ -2180,7 +2528,7 @@ class App(Dash):
                         "cursor": "not-allowed",
                         "opacity": 0.5
                     },
-                    "Edit Selected Node: Select a node to edit.",
+                    "Select a node to edit.",
                     True,
                     {
                         **delete_base_style,
@@ -2190,7 +2538,7 @@ class App(Dash):
                         "cursor": "not-allowed",
                         "opacity": 0.5
                     },
-                    "Delete Selected Node: Select a node to delete."
+                    "Select a node to delete."
                 )
             return (
                 False, 
@@ -2200,7 +2548,7 @@ class App(Dash):
                     "color": "#e6e6e6",
                     "cursor": "pointer"
                 },
-                "",
+                "Edit the selected node's text, effects, and predicates (E)",
                 False,
                 {
                     **delete_base_style,
@@ -2209,7 +2557,7 @@ class App(Dash):
                     "border": "1px solid #c53030",
                     "cursor": "pointer"
                 },
-                ""
+                "Remove the selected node from the graph (Delete / Backspace)"
             )
 
         @self.callback(

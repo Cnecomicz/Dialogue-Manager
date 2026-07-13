@@ -215,9 +215,9 @@ def test_add_player_button_enabled_state(app):
     disabled, style, tooltip = app.get_add_player_button_state()
     assert disabled is False
     assert style["cursor"] == "pointer"
-    assert tooltip == ""
+    assert tooltip == "Create a player choice linking two NPC nodes (P)"
     app.graph_editor.load(yaml_data={"name": "Empty", "vertices": {}, "edges": {}})
     disabled, style, tooltip = app.get_add_player_button_state()
     assert disabled is True
     assert style["cursor"] == "not-allowed"
-    assert tooltip == "Add Player Dialogue: Create at least one NPC node before adding Player dialogue."
+    assert tooltip == "Create at least one NPC node first."

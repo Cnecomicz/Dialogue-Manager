@@ -58,18 +58,53 @@ and pytest-xdist, and are used for running the pytest suite.
 
 ## Quick start
 
+### Dialogue editor
+
 Launch the visual dialogue editor with `dialogue-editor`. This starts a 
 local Dash app and opens http://localhost:8050. 
 
+#### Shortcuts
+
+Keyboard shortcuts can be performed in the dialogue editor when the graph
+UI is in focus (i.e., not during text field editing).
+
+Shortcuts are designed to work on Safari in macOS. Other browers/platforms
+may experience a collision with built in browser/system level shortcuts.
+
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl+N` | Start a new empty graph |
+| `Ctrl+O` | Open a graph |
+| `Ctrl+S` | Save a copy of the graph |
+| `Ctrl+Q` | Quit the editor |
+| `N` | Add an NPC dialogue node |
+| `P` | Add a Player dialogue node |
+| `E` | Edit the selected node |
+| `Delete` / `Backspace` | Delete the selected node |
+| `Arrow keys` | Move the selection to the next node |
+| `Enter` | Confirm |
+| `Esc` | Cancel |
+| `?` | Show the keyboard shortcut help overlay |
+
+Shortcuts can be viewed in the UI by pressing `?` or by hovering over any
+button.
+
+### Dialogue renderer
+
 Render a dialogue graph to svg with `render`. You will be prompted for a 
 yaml file path. An svg is generated in the same directory.
+
+### Test suite
 
 With dev dependencies installed, run the test suite with `./run_tests.sh`. 
 This attempts to optimize which tests run using testmon. To override this, 
 use `COVERAGE=1 ./run_tests.sh`.
 
+### In game dialogue management API
+
 Use the `GraphNavigator` API to handle presenting, filtering, and selecting
-dialogue options in your game engine. See a minimal working example below.
+dialogue options in your game engine. See a minimal working example 
+[below](## Programmatic usage MWE).
 
 ## Dialogue model yaml format
 
