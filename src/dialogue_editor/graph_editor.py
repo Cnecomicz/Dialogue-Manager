@@ -2,6 +2,20 @@ from os import PathLike
 from typing import Any
 from yaml import safe_dump
 
+from dialogue_editor.messages import (
+    FIELD_SOURCE,
+    FIELD_TARGET,
+    FIELD_VERTEX,
+    MSG_NO_YAML_PATH,
+    MSG_VERTEX_CANNOT_BE_DELETED,
+    MSG_VERTEX_NOT_FOUND
+)
+from dialogue_model.constants import (
+    EDGE_PREFIX,
+    MISSING_VERTEX,
+    START_VERTEX,
+    VERTEX_PREFIX
+)
 from dialogue_model.edge import Edge
 from dialogue_model.graph import Graph
 from dialogue_model.vertex import Vertex
@@ -25,10 +39,11 @@ class VertexNotFoundError(Exception):
         """
         self.vertex_name = vertex_name
         self.field_name = field_name
-        field_label = field_name or "Vertex"
+        field_label = field_name or FIELD_VERTEX
         super().__init__(
-            f'{field_label} "{vertex_name}" does not match any vertex in the '
-            "graph."
+            MSG_VERTEX_NOT_FOUND.format(
+                field_label=field_label, vertex_name=vertex_name
+            )
         )
 
 class GraphEditor:
@@ -92,17 +107,17 @@ class GraphEditor:
             VertexNotFoundError: If from_vertex or to_vertex is not a valid
                 vertex identifier.
         """
-        self.require_valid_vertex(from_vertex, "Source")
+        self.require_valid_vertex(from_vertex, FIELD_SOURCE)
         if to_vertex is None:
             to_vertex = self.add_vertex()
-        self.require_valid_vertex(to_vertex, "Target")
+        self.require_valid_vertex(to_vertex, FIELD_TARGET)
         if text is None:
             text = ""
         if predicates is None:
             predicates = []
         if effects is None:
             effects = []
-        edge_name = f"edge_{self.next_edge_index}"
+        edge_name = f"{EDGE_PREFIX}{self.next_edge_index}"
         self.graph.edge_dict[edge_name] = Edge(
             edge_name, {
                 "from": from_vertex,
@@ -158,7 +173,7 @@ class GraphEditor:
             text = ""
         if effects is None:
             effects = []
-        vertex_name = f"vertex_{self.next_vertex_index}"
+        vertex_name = f"{VERTEX_PREFIX}{self.next_vertex_index}"
         self.graph.vertex_dict[vertex_name] = Vertex(
             vertex_name, {"text": text, "effects": effects}
         )
@@ -207,7 +222,7 @@ class GraphEditor:
             VertexNotFoundError: If from_vertex is not a valid vertex
                 identifier.
         """
-        self.require_valid_vertex(from_vertex, "Source")
+        self.require_valid_vertex(from_vertex, FIELD_SOURCE)
         self.graph.edge_dict[edge_name].from_vertex = from_vertex
 
     def edit_name(self, name: str) -> None:
@@ -228,7 +243,7 @@ class GraphEditor:
         Raises:
             VertexNotFoundError: If to_vertex is not a valid vertex identifier.
         """
-        self.require_valid_vertex(to_vertex, "Target")
+        self.require_valid_vertex(to_vertex, FIELD_TARGET)
         self.graph.edge_dict[edge_name].to_vertex = to_vertex
 
     def edit_vertex_effects(
@@ -285,7 +300,7 @@ class GraphEditor:
         Returns:
             int: Next index to use for "edge_<index>" ids.
         """
-        return self.get_next_index(self.graph.edge_dict, "edge_")
+        return self.get_next_index(self.graph.edge_dict, EDGE_PREFIX)
 
     def get_next_index(self, node_dict: dict[str, Any], prefix: str) -> int:
         """Compute the next numeric suffix for ids with a shared prefix.
@@ -314,7 +329,7 @@ class GraphEditor:
         Returns:
             int: Next index to use for "vertex_<index>" ids.
         """
-        return self.get_next_index(self.graph.vertex_dict, "vertex_")
+        return self.get_next_index(self.graph.vertex_dict, VERTEX_PREFIX)
 
     def load(
         self, 
@@ -377,9 +392,9 @@ class GraphEditor:
         Raises:
             VertexCannotBeDeletedError: If vertex_name is vertex_0.
         """
-        if vertex_name == "vertex_0":
+        if vertex_name == START_VERTEX:
             raise VertexCannotBeDeletedError(
-                "vertex_0 is mandatory and cannot be deleted."
+                MSG_VERTEX_CANNOT_BE_DELETED.format(vertex_name=START_VERTEX)
             )
         if cascade_delete:
             edges_to_remove = [
@@ -392,9 +407,9 @@ class GraphEditor:
                 self.remove_edge(edge_name)
         for edge_name, edge in self.graph.edge_dict.items():
             if edge.from_vertex == vertex_name:
-                self.edit_from_vertex(edge_name, "__MISSING__")
+                self.edit_from_vertex(edge_name, MISSING_VERTEX)
             if edge.to_vertex == vertex_name:
-                self.edit_to_vertex(edge_name, "__MISSING__")
+                self.edit_to_vertex(edge_name, MISSING_VERTEX)
         del self.graph.vertex_dict[vertex_name]
 
     def require_valid_vertex(
@@ -413,7 +428,7 @@ class GraphEditor:
                 "__MISSING__".
         """
         if (
-            vertex_name != "__MISSING__" 
+            vertex_name != MISSING_VERTEX
             and vertex_name not in self.graph.vertex_dict
         ):
             raise VertexNotFoundError(vertex_name, field_name)
@@ -426,12 +441,12 @@ class GraphEditor:
             yaml_file (str | PathLike | None): Destination file path.
 
         Raises:
-            ValueError: If no desination path is available.
+            ValueError: If no destination path is available.
         """
         if yaml_file is None:
             yaml_file = self.yaml_file
         if yaml_file is None:
-            raise ValueError("No yaml file path is set for save().")
+            raise ValueError(MSG_NO_YAML_PATH)
         yaml_data = self.export_yaml_text()
         with open(yaml_file, "w") as f:
             f.write(yaml_data)

@@ -128,7 +128,7 @@ def test_update_edge_endpoints_does_not_save_invalid_endpoint(app):
     assert was_updated is True
     assert app.graph_editor.graph.edge_dict["edge_0"].from_vertex == "vertex_1"
     assert app.graph_editor.graph.edge_dict["edge_0"].to_vertex == original_to
-    assert warnings == ["Could not update Target for Player node \"edge_0\" because NPC node \"not_a_vertex\" does not exist. Enter an existing NPC node ID in Target and save again."]
+    assert warnings == ["Could not update Target for Player node \"edge_0\" because NPC node \"not_a_vertex\" does not exist. Enter an existing NPC node ID in Target and try again."]
 
 # Unresolved count is based on how many fixes to be made
 def test_count_unresolved_connections_for_vertex_delete(app):

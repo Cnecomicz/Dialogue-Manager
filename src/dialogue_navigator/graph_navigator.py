@@ -1,6 +1,26 @@
 from dialogue_navigator.helper_functions import (
     evaluate_text, get_operator, get_nested_attr, set_nested_attr
 )
+from dialogue_navigator.messages import (
+    MSG_COMPONENT,
+    MSG_COMPONENT_LINE,
+    MSG_DISCONNECTED_GRAPH,
+    MSG_ENDPOINT_NOT_FOUND,
+    MSG_INVALID_EDGE,
+    MSG_MISSING_EDGE_ENDPOINT,
+    MSG_START_VERTEX_MISSING,
+    MSG_UNREACHABLE_VERTEX,
+    MSG_VALIDATION_ERROR_LINE,
+    MSG_VALIDATION_FAILED_HEADER
+)
+from dialogue_model.constants import (
+    EffectType,
+    Endpoint,
+    ListMethod,
+    MISSING_VERTEX,
+    PredicateType,
+    START_VERTEX
+)
 from dialogue_model.edge import Edge
 from dialogue_model.graph import Graph
 
@@ -16,8 +36,11 @@ class AggregatedValidationErrors(Exception):
         """
         self.errors = errors
         message_lines = [
-            "Graph failed runtime validation:",
-            *[f"- {error}" for error in errors]
+            MSG_VALIDATION_FAILED_HEADER,
+            *[
+                MSG_VALIDATION_ERROR_LINE.format(error=error) 
+                for error in errors
+            ]
         ]
         super().__init__("\n".join(message_lines))
 
@@ -33,13 +56,15 @@ class DisconnectedGraphError(Exception):
         """
         self.components = components
         component_strings = [
-            f"Component {i+1}: {component}"
+            MSG_COMPONENT.format(index=i+1, component=component)
             for i, component in enumerate(components)
         ]
         message = (
-            f"Graph is not connected. Found {len(components)} "
-            "connected components:\n"
-            + "\n".join(f". {string}" for string in component_strings)
+            MSG_DISCONNECTED_GRAPH.format(count=len(components)) + "\n"
+            + "\n".join(
+                MSG_COMPONENT_LINE.format(component_string=string)
+                for string in component_strings
+            )
         )
         super().__init__(message)
 
@@ -60,8 +85,9 @@ class EndpointNotFoundError(Exception):
         self.endpoint = endpoint
         self.vertex_name = vertex_name
         super().__init__(
-            f'Edge "{edge_name}" {endpoint} endpoint references unknown '
-            f'vertex "{vertex_name}".'
+            MSG_ENDPOINT_NOT_FOUND.format(
+                edge_name=edge_name, endpoint=endpoint, vertex_name=vertex_name
+            )
         )
 
 class InvalidEdgeError(Exception):
@@ -82,7 +108,11 @@ class MissingEdgeEndpointError(Exception):
         self.edge_name = edge_name
         self.endpoint = endpoint
         super().__init__(
-            f'Edge "{edge_name}" has {endpoint} endpoint set to "__MISSING__".'
+            MSG_MISSING_EDGE_ENDPOINT.format(
+                edge_name=edge_name, 
+                endpoint=endpoint, 
+                missing_vertex=MISSING_VERTEX
+            )
         )
 
 
@@ -102,7 +132,7 @@ class UnreachableVertexError(Exception):
         """
         self.vertex_name = vertex_name
         super().__init__(
-            f'Vertex "{vertex_name}" is unreachable from vertex "vertex_0".'
+            MSG_UNREACHABLE_VERTEX.format(vertex_name=vertex_name)
         )
 
 def collect_validation_errors(graph: Graph) -> list[Exception]:
@@ -117,16 +147,18 @@ def collect_validation_errors(graph: Graph) -> list[Exception]:
     """
     errors = []
     vertex_names = set(graph.vertex_dict.keys())
-    if "vertex_0" not in vertex_names:
+    if START_VERTEX not in vertex_names:
         errors.append(
             StartVertexMissingError(
-                'Required start vertex "vertex_0" is missing.'
+                MSG_START_VERTEX_MISSING.format(start_vertex=START_VERTEX)
             )
         )
     for edge_name, edge in graph.edge_dict.items():
-        endpoints = [("from", edge.from_vertex), ("to", edge.to_vertex)]
+        endpoints = [
+            (Endpoint.FROM, edge.from_vertex), (Endpoint.TO, edge.to_vertex)
+        ]
         for endpoint, vertex_name in endpoints:
-            if vertex_name == "__MISSING__":
+            if vertex_name == MISSING_VERTEX:
                 errors.append(
                     MissingEdgeEndpointError(edge_name, endpoint)
                 )
@@ -134,9 +166,9 @@ def collect_validation_errors(graph: Graph) -> list[Exception]:
                 errors.append(
                     EndpointNotFoundError(edge_name, endpoint, vertex_name)
                 )
-    if "vertex_0" in vertex_names:
-        already_reachable_vertices = {"vertex_0"}
-        frontier_of_traversed_vertices = ["vertex_0"]
+    if START_VERTEX in vertex_names:
+        already_reachable_vertices = {START_VERTEX}
+        frontier_of_traversed_vertices = [START_VERTEX]
         while frontier_of_traversed_vertices:
             current_vertex = frontier_of_traversed_vertices.pop()
             for edge in graph.edge_dict.values():
@@ -146,8 +178,8 @@ def collect_validation_errors(graph: Graph) -> list[Exception]:
                     source == current_vertex
                     and source in vertex_names
                     and target in vertex_names
-                    and source != "__MISSING__"
-                    and target != "__MISSING__"
+                    and source != MISSING_VERTEX
+                    and target != MISSING_VERTEX
                     and target not in already_reachable_vertices
                 ):
                     already_reachable_vertices.add(target)
@@ -202,7 +234,7 @@ class GraphNavigator:
         self.graph = graph
         self.game_state = game_state
         self.validate_graph()
-        self.enter_vertex("vertex_0")
+        self.enter_vertex(START_VERTEX)
 
     @property
     def current_edges(self) -> dict[str, Edge]:
@@ -242,7 +274,7 @@ class GraphNavigator:
         is_valid_edge = True
         for predicate in edge.predicates:
             match predicate["type"]:
-                case "check_value":
+                case PredicateType.CHECK_VALUE:
                     operator_function = get_operator(predicate["op"])
                     current_value = get_nested_attr(
                         self.game_state, predicate["path"]
@@ -250,7 +282,7 @@ class GraphNavigator:
                     predicate_value = predicate["value"]
                     if not(operator_function(current_value, predicate_value)):
                         is_valid_edge = False
-                case "check_list":
+                case PredicateType.CHECK_LIST:
                     operator_function = get_operator(predicate["op"])
                     current_list = get_nested_attr(
                         self.game_state, predicate["path"]
@@ -311,20 +343,20 @@ class GraphNavigator:
             effect (dict[str, str | int]): Effect mapping to be processed.
         """
         match effect["type"]:
-            case "modify_value":
+            case EffectType.MODIFY_VALUE:
                 target_value = get_nested_attr(
                     self.game_state, effect["target"]
                 )
                 new_value = target_value + effect["delta"]
                 set_nested_attr(self.game_state, effect["target"], new_value)
-            case "modify_list":
+            case EffectType.MODIFY_LIST:
                 match effect["method"]:
-                    case "append":
+                    case ListMethod.APPEND:
                         target_list = get_nested_attr(
                             self.game_state, effect["target"]
                         )
                         target_list.append(effect["value"])
-                    case "remove":
+                    case ListMethod.REMOVE:
                         target_list = get_nested_attr(
                             self.game_state, effect["target"]
                         )
@@ -341,12 +373,9 @@ class GraphNavigator:
         """
         if edge_name not in self.get_current_edges():
             raise InvalidEdgeError(
-                f"Cannot select {edge_name} at vertex "
-                f"{self.current_vertex} with the current game state. "
-                f"{edge_name=}, "
-                f"{self.current_vertex=}, "
-                f"{self.graph=}, "
-                f"{self.game_state=}"
+                MSG_INVALID_EDGE.format(
+                    edge_name=edge_name, current_vertex=self.current_vertex
+                )
             )
         edge = self.current_edges[edge_name]
         for effect in edge.effects:

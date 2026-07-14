@@ -1,7 +1,16 @@
 from dialogue_model.codecs import (
     convert_effect_to_text, convert_predicate_to_text
 )
+from dialogue_model.constants import MISSING_VERTEX, START_VERTEX
 from dialogue_model.graph import Graph
+from dialogue_viewer.theme import (
+    LABEL_EFFECTS,
+    LABEL_FROM_MISSING,
+    LABEL_PREDICATES,
+    LABEL_START,
+    LABEL_TEXT,
+    LABEL_TO_MISSING
+)
 
 class CytoscapeAdapter:
     """Adapt a graph model to Dash Cytoscape nodes and edges."""
@@ -25,7 +34,7 @@ class CytoscapeAdapter:
         for edge_name, edge in self.graph.edge_dict.items():
             if (
                 edge.from_vertex 
-                and edge.from_vertex != "__MISSING__" 
+                and edge.from_vertex != MISSING_VERTEX
                 and edge.from_vertex in self.graph.vertex_dict
             ):
                 edges.append(
@@ -33,7 +42,7 @@ class CytoscapeAdapter:
                 )
             if (
                 edge.to_vertex
-                and edge.to_vertex != "__MISSING__"
+                and edge.to_vertex != MISSING_VERTEX
                 and edge.to_vertex in self.graph.vertex_dict
             ):
                 edges.append(
@@ -52,13 +61,13 @@ class CytoscapeAdapter:
         # Nodes from vertices
         for vertex_name, vertex in self.graph.vertex_dict.items():
             effects_text = self.get_effects_text(vertex.effects)
-            dialogue_text = f"TEXT:\n{vertex.text}"
+            dialogue_text = f"{LABEL_TEXT}\n{vertex.text}"
             if effects_text:
                 text = f"{effects_text}\n{dialogue_text}"
             else:
                 text = dialogue_text
-            if vertex_name == "vertex_0":
-                text = f"START\n\n{text}"
+            if vertex_name == START_VERTEX:
+                text = f"{LABEL_START}\n\n{text}"
                 nodes.append(
                     {
                         "data": {
@@ -72,14 +81,14 @@ class CytoscapeAdapter:
                 nodes.append({"data": {"id": vertex_name, "label": text}})
         # Nodes from edges
         for edge_name, edge in self.graph.edge_dict.items():
-            has_missing_from = edge.from_vertex == "__MISSING__"
-            has_missing_to = edge.to_vertex == "__MISSING__"
+            has_missing_from = edge.from_vertex == MISSING_VERTEX
+            has_missing_to = edge.to_vertex == MISSING_VERTEX
             unresolved_text = ""
             if has_missing_from:
-                unresolved_text += "FROM: missing\n"
+                unresolved_text += f"{LABEL_FROM_MISSING}\n"
             if has_missing_to:
-                unresolved_text += "TO: missing\n"
-            dialogue_text = f"TEXT:\n{edge.text}\n"
+                unresolved_text += f"{LABEL_TO_MISSING}\n"
+            dialogue_text = f"{LABEL_TEXT}\n{edge.text}\n"
             predicates_text = self.get_predicates_text(edge.predicates)
             effects_text = self.get_effects_text(edge.effects)
             text = unresolved_text + dialogue_text
@@ -112,7 +121,7 @@ class CytoscapeAdapter:
             str: Prefixed multiline effects text.
         """
         if effects:
-            effects_text = "EFFECTS:\n"
+            effects_text = f"{LABEL_EFFECTS}\n"
             for effect in effects:
                 effects_text += convert_effect_to_text(effect)+"\n"
         else:
@@ -131,7 +140,7 @@ class CytoscapeAdapter:
             str: Prefixed multiline predicates text.
         """
         if predicates:
-            predicates_text = "PREDICATES:\n"
+            predicates_text = f"{LABEL_PREDICATES}\n"
             for predicate in predicates:
                 predicates_text += convert_predicate_to_text(predicate)+"\n"
         else:

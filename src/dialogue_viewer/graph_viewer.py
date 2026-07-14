@@ -1,9 +1,24 @@
 from graphviz import Digraph
 from os import PathLike
 
+from dialogue_model.constants import START_VERTEX
 from dialogue_model.graph import Graph
 from dialogue_model.codecs import (
     convert_effect_to_text, convert_predicate_to_text
+)
+from dialogue_viewer.theme import (
+    COLOR_BACKGROUND,
+    COLOR_EDGE_LINE,
+    COLOR_EDGE_NODE_FILL,
+    COLOR_FONT,
+    COLOR_NODE_BORDER,
+    COLOR_START_VERTEX_BORDER,
+    COLOR_START_VERTEX_FILL,
+    COLOR_VERTEX_FILL,
+    LABEL_EFFECTS,
+    LABEL_PREDICATES,
+    LABEL_START,
+    LABEL_TEXT
 )
 
 class GraphViewer:
@@ -27,7 +42,7 @@ class GraphViewer:
             str: Escaped multiline effects block, or an empty string.
         """
         if effects:
-            effects_text = r"EFFECTS:\n"
+            effects_text = fr"{LABEL_EFFECTS}\n"
             for effect in effects:
                 effects_text += convert_effect_to_text(effect)+r"\n"
         else:
@@ -46,7 +61,7 @@ class GraphViewer:
             str: Escaped multiline predicates block, or an empty string.
         """
         if predicates:
-            predicates_text = r"PREDICATES:\n"
+            predicates_text = fr"{LABEL_PREDICATES}\n"
             for predicate in predicates:
                 predicates_text += convert_predicate_to_text(predicate)+r"\n"
         else:
@@ -63,7 +78,7 @@ class GraphViewer:
         graph = Graph(yaml_file=self.yaml_file)
         dot = Digraph(comment=graph.name)
         dot.attr(
-            bgcolor="#303841",
+            bgcolor=COLOR_BACKGROUND,
             rankdir="TB",
             pad="0.5"
         )
@@ -73,30 +88,30 @@ class GraphViewer:
         )
         dot.attr(
             "node",
-            fontcolor="#e6e6e6",
+            fontcolor=COLOR_FONT,
             fontname="Helvetica",
             justify="center",
             margin="0.25,0.1"
         )
         dot.attr(
             "edge",
-            color="#cccccc",
-            fontcolor="#e6e6e6",
+            color=COLOR_EDGE_LINE,
+            fontcolor=COLOR_FONT,
             fontname="Helvetica",
         )
         for vertex_name, vertex in graph.vertex_dict.items():
             effects_text = self.get_effects_text(vertex.effects)
-            dialogue_text = fr"TEXT:\n{vertex.text}"
+            dialogue_text = fr"{LABEL_TEXT}\n{vertex.text}"
             if effects_text:
                 text = fr"{effects_text}\n{dialogue_text}"
             else:
                 text = dialogue_text
-            fill_color = "#a36a2a"
-            border_color = "#aaaaaa"
-            if vertex_name == "vertex_0":
-                text = fr"START\n\n{text}"
-                fill_color = "#a84a07"
-                border_color = "#d6c29b"
+            fill_color = COLOR_VERTEX_FILL
+            border_color = COLOR_NODE_BORDER
+            if vertex_name == START_VERTEX:
+                text = fr"{LABEL_START}\n\n{text}"
+                fill_color = COLOR_START_VERTEX_FILL
+                border_color = COLOR_START_VERTEX_BORDER
             dot.node(
                 vertex_name, 
                 text,
@@ -106,7 +121,7 @@ class GraphViewer:
                 color=border_color
             )
         for edge_name, edge in graph.edge_dict.items():
-            dialogue_text = fr"TEXT:\n{edge.text}\n"
+            dialogue_text = fr"{LABEL_TEXT}\n{edge.text}\n"
             predicates_text = self.get_predicates_text(edge.predicates)
             effects_text = self.get_effects_text(edge.effects)
             text = dialogue_text
@@ -118,8 +133,8 @@ class GraphViewer:
                 edge_name,
                 text,
                 style="filled",
-                fillcolor="#336699",
-                color="#aaaaaa"
+                fillcolor=COLOR_EDGE_NODE_FILL,
+                color=COLOR_NODE_BORDER
             )
             dot.edge(
                 edge.from_vertex, 

@@ -4,6 +4,102 @@ from datetime import datetime
 from pathlib import Path
 from tomllib import load as toml_load
 
+from dash_app.element_ids import ElementId
+from dash_app.enums import CascadeValue
+from dash_app.messages import (
+    BUTTON_CANCEL,
+    BUTTON_CLOSE,
+    BUTTON_NEW,
+    BUTTON_OPEN,
+    BUTTON_QUIT,
+    BUTTON_SAVE,
+    BUTTON_SELECT_FROM_GRAPH,
+    BUTTON_SHORTCUTS,
+    CONFIRM_DELETE_NODE_QUESTION,
+    DEFAULT_DOCUMENT_NAME,
+    DEFAULT_NODE_DISPLAY,
+    HEADER_LOG,
+    HEADER_NPC_NAME,
+    HEADER_SELECTED_NODE,
+    LABEL_CASCADE_OPTION,
+    LABEL_DIALOGUE,
+    LABEL_DOCUMENT,
+    LABEL_EFFECTS,
+    LABEL_PREDICATES,
+    LABEL_SOURCE_NPC,
+    LABEL_TARGET_NPC,
+    MENU_DELETE_NODE,
+    MENU_EDIT_NODE,
+    PLACEHOLDER_EFFECTS,
+    PLACEHOLDER_NPC_NAME,
+    PLACEHOLDER_PREDICATES,
+    PLACEHOLDER_SOURCE_NPC,
+    PLACEHOLDER_TARGET_NPC,
+    SHORTCUTS_HELP,
+    SHORTCUTS_HELP_FOOTER,
+    TITLE_ADD_NPC,
+    TITLE_ADD_PLAYER,
+    TITLE_DIALOGUE_EDITOR,
+    TITLE_FORM,
+    TITLE_KEYBOARD_SHORTCUTS,
+    TOOLTIP_ADD_NPC_BUTTON,
+    TOOLTIP_NEW,
+    TOOLTIP_OPEN,
+    TOOLTIP_QUIT,
+    TOOLTIP_SAVE_COPY,
+    TOOLTIP_SHORTCUTS
+)
+from dash_app.theme import (
+    COLOR_DANGER_BG,
+    COLOR_DANGER_BORDER,
+    COLOR_DARK_BG,
+    COLOR_DELETE_HIGHLIGHT,
+    COLOR_INPUT_BG,
+    COLOR_INPUT_BORDER,
+    COLOR_INPUT_TEXT,
+    COLOR_LOG_ROW_BORDER,
+    COLOR_PANEL_ALT_BG,
+    COLOR_PANEL_BG,
+    COLOR_PANEL_BORDER,
+    COLOR_PRIMARY_BG,
+    COLOR_ROW_BORDER,
+    COLOR_SELECT_HIGHLIGHT,
+    COLOR_TEXT,
+    COLOR_TEXT_DOCUMENT,
+    COLOR_TEXT_LIGHT,
+    COLOR_TEXT_MUTED,
+    FONT_SIZE_BASE,
+    FONT_SIZE_H1,
+    FONT_SIZE_H2,
+    FONT_SIZE_LG,
+    FONT_SIZE_TITLE,
+    FONT_SIZE_XS,
+    get_close_button_style,
+    get_input_style,
+    get_key_badge_style,
+    get_label_style,
+    get_panel_button_danger_style,
+    get_panel_button_enabled_style,
+    get_pick_button_style,
+    get_primary_button_style,
+    get_textarea_style,
+    get_toolbar_button_style,
+    PANEL_WIDTH,
+    RADIUS,
+    RADIUS_LG,
+    thin_border
+)
+from dialogue_viewer.theme import (
+    COLOR_BACKGROUND,
+    COLOR_EDGE_LINE,
+    COLOR_EDGE_NODE_FILL,
+    COLOR_FONT,
+    COLOR_NODE_BORDER,
+    COLOR_START_VERTEX_BORDER,
+    COLOR_START_VERTEX_FILL,
+    COLOR_VERTEX_FILL
+)
+
 def build_log_children(entries: list[dict[str, str]] | None) -> list[html.Div]:
     """Build log row components from entries in reverse-chronological order.
 
@@ -39,47 +135,33 @@ def get_bottom_panel() -> html.Div:
     Returns:
         html.Div: Bottom panel component containing all form fields.
     """
-    primary_button_style = {
-        "padding": "8px 14px",
-        "backgroundColor": "#4b5563",
-        "color": "#e6e6e6",
-        "border": "1px solid #666",
-        "borderRadius": "4px",
-        "cursor": "pointer"
-    }
-    secondary_button_style = {
-        "padding": "8px 14px",
-        "backgroundColor": "#333",
-        "color": "#e6e6e6",
-        "border": "1px solid #555",
-        "borderRadius": "4px",
-        "cursor": "pointer"
-    }
+    primary_button_style = get_primary_button_style()
+    secondary_button_style = get_close_button_style()
     return html.Div(
         [
             html.Div(
                 [
                     html.H2(
-                        "Form",
-                        id="bottom-panel-title",
+                        TITLE_FORM,
+                        id=ElementId.BOTTOM_PANEL_TITLE,
                         style={
                             "margin": "0",
-                            "fontSize": "18px",
-                            "color": "#e6e6e6",
+                            "fontSize": FONT_SIZE_TITLE,
+                            "color": COLOR_TEXT,
                             "flex": "1"
                         }
                     ),
                     html.Div(
                         [
                             html.Button(
-                                "Save",
-                                id="bottom-panel-save",
+                                BUTTON_SAVE,
+                                id=ElementId.BOTTOM_PANEL_SAVE,
                                 n_clicks=0,
                                 style=primary_button_style
                             ),
                             html.Button(
-                                "Cancel",
-                                id="bottom-panel-close",
+                                BUTTON_CANCEL,
+                                id=ElementId.BOTTOM_PANEL_CLOSE,
                                 n_clicks=0,
                                 style=secondary_button_style
                             )
@@ -93,19 +175,19 @@ def get_bottom_panel() -> html.Div:
                     "alignItems": "center",
                     "marginBottom": "16px",
                     "paddingBottom": "12px",
-                    "borderBottom": "1px solid #444"
+                    "borderBottom": thin_border(COLOR_PANEL_BORDER)
                 }
             ),
             html.Div(
                 [
-                    html.Label("Dialogue", style=get_label_style()),
+                    html.Label(LABEL_DIALOGUE, style=get_label_style()),
                     dcc.Textarea(
-                        id="bottom-form-dialogue",
-                        placeholder="Dialogue",
+                        id=ElementId.BOTTOM_FORM_DIALOGUE,
+                        placeholder=LABEL_DIALOGUE,
                         style=get_textarea_style("100px")
                     )
                 ],
-                id="bottom-form-dialogue-container",
+                id=ElementId.BOTTOM_FORM_DIALOGUE_CONTAINER,
                 style={"marginBottom": "12px"}
             ),
             html.Div(
@@ -113,14 +195,14 @@ def get_bottom_panel() -> html.Div:
                     html.Div(
                         [
                             html.Label(
-                                "Source NPC Node", style=get_label_style()
+                                LABEL_SOURCE_NPC, style=get_label_style()
                             ),
                             html.Div(
                                 [
                                     dcc.Input(
-                                        id="bottom-form-source",
+                                        id=ElementId.BOTTOM_FORM_SOURCE,
                                         type="text",
-                                        placeholder="Source NPC node",
+                                        placeholder=PLACEHOLDER_SOURCE_NPC,
                                         style={
                                             **get_input_style(),
                                             "flex": "1",
@@ -128,19 +210,10 @@ def get_bottom_panel() -> html.Div:
                                         }
                                     ),
                                     html.Button(
-                                        "Select From Graph",
-                                        id="bottom-form-pick-source",
+                                        BUTTON_SELECT_FROM_GRAPH,
+                                        id=ElementId.BOTTOM_FORM_PICK_SOURCE,
                                         n_clicks=0,
-                                        style={
-                                            "padding": "6px 10px",
-                                            "backgroundColor": "#5a6370",
-                                            "color": "#e6e6e6",
-                                            "border": "1px solid #777",
-                                            "borderRadius": "4px",
-                                            "cursor": "pointer",
-                                            "fontSize": "12px",
-                                            "marginLeft": "8px"
-                                        }
+                                        style=get_pick_button_style()
                                     )
                                 ],
                                 style={
@@ -155,19 +228,19 @@ def get_bottom_panel() -> html.Div:
                             "minWidth": "280px",
                             "marginRight": "8px"
                         },
-                        id="bottom-form-source-container"
+                        id=ElementId.BOTTOM_FORM_SOURCE_CONTAINER
                     ),
                     html.Div(
                         [
                             html.Label(
-                                "Target NPC Node", style=get_label_style()
+                                LABEL_TARGET_NPC, style=get_label_style()
                             ),
                             html.Div(
                                 [
                                     dcc.Input(
-                                        id="bottom-form-target",
+                                        id=ElementId.BOTTOM_FORM_TARGET,
                                         type="text",
-                                        placeholder="Target NPC node",
+                                        placeholder=PLACEHOLDER_TARGET_NPC,
                                         style={
                                             **get_input_style(),
                                             "flex": "1",
@@ -175,19 +248,10 @@ def get_bottom_panel() -> html.Div:
                                         }
                                     ),
                                     html.Button(
-                                        "Select From Graph",
-                                        id="bottom-form-pick-target",
+                                        BUTTON_SELECT_FROM_GRAPH,
+                                        id=ElementId.BOTTOM_FORM_PICK_TARGET,
                                         n_clicks=0,
-                                        style={
-                                            "padding": "6px 10px",
-                                            "backgroundColor": "#5a6370",
-                                            "color": "#e6e6e6",
-                                            "border": "1px solid #777",
-                                            "borderRadius": "4px",
-                                            "cursor": "pointer",
-                                            "fontSize": "12px",
-                                            "marginLeft": "8px"
-                                        }
+                                        style=get_pick_button_style()
                                     )
                                 ],
                                 style={
@@ -201,7 +265,7 @@ def get_bottom_panel() -> html.Div:
                             "flex": "1",
                             "minWidth": "280px"
                         },
-                        id="bottom-form-target-container"
+                        id=ElementId.BOTTOM_FORM_TARGET_CONTAINER
                     )
                 ],
                 style={
@@ -215,14 +279,17 @@ def get_bottom_panel() -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Label("Predicates", style=get_label_style()),
+                            html.Label(
+                                LABEL_PREDICATES, 
+                                style=get_label_style()
+                            ),
                             dcc.Textarea(
-                                id="bottom-form-predicates",
-                                placeholder="Predicates (one per line)",
+                                id=ElementId.BOTTOM_FORM_PREDICATES,
+                                placeholder=PLACEHOLDER_PREDICATES,
                                 style=get_textarea_style("70px")
                             )
                         ],
-                        id="bottom-form-predicates-container",
+                        id=ElementId.BOTTOM_FORM_PREDICATES_CONTAINER,
                         style={
                             "flex": "1", 
                             "minWidth": "300px", 
@@ -231,14 +298,14 @@ def get_bottom_panel() -> html.Div:
                     ),
                     html.Div(
                         [
-                            html.Label("Effects", style=get_label_style()),
+                            html.Label(LABEL_EFFECTS, style=get_label_style()),
                             dcc.Textarea(
-                                id="bottom-form-effects",
-                                placeholder="Effects (one per line)",
+                                id=ElementId.BOTTOM_FORM_EFFECTS,
+                                placeholder=PLACEHOLDER_EFFECTS,
                                 style=get_textarea_style("70px")
                             )
                         ],
-                        id="bottom-form-effects-container",
+                        id=ElementId.BOTTOM_FORM_EFFECTS_CONTAINER,
                         style={"flex": "1", "minWidth": "300px"}
                     )
                 ],
@@ -252,41 +319,36 @@ def get_bottom_panel() -> html.Div:
             html.Div(
                 [
                     html.Div(
-                        "Are you sure you want to delete the selected node?",
-                        id="bottom-form-delete-message-container",
+                        CONFIRM_DELETE_NODE_QUESTION,
+                        id=ElementId.BOTTOM_FORM_DELETE_MESSAGE_CONTAINER,
                         style={
                             "display": "none",
                             "marginBottom": "12px",
-                            "color": "#e6e6e6"
+                            "color": COLOR_TEXT
                         }
                     ),
                     html.Div(
                         [
                             dcc.Checklist(
-                                id="bottom-form-cascade",
+                                id=ElementId.BOTTOM_FORM_CASCADE,
                                 options=[
                                     {
-                                        "label": (
-                                            "Delete all connected player "
-                                            "nodes? If you do not, you may "
-                                            "need to repair unresolved "
-                                            "connections."
-                                        ),
-                                        "value": "cascade"
+                                        "label": LABEL_CASCADE_OPTION,
+                                        "value": CascadeValue.CASCADE
                                     }
                                 ],
                                 value=[],
-                                labelStyle={"color": "#e5e7eb"},
-                                style={"color": "#e5e7eb"}
+                                labelStyle={"color": COLOR_TEXT_LIGHT},
+                                style={"color": COLOR_TEXT_LIGHT}
                             )
                         ]
                     )
                 ],
-                id="bottom-form-cascade-container",
+                id=ElementId.BOTTOM_FORM_CASCADE_CONTAINER,
                 style={"display": "none"}
             )
         ],
-        id="bottom-panel",
+        id=ElementId.BOTTOM_PANEL,
         style=get_bottom_panel_style(False)
     )
 
@@ -305,8 +367,8 @@ def get_bottom_panel_style(is_open: bool) -> dict[str, str | int]:
         "bottom": "0",
         "left": "0",
         "right": "0",
-        "backgroundColor": "#252d35",
-        "borderTop": "1px solid #444",
+        "backgroundColor": COLOR_PANEL_ALT_BG,
+        "borderTop": thin_border(COLOR_PANEL_BORDER),
         "padding": "16px",
         "boxSizing": "border-box",
         "maxHeight": "45vh",
@@ -336,7 +398,7 @@ def get_center_panel(
                 [
                     html.Div(
                         get_graph_component(initial_elements, context_menu),
-                        id="graph-container",
+                        id=ElementId.GRAPH_CONTAINER,
                         style={"flex": "1", "minHeight": 0}
                     ),
                     get_bottom_panel()
@@ -371,10 +433,10 @@ def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
             "selector": "node",
             "style": {
                 "shape": "round-rectangle",
-                "background-color": "#a36a2a",
-                "border-color": "#aaaaaa",
+                "background-color": COLOR_VERTEX_FILL,
+                "border-color": COLOR_NODE_BORDER,
                 "border-width": 2,
-                "color": "#e6e6e6",
+                "color": COLOR_FONT,
                 "font-family": "Helvetica",
                 "font-size": "12px",
                 "label": "data(label)",
@@ -392,17 +454,17 @@ def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
         {
             "selector": "edge",
             "style": {
-                "line-color": "#cccccc",
-                "target-arrow-color": "#cccccc",
+                "line-color": COLOR_EDGE_LINE,
+                "target-arrow-color": COLOR_EDGE_LINE,
                 "target-arrow-shape": "triangle",
-                "color": "#e6e6e6",
+                "color": COLOR_FONT,
                 "curve-style": "bezier"
             }
         },
         {
             "selector": "node:selected",
             "style": {
-                "border-color": "#fbbf24",
+                "border-color": COLOR_SELECT_HIGHLIGHT,
                 "border-width": 4
             }
         },
@@ -410,38 +472,38 @@ def get_cytoscape_stylesheet() -> list[dict[str, str | dict[str, str | int]]]:
             "selector": "[?is_edge_node]",
             "style": {
                 "shape": "ellipse",
-                "background-color": "#336699",
+                "background-color": COLOR_EDGE_NODE_FILL,
                 "padding": "30px"
             }
         },
         {
             "selector": "[?is_start_vertex]",
             "style": {
-                "border-color": "#d6c29b",
+                "border-color": COLOR_START_VERTEX_BORDER,
                 "border-width": 3,
-                "background-color": "#a84a07",
+                "background-color": COLOR_START_VERTEX_FILL,
                 "font-weight": "bold"
             }
         },
         {
             "selector": "[?is_start_vertex]:selected",
             "style": {
-                "border-color": "#fbbf24",
+                "border-color": COLOR_SELECT_HIGHLIGHT,
                 "border-width": 4
             }
         },
         {
             "selector": "[?has_missing_endpoint]",
             "style": {
-                "border-color": "#ef4444",
+                "border-color": COLOR_DELETE_HIGHLIGHT,
                 "border-width": 4,
-                "background-color": "#7f1d1d"
+                "background-color": COLOR_DANGER_BG
             }
         },
         {
             "selector": "[?has_missing_endpoint]:selected",
             "style": {
-                "border-color": "#fbbf24",
+                "border-color": COLOR_SELECT_HIGHLIGHT,
                 "border-width": 6
             }
         }
@@ -454,18 +516,18 @@ def get_edit_section() -> list:
         list: Dash components showing currently selected node.
     """
     return [
-        html.H3("Selected Node"),
+        html.H3(HEADER_SELECTED_NODE),
         html.Div(
-            "None",
-            id="selected-node-display",
+            DEFAULT_NODE_DISPLAY,
+            id=ElementId.SELECTED_NODE_DISPLAY,
             style={
                 "padding": "8px",
                 "marginBottom": "12px",
-                "backgroundColor": "#111827",
-                "border": "1px solid #4b5563",
-                "borderRadius": "4px",
-                "color": "#e5e7eb",
-                "fontSize": "14px"
+                "backgroundColor": COLOR_DARK_BG,
+                "border": thin_border(COLOR_PRIMARY_BG),
+                "borderRadius": RADIUS,
+                "color": COLOR_TEXT_LIGHT,
+                "fontSize": FONT_SIZE_BASE
             }
         )
     ]
@@ -495,13 +557,13 @@ def get_graph_component(
     """
     return html.Div(
         Cytoscape(
-            id="dialogue-editor",
+            id=ElementId.DIALOGUE_EDITOR,
             layout={"name": "dagre", "rankDir": "TB"},
             clearOnUnhover=True,
             style={
                 "width": "100%",
                 "height": "100%",
-                "backgroundColor": "#303841"
+                "backgroundColor": COLOR_BACKGROUND
             },
             elements=elements,
             contextMenu=context_menu or [],
@@ -517,62 +579,54 @@ def get_header() -> html.Div:
     Returns:
         html.Div: Header component with new/open/save controls.
     """
-    button_style = {
-        "padding": "8px 14px",
-        "fontSize": "16px",
-        "backgroundColor": "#374151",
-        "color": "#e5e7eb",
-        "border": "1px solid #4b5563",
-        "borderRadius": "4px",
-        "cursor": "pointer"
-    }
+    button_style = get_toolbar_button_style()
     return html.Div(
         [
             html.Button(
-                "New",
-                id="new-graph",
+                BUTTON_NEW,
+                id=ElementId.NEW_GRAPH,
                 n_clicks=0,
-                title="Start a new empty graph (Ctrl+N)",
+                title=TOOLTIP_NEW,
                 style=button_style
             ),
             html.Div(
                 get_upload_graph(button_style),
-                id="upload-graph-container",
+                id=ElementId.UPLOAD_GRAPH_CONTAINER,
                 style={"display": "inline-block"}
             ),
             html.Button(
-                "Save",
-                id="download-graph",
+                BUTTON_SAVE,
+                id=ElementId.DOWNLOAD_GRAPH,
                 n_clicks=0,
-                title="Download a copy of this graph as yaml (Ctrl+S)",
+                title=TOOLTIP_SAVE_COPY,
                 style=button_style
             ),
             html.Div(
-                "Document: Untitled",
-                id="current-document-label",
+                LABEL_DOCUMENT.format(name=DEFAULT_DOCUMENT_NAME),
+                id=ElementId.CURRENT_DOCUMENT_LABEL,
                 style={
-                    "fontSize": "16px",
-                    "color": "#d1d5db",
+                    "fontSize": FONT_SIZE_LG,
+                    "color": COLOR_TEXT_DOCUMENT,
                     "marginLeft": "8px"
                 }
             ),
             html.Div(style={"flex": "1"}),
             html.Button(
-                "Shortcuts",
-                id="open-shortcuts-help",
+                BUTTON_SHORTCUTS,
+                id=ElementId.OPEN_SHORTCUTS_HELP,
                 n_clicks=0,
-                title="Show all keyboard shortcuts (?)",
+                title=TOOLTIP_SHORTCUTS,
                 style=button_style
             ),
             html.Button(
-                "Quit",
-                id="quit-editor",
+                BUTTON_QUIT,
+                id=ElementId.QUIT_EDITOR,
                 n_clicks=0,
-                title="Close the editor (Ctrl+Q)",
+                title=TOOLTIP_QUIT,
                 style={
                     **button_style,
-                    "backgroundColor": "#7f1d1d",
-                    "border": "1px solid #c53030"
+                    "backgroundColor": COLOR_DANGER_BG,
+                    "border": thin_border(COLOR_DANGER_BORDER)
                 }
             )
         ],
@@ -583,8 +637,8 @@ def get_header() -> html.Div:
             "gap": "8px",
             "whiteSpace": "nowrap",
             "overflow": "hidden",
-            "backgroundColor": "#1f252b",
-            "borderBottom": "1px solid #444",
+            "backgroundColor": COLOR_PANEL_BG,
+            "borderBottom": thin_border(COLOR_PANEL_BORDER),
             "flexShrink": 0,
             "padding": "8px 10px"
         }
@@ -611,7 +665,7 @@ def get_index_string() -> str:
                         width: 100%;
                         height: 100%;
                         overflow: hidden;
-                        background-color: #1f252b;
+                        background-color: """ + COLOR_PANEL_BG + """;
                     }
                     .cy-context-menus-cxt-menu,
                     .cy-context-menus-cxt-menuitem,
@@ -636,37 +690,6 @@ def get_index_string() -> str:
         </html>
     """
 
-def get_input_style() -> dict[str, str | int]:
-    """Return consistent styling for text input fields.
-
-    Returns:
-        dict[str, str | int]: Inline style for inputs.
-    """
-    return {
-        "width": "100%",
-        "backgroundColor": "#ffffff",
-        "color": "#111827",
-        "caretColor": "#111827",
-        "border": "1px solid #9ca3af",
-        "fontSize": "14px",
-        "padding": "6px 8px",
-        "boxSizing": "border-box"
-    }
-
-def get_label_style() -> dict[str, str | int]:
-    """Return consistent styling for form labels.
-
-    Returns:
-        dict[str, str | int]: Inline style for labels.
-    """
-    return {
-        "fontWeight": "bold",
-        "marginBottom": "4px",
-        "marginTop": "12px",
-        "color": "#e5e7eb",
-        "fontSize": "14px"
-    }
-
 def get_left_panel(initial_name: str, author: str, version: str) -> html.Div:
     """Build the left sidebar panel with title, controls, and action buttons.
 
@@ -686,12 +709,12 @@ def get_left_panel(initial_name: str, author: str, version: str) -> html.Div:
     return html.Div(
         [
             html.H1(
-                "Dialogue Editor",
+                TITLE_DIALOGUE_EDITOR,
                 style={
                     "marginTop": "0",
                     "marginBottom": "4px",
-                    "color": "#e6e6e6",
-                    "fontSize": "24px",
+                    "color": COLOR_TEXT,
+                    "fontSize": FONT_SIZE_H1,
                     "fontWeight": "bold"
                 }
             ),
@@ -700,8 +723,8 @@ def get_left_panel(initial_name: str, author: str, version: str) -> html.Div:
                 style={
                     "marginTop": "0",
                     "marginBottom": "20px",
-                    "color": "#9ca3af",
-                    "fontSize": "12px"
+                    "color": COLOR_TEXT_MUTED,
+                    "fontSize": FONT_SIZE_XS
                 }
             ),
             html.Hr(style={"margin": "16px 0"}),
@@ -710,91 +733,55 @@ def get_left_panel(initial_name: str, author: str, version: str) -> html.Div:
             *get_edit_section(),
             html.Hr(style={"margin": "16px 0"}),
             html.Button(
-                "Add NPC Dialogue",
-                id="open-add-vertex-modal",
+                TITLE_ADD_NPC,
+                id=ElementId.OPEN_ADD_VERTEX_MODAL,
                 n_clicks=0,
-                title="Create a new NPC dialogue node (N)",
-                style={
-                    "width": "100%",
-                    "padding": "10px",
-                    "marginBottom": "8px",
-                    "backgroundColor": "#4b5563",
-                    "color": "#e6e6e6",
-                    "border": "1px solid #666",
-                    "borderRadius": "4px",
-                    "cursor": "pointer"
-                }
+                title=TOOLTIP_ADD_NPC_BUTTON,
+                style=get_panel_button_enabled_style()
             ),
             html.Div(
                 html.Button(
-                    "Add Player Dialogue",
-                    id="open-add-edge-modal",
+                    TITLE_ADD_PLAYER,
+                    id=ElementId.OPEN_ADD_EDGE_MODAL,
                     n_clicks=0,
-                    style={
-                        "width": "100%",
-                        "padding": "10px",
-                        "marginBottom": "8px",
-                        "backgroundColor": "#4b5563",
-                        "color": "#e6e6e6",
-                        "border": "1px solid #666",
-                        "borderRadius": "4px",
-                        "cursor": "pointer"
-                    }
+                    style=get_panel_button_enabled_style()
                 ),
-                id="open-add-edge-tooltip",
+                id=ElementId.OPEN_ADD_EDGE_TOOLTIP,
                 title="",
                 style={"display": "block"}
             ),
             html.Div(
                 html.Button(
-                    "Edit Selected Node",
-                    id="open-edit-modal",
+                    MENU_EDIT_NODE,
+                    id=ElementId.OPEN_EDIT_MODAL,
                     n_clicks=0,
-                    style={
-                        "width": "100%",
-                        "padding": "10px",
-                        "marginBottom": "8px",
-                        "backgroundColor": "#4b5563",
-                        "color": "#e6e6e6",
-                        "border": "1px solid #666",
-                        "borderRadius": "4px",
-                        "cursor": "pointer"
-                    }
+                    style=get_panel_button_enabled_style()
                 ),
-                id="open-edit-tooltip",
+                id=ElementId.OPEN_EDIT_TOOLTIP,
                 title="",
                 style={"display": "block"}
             ),
             html.Div(
                 html.Button(
-                    "Delete Selected Node",
-                    id="open-delete-modal",
+                    MENU_DELETE_NODE,
+                    id=ElementId.OPEN_DELETE_MODAL,
                     n_clicks=0,
-                    style={
-                        "width": "100%",
-                        "padding": "10px",
-                        "marginBottom": "8px",
-                        "backgroundColor": "#7f1d1d",
-                        "color": "#e6e6e6",
-                        "border": "1px solid #c53030",
-                        "borderRadius": "4px",
-                        "cursor": "pointer"
-                    }
+                    style=get_panel_button_danger_style()
                 ),
-                id="open-delete-tooltip",
+                id=ElementId.OPEN_DELETE_TOOLTIP,
                 title="",
                 style={"display": "block"}
             )
         ],
         style={
-            "width": "320px",
+            "width": PANEL_WIDTH,
             "flexShrink": 0,
             "boxSizing": "border-box",
             "padding": "12px",
             "paddingBottom": "24px",
-            "backgroundColor": "1f252b",
-            "color": "#e6e6e6",
-            "borderRight": "1px solid #444",
+            "backgroundColor": COLOR_PANEL_BG,
+            "color": COLOR_TEXT,
+            "borderRight": thin_border(COLOR_PANEL_BORDER),
             "overflowY": "auto",
             "height": "100vh"
         }
@@ -814,9 +801,9 @@ def get_log_row(entry: dict[str, str]) -> html.Div:
             html.Span(
                 format_log_timestamp(entry.get("timestamp", "")),
                 style={
-                    "color": "#9ca3af",
+                    "color": COLOR_TEXT_MUTED,
                     "fontFamily": "monospace",
-                    "fontSize": "12px",
+                    "fontSize": FONT_SIZE_XS,
                     "marginRight": "8px",
                     "flexShrink": 0
                 }
@@ -830,11 +817,11 @@ def get_log_row(entry: dict[str, str]) -> html.Div:
             "display": "flex",
             "alignItems": "baseline",
             "paddingBottom": "6px",
-            "borderBottom": "1px solid #1f2a37"
+            "borderBottom": thin_border(COLOR_LOG_ROW_BORDER)
         }
     )
 
-def get_name_section(initial_value: str = "Untitled") -> list:
+def get_name_section(initial_value: str = DEFAULT_DOCUMENT_NAME) -> list:
     """Build the sidebar controls for editing NPC name.
 
     Args:
@@ -844,24 +831,24 @@ def get_name_section(initial_value: str = "Untitled") -> list:
         list: Dash components for name editing controls.
     """
     return [
-        html.H3("NPC Name"),
+        html.H3(HEADER_NPC_NAME),
         dcc.Input(
-            id="document-name",
+            id=ElementId.DOCUMENT_NAME,
             type="text",
             value=initial_value,
-            placeholder="NPC name",
+            placeholder=PLACEHOLDER_NPC_NAME,
             style={
                 "width": "100%",
                 "marginBottom": "12px",
-                "backgroundColor": "#ffffff",
-                "color": "#111827",
-                "caretColor": "#111827",
-                "border": "1px solid #9ca3af",
-                "fontSize": "14px",
+                "backgroundColor": COLOR_INPUT_BG,
+                "color": COLOR_INPUT_TEXT,
+                "caretColor": COLOR_INPUT_TEXT,
+                "border": thin_border(COLOR_INPUT_BORDER),
+                "fontSize": FONT_SIZE_BASE,
                 "opacity": 1
             }
         ),
-        html.Button("Save", id="save-name", n_clicks=0)
+        html.Button(BUTTON_SAVE, id=ElementId.SAVE_NAME, n_clicks=0)
     ]
 
 def get_project_metadata() -> tuple[str, str]:
@@ -890,16 +877,16 @@ def get_right_panel() -> html.Div:
     """
     return html.Div(
         [
-            html.H3("Log", style={"marginTop": "0"}),
+            html.H3(HEADER_LOG, style={"marginTop": "0"}),
             html.Div(
-                id="action-log-display",
+                id=ElementId.ACTION_LOG_DISPLAY,
                 style={
                     "width": "100%",
                     "flex": "1",
-                    "fontSize": "14px",
-                    "backgroundColor": "#111827",
-                    "color": "#e5e7eb",
-                    "border": "1px solid #4b5563",
+                    "fontSize": FONT_SIZE_BASE,
+                    "backgroundColor": COLOR_DARK_BG,
+                    "color": COLOR_TEXT_LIGHT,
+                    "border": thin_border(COLOR_PRIMARY_BG),
                     "padding": "8px",
                     "overflowY": "auto",
                     "boxSizing": "border-box",
@@ -918,14 +905,14 @@ def get_right_panel() -> html.Div:
             )
         ],
         style={
-            "width": "320px",
+            "width": PANEL_WIDTH,
             "flexShrink": 0,
             "boxSizing": "border-box",
             "padding": "12px",
             "paddingBottom": "24px",
-            "backgroundColor": "#1f252b",
-            "color": "#e6e6e6",
-            "borderLeft": "1px solid #444",
+            "backgroundColor": COLOR_PANEL_BG,
+            "color": COLOR_TEXT,
+            "borderLeft": thin_border(COLOR_PANEL_BORDER),
             "display": "flex",
             "flexDirection": "column",
             "height": "100vh"
@@ -938,42 +925,20 @@ def get_shortcuts_overlay() -> html.Div:
     Returns:
         html.Div: Full-screen overlay component listing keyboard shortcuts.
     """
-    shortcuts = [
-        ("New graph", "Ctrl+N"),
-        ("Open a graph", "Ctrl+O"),
-        ("Save a copy", "Ctrl+S"),
-        ("Quit the editor", "Ctrl+Q"),
-        ("Add NPC dialogue", "N"),
-        ("Add Player dialogue", "P"),
-        ("Edit selected node", "E"),
-        ("Delete selected node", "Delete / Backspace"),
-        ("Navigate between nodes", "\u2190 \u2191 \u2192 \u2193"),
-        ("Confirm delete", "Enter"),
-        ("Cancel, close panel, or exit node picking", "Esc"),
-        ("Show this help", "?")
-    ]
-    key_style = {
-        "backgroundColor": "#111827",
-        "color": "#e5e7eb",
-        "border": "1px solid #4b5563",
-        "borderRadius": "4px",
-        "padding": "2px 8px",
-        "fontFamily": "monospace",
-        "fontSize": "13px",
-        "whiteSpace": "nowrap"
-    }
+    shortcuts = SHORTCUTS_HELP
+    key_style = get_key_badge_style()
     row_style = {
         "display": "flex",
         "justifyContent": "space-between",
         "alignItems": "center",
         "gap": "16px",
         "padding": "8px 0",
-        "borderBottom": "1px solid #333",
+        "borderBottom": thin_border(COLOR_ROW_BORDER)
     }
     rows = [
         html.Div(
             [
-                html.Span(description, style={"color": "#e6e6e6"}),
+                html.Span(description, style={"color": COLOR_TEXT}),
                 html.Span(keys, style=key_style)
             ],
             style=row_style
@@ -986,26 +951,19 @@ def get_shortcuts_overlay() -> html.Div:
                 html.Div(
                     [
                         html.H2(
-                            "Keyboard Shortcuts",
+                            TITLE_KEYBOARD_SHORTCUTS,
                             style={
                                 "margin": "0",
-                                "fontSize": "20px",
-                                "color": "#e6e6e6",
+                                "fontSize": FONT_SIZE_H2,
+                                "color": COLOR_TEXT,
                                 "flex": "1"
                             }
                         ),
                         html.Button(
-                            "Close",
-                            id="shortcuts-help-close",
+                            BUTTON_CLOSE,
+                            id=ElementId.SHORTCUTS_HELP_CLOSE,
                             n_clicks=0,
-                            style={
-                                "padding": "8px 14px",
-                                "backgroundColor": "#333",
-                                "color": "#e6e6e6",
-                                "border": "1px solid #555",
-                                "borderRadius": "4px",
-                                "cursor": "pointer"
-                            }
+                            style=get_close_button_style()
                         )
                     ],
                     style={
@@ -1014,18 +972,17 @@ def get_shortcuts_overlay() -> html.Div:
                         "alignItems": "center",
                         "marginBottom": "12px",
                         "paddingBottom": "12px",
-                        "borderBottom": "1px solid #444"
+                        "borderBottom": thin_border(COLOR_PANEL_BORDER)
                     }
                 ),
                 *rows,
                 html.P(
-                    "Shortcuts work whhile the graph is in focus and you "
-                    "are not typing in a text field.",
+                    SHORTCUTS_HELP_FOOTER,
                     style={
                         "marginTop": "16px",
                         "marginBottom": "0",
-                        "color": "#9ca3af",
-                        "fontSize": "12px"
+                        "color": COLOR_TEXT_MUTED,
+                        "fontSize": FONT_SIZE_XS
                     }
                 )
             ],
@@ -1033,15 +990,15 @@ def get_shortcuts_overlay() -> html.Div:
                 "width": "min(480px, 90vw)",
                 "maxHeight": "80vh",
                 "overflowY": "auto",
-                "backgroundColor": "#252d35",
-                "border": "1px solid #444",
-                "borderRadius": "8px",
+                "backgroundColor": COLOR_PANEL_ALT_BG,
+                "border": thin_border(COLOR_PANEL_BORDER),
+                "borderRadius": RADIUS_LG,
                 "padding": "20px",
                 "boxSizing": "border-box",
                 "boxShadow": "0 8px 32px rgba(0, 0, 0, 0.5)"
             }
         ),
-        id="shortcuts-overlay",
+        id=ElementId.SHORTCUTS_OVERLAY,
         style=get_shortcuts_overlay_style(False)
     )
 
@@ -1067,29 +1024,6 @@ def get_shortcuts_overlay_style(is_open: bool) -> dict[str, str | int]:
         "zIndex": "1000"
     }
 
-def get_textarea_style(height: str = "auto") -> dict[str, str | int]:
-    """Return consistent styling for textarea fields.
-
-    Args:
-        height (str): Height of textarea (default "auto").
-
-    Returns:
-        dict[str, str | int]: Inline style for textareas.
-    """
-    return {
-        "width": "100%",
-        "height": height,
-        "backgroundColor": "#ffffff",
-        "color": "#111827",
-        "caretColor": "#111827",
-        "border": "1px solid #9ca3af",
-        "fontSize": "14px",
-        "padding": "6px 8px",
-        "resize": "none",
-        "overflowY": "auto",
-        "boxSizing": "border-box"
-    }
-
 def get_upload_graph(
     button_style: dict[str, str | int] | None = None
 ) -> dcc.Upload:
@@ -1102,22 +1036,14 @@ def get_upload_graph(
     Returns:
         dcc.Upload: Dash upload component for yaml files.
     """
-    resolved_button_style = button_style or {
-        "padding": "8px 14px",
-        "fontSize": "16px",
-        "backgroundColor": "#374151",
-        "color": "#e5e7eb",
-        "border": "1px solid #4b5563",
-        "borderRadius": "4px",
-        "cursor": "pointer"
-    }
+    resolved_button_style = button_style or get_toolbar_button_style()
     return dcc.Upload(
-        id="upload-graph",
+        id=ElementId.UPLOAD_GRAPH,
         children=html.Button(
-            "Open",
-            id="upload-graph-button",
+            BUTTON_OPEN,
+            id=ElementId.UPLOAD_GRAPH_BUTTON,
             n_clicks=0,
-            title="Open a graph from a yaml file (Ctrl+O)",
+            title=TOOLTIP_OPEN,
             style=resolved_button_style
         ),
         multiple=False,

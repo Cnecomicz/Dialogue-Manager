@@ -1,5 +1,13 @@
 from re import match
 
+from dialogue_model.constants import EffectType, PredicateType
+from dialogue_model.messages import (
+    MSG_UNKNOWN_EFFECT,
+    MSG_UNKNOWN_EFFECT_SYNTAX,
+    MSG_UNKNOWN_PREDICATE,
+    MSG_UNKNOWN_PREDICATE_SYNTAX
+)
+
 def convert_effect_to_text(effect: dict[str, str | int]) -> str:
     """Convert an effect dictionary into its single line text form.
 
@@ -14,19 +22,19 @@ def convert_effect_to_text(effect: dict[str, str | int]) -> str:
         ValueError: If the effect type is not recognized.
     """
     match effect["type"]:
-        case "modify_value":
+        case EffectType.MODIFY_VALUE:
             return (
                 effect["target"] + " = "
                 + effect["target"]
                 + str(effect["delta"])
             )
-        case "modify_list":
+        case EffectType.MODIFY_LIST:
             return (
                 effect["target"] + "."
                 + effect["method"] + "("
                 + effect["value"] + ")"
             )
-    raise ValueError(f"Unknown effect: {effect}")
+    raise ValueError(MSG_UNKNOWN_EFFECT.format(effect=effect))
 
 def convert_predicate_to_text(predicate: dict[str, str | int]) -> str:
     """Convert a predicate dictionary into its single line text form.
@@ -42,19 +50,19 @@ def convert_predicate_to_text(predicate: dict[str, str | int]) -> str:
         ValueError: If the predicate type is not recognized.
     """
     match predicate["type"]:
-        case "check_value":
+        case PredicateType.CHECK_VALUE:
             return (
                 predicate["path"] + " "
                 + predicate["op"] + " "
                 + str(predicate["value"])
             )
-        case "check_list":
+        case PredicateType.CHECK_LIST:
             return (
                 str(predicate["value"]) + " "
                 + predicate["op"] + " "
                 + predicate["path"]
             )
-    raise ValueError(f"Unknown predicate: {predicate}")
+    raise ValueError(MSG_UNKNOWN_PREDICATE.format(predicate=predicate))
 
 def convert_text_to_effect(effect: str) -> dict[str, str | int]:
     """Parse text into an effect dictionary.
@@ -79,17 +87,21 @@ def convert_text_to_effect(effect: str) -> dict[str, str | int]:
             delta = int(delta)
         except ValueError:
             delta = delta
-        return {"type": "modify_value", "target": target, "delta": delta}
+        return {
+            "type": EffectType.MODIFY_VALUE.value, 
+            "target": target, 
+            "delta": delta
+        }
     match_list = match(r"^(\w+(?:\.\w+)*)\.(\w+)\((.+)\)$", effect)
     if match_list:
         target, method, value = match_list.groups()
         return {
-            "type": "modify_list", 
+            "type": EffectType.MODIFY_LIST.value, 
             "target": target, 
             "method": method, 
             "value": value
         }
-    raise ValueError(f"Unknown effect syntax: {effect}")
+    raise ValueError(MSG_UNKNOWN_EFFECT_SYNTAX.format(effect=effect))
 
 def convert_text_to_predicate(predicate: str) -> dict[str, str | int]:
     """Parse text into a predicate dictionary.
@@ -115,7 +127,12 @@ def convert_text_to_predicate(predicate: str) -> dict[str, str | int]:
             value = int(value)
         except ValueError:
             value = value
-        return {"type": "check_value", "path": path, "op": op, "value": value}
+        return {
+            "type": PredicateType.CHECK_VALUE.value, 
+            "path": path, 
+            "op": op, 
+            "value": value
+        }
     match_list = match(r"^(.+?)\s+(not in|in)\s+(\w+(?:\.\w+)*)$", predicate)
     if match_list:
         value, op, path = match_list.groups()
@@ -123,5 +140,10 @@ def convert_text_to_predicate(predicate: str) -> dict[str, str | int]:
             value = int(value)
         except ValueError:
             value = value
-        return {"type": "check_list", "path": path, "op": op, "value": value}
-    raise ValueError(f"Unknown predicate syntax: {predicate}")
+        return {
+            "type": PredicateType.CHECK_LIST.value, 
+            "path": path, 
+            "op": op, 
+            "value": value
+        }
+    raise ValueError(MSG_UNKNOWN_PREDICATE_SYNTAX.format(predicate=predicate))

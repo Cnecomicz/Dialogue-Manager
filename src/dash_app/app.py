@@ -11,6 +11,14 @@ from typing import Any
 from webbrowser import open as open_url
 from yaml import YAMLError, safe_load
 
+from dash_app.element_ids import ElementId
+from dash_app.enums import (
+    CascadeValue,
+    FormType,
+    MenuItemId,
+    PendingAction,
+    PickField
+)
 from dash_app.layout import (
     build_log_children,
     get_bottom_panel_style,
@@ -24,6 +32,90 @@ from dash_app.layout import (
     get_upload_graph
 )
 from dash_app.logger import Logger
+from dash_app.messages import (
+    BUTTON_CANCEL,
+    BUTTON_CONFIRM_DELETE,
+    BUTTON_SAVE,
+    CONFIRM_UNSAVED_CONTINUE,
+    CONFIRM_UNSAVED_NEW,
+    CONFIRM_UNSAVED_QUIT,
+    CONFIRM_UNSAVED_UPLOAD,
+    DEFAULT_DOCUMENT_NAME,
+    DEFAULT_NODE_DISPLAY,
+    DIRTY_MARKER,
+    ERROR_ADD_NPC_INVALID_FIELD,
+    ERROR_ADD_PLAYER_ENDPOINT,
+    ERROR_ADD_PLAYER_INVALID_FIELD,
+    ERROR_ADD_PLAYER_INVALID_SOURCE,
+    ERROR_ADD_PLAYER_SOURCE_REQUIRED,
+    ERROR_DELETE_MISSING_NODE,
+    ERROR_DELETE_START_VERTEX,
+    ERROR_INVALID_EFFECT,
+    ERROR_INVALID_PREDICATE,
+    ERROR_SAVE_INVALID_FIELD,
+    ERROR_SAVE_MISSING_NODE,
+    ERROR_UPDATE_ENDPOINT_EMPTY,
+    ERROR_UPDATE_ENDPOINT_MISSING,
+    ERROR_UPLOAD_INVALID_DATA,
+    ERROR_UPLOAD_INVALID_YAML,
+    ERROR_UPLOAD_NO_DATA,
+    ERROR_UPLOAD_NO_PENDING,
+    ERROR_UPLOAD_NOT_DICT,
+    ERROR_UPLOAD_NOT_UTF8,
+    FIELD_SOURCE,
+    FIELD_SOURCE_OR_TARGET,
+    FIELD_TARGET,
+    LABEL_CASCADE_DELETE,
+    LABEL_DOCUMENT,
+    LABEL_SELECTED_NODE,
+    MENU_DELETE_NODE,
+    MENU_EDIT_NODE,
+    NODE_TYPE_NPC,
+    NODE_TYPE_PLAYER,
+    STATUS_DISCARD_NEW,
+    STATUS_DISCARD_OPENED,
+    STATUS_DISCARD_QUIT,
+    STATUS_NEW_GRAPH,
+    STATUS_NO_CHANGES,
+    STATUS_OPENED,
+    STATUS_PICK_MODE,
+    STATUS_QUIT,
+    STATUS_READY,
+    STATUS_RUNTIME_VALIDATION_HEADER,
+    STATUS_RUNTIME_VALIDATION_LINE,
+    STATUS_SAVED_COPY,
+    STATUS_SAVED_NAME,
+    STATUS_UNRESOLVED_CONNECTIONS,
+    TITLE_ADD_NPC,
+    TITLE_ADD_PLAYER,
+    TITLE_DELETE_NODE,
+    TITLE_EDIT_NODE,
+    TITLE_FORM,
+    TOOLTIP_ADD_PLAYER_NO_NPC,
+    TOOLTIP_ADD_PLAYER_ENABLED,
+    TOOLTIP_DELETE_DISABLED,
+    TOOLTIP_DELETE_ENABLED,
+    TOOLTIP_EDIT_DISABLED,
+    TOOLTIP_EDIT_ENABLED,
+    TOOLTIP_MENU_ADD_NPC,
+    TOOLTIP_MENU_ADD_PLAYER,
+    TOOLTIP_MENU_ADD_PLAYER_FROM_NPC,
+    TOOLTIP_MENU_CANCEL,
+    TOOLTIP_MENU_DELETE,
+    TOOLTIP_MENU_EDIT
+)
+from dash_app.theme import (
+    COLOR_TEXT,
+    get_close_button_style,
+    get_danger_button_style,
+    get_panel_button_danger_disabled_style,
+    get_panel_button_danger_style,
+    get_panel_button_disabled_style,
+    get_panel_button_enabled_style,
+    get_primary_button_style,
+    SERVER_SHUTDOWN_DELAY_SECONDS,
+    SERVER_URL
+)
 from dialogue_editor.graph_editor import (
     GraphEditor, VertexCannotBeDeletedError, VertexNotFoundError
 )
@@ -33,16 +125,12 @@ from dialogue_model.codecs import (
     convert_text_to_effect, 
     convert_text_to_predicate
 )
+from dialogue_model.constants import MISSING_VERTEX, START_VERTEX
 from dialogue_navigator.graph_navigator import collect_validation_errors
 from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 
 class App(Dash):
     """Dash application wrapper for dialogue graph editing."""
-
-    MISSING_VERTEX = "__MISSING__"
-    PENDING_ACTION_NEW = "new"
-    PENDING_ACTION_QUIT = "quit"
-    PENDING_ACTION_UPLOAD = "upload"
 
     def __init__(self, yaml_file: str | PathLike | None = None) -> None:
         """Initialize the app layout, state stores, and callbacks.
@@ -61,33 +149,37 @@ class App(Dash):
         author, version = get_project_metadata()
         initial_name = self.normalize_name(self.graph_editor.graph.name)
         initial_log_entries = self.action_logger.append_status(
-            None, "Ready."
+            None, STATUS_READY
         )
         self.layout = html.Div(
             [
                 get_left_panel(initial_name, author, version),
                 get_center_panel(self.get_elements(), self.get_context_menu()),
                 get_right_panel(),
-                dcc.Store(id="unsaved-changes", data=False),
-                dcc.Store(id="current-document", data=initial_name),
-                dcc.Store(id="pending-action", data=""),
-                dcc.Store(id="action-log", data=initial_log_entries),
-                dcc.Store(id="pending-upload", data={}),
-                dcc.Store(id="quit-signal", data=0),
-                dcc.Store(id="selected-node-id", data=None),
-                dcc.Store(id="bottom-panel-visible", data=False),
-                dcc.Store(id="bottom-panel-form-type", data=""),
-                dcc.Store(id="pick-mode-active", data=False),
-                dcc.Store(id="pick-mode-field", data=""),
-                dcc.Store(id="shortcuts-help-visible", data=False),
-                dcc.Download(id="download-yaml"),
+                dcc.Store(id=ElementId.UNSAVED_CHANGES, data=False),
+                dcc.Store(id=ElementId.CURRENT_DOCUMENT, data=initial_name),
+                dcc.Store(id=ElementId.PENDING_ACTION, data=""),
+                dcc.Store(id=ElementId.ACTION_LOG, data=initial_log_entries),
+                dcc.Store(id=ElementId.PENDING_UPLOAD, data={}),
+                dcc.Store(id=ElementId.QUIT_SIGNAL, data=0),
+                dcc.Store(id=ElementId.SELECTED_NODE_ID, data=None),
+                dcc.Store(id=ElementId.BOTTOM_PANEL_VISIBLE, data=False),
+                dcc.Store(id=ElementId.BOTTOM_PANEL_FORM_TYPE, data=""),
+                dcc.Store(id=ElementId.PICK_MODE_ACTIVE, data=False),
+                dcc.Store(id=ElementId.PICK_MODE_FIELD, data=""),
+                dcc.Store(id=ElementId.SHORTCUTS_HELP_VISIBLE, data=False),
+                dcc.Download(id=ElementId.DOWNLOAD_YAML),
                 dcc.ConfirmDialog(
-                    id="confirm-unsaved-work",
-                    message="You have unsaved changes. Continue?"
+                    id=ElementId.CONFIRM_UNSAVED_WORK,
+                    message=CONFIRM_UNSAVED_CONTINUE
                 ),
-                html.Div(id="quit-client-trigger", style={"display": "none"}),
                 html.Div(
-                    id="shortcut-listener-dummy", style={"display": "none"}
+                    id=ElementId.QUIT_CLIENT_TRIGGER, 
+                    style={"display": "none"}
+                ),
+                html.Div(
+                    id=ElementId.SHORTCUT_LISTENER_DUMMY,
+                    style={"display": "none"}
                 ),
                 get_shortcuts_overlay()
             ],
@@ -194,35 +286,17 @@ class App(Dash):
             tuple[bool, dict[str, str | int], str]: Disabled flag, style,
                 and tooltip text.
         """
-        base_style = {
-            "width": "100%",
-            "padding": "10px",
-            "marginBottom": "8px",
-            "border": "1px solid #666",
-            "borderRadius": "4px"
-        }
         has_vertices = bool(self.graph_editor.graph.vertex_dict)
         if not has_vertices:
             return (
                 True,
-                {
-                    **base_style,
-                    "backgroundColor": "#374151",
-                    "color": "#6b7280",
-                    "cursor": "not-allowed",
-                    "opacity": 0.5
-                },
-                "Create at least one NPC node first."
+                get_panel_button_disabled_style(),
+                TOOLTIP_ADD_PLAYER_NO_NPC
             )
         return (
             False,
-            {
-                **base_style,
-                "backgroundColor": "#4b5563",
-                "color": "#e6e6e6",
-                "cursor": "pointer"
-            },
-            "Create a player choice linking two NPC nodes (P)"
+            get_panel_button_enabled_style(),
+            TOOLTIP_ADD_PLAYER_ENABLED
         )
 
     def get_context_action_panel_outputs(
@@ -266,37 +340,16 @@ class App(Dash):
         Raises:
             PreventUpdate: If no action should be performed.
         """
-        default_save_button_style = {
-            "padding": "8px 14px",
-            "backgroundColor": "#4b5563",
-            "color": "#e6e6e6",
-            "border": "1px solid #666",
-            "borderRadius": "4px",
-            "cursor": "pointer"
-        }
-        delete_save_button_style = {
-            "padding": "8px 14px",
-            "backgroundColor": "#7f1d1d",
-            "color": "#e6e6e6",
-            "border": "1px solid #c53030",
-            "borderRadius": "4px",
-            "cursor": "pointer"
-        }
-        close_button_style = {
-            "padding": "8px 14px",
-            "backgroundColor": "#333",
-            "color": "#e6e6e6",
-            "border": "1px solid #555",
-            "borderRadius": "4px",
-            "cursor": "pointer"
-        }
-        if menu_item_id == "add-npc":
+        default_save_button_style = get_primary_button_style()
+        delete_save_button_style = get_danger_button_style()
+        close_button_style = get_close_button_style()
+        if menu_item_id == MenuItemId.ADD_NPC:
             return (
                 no_update,
                 get_bottom_panel_style(True),
                 True,
-                "add-vertex",
-                "Add NPC Dialogue",
+                FormType.ADD_VERTEX,
+                TITLE_ADD_NPC,
                 "",
                 "",
                 "",
@@ -305,18 +358,18 @@ class App(Dash):
                 [],
                 False,
                 "",
-                "Save",
+                BUTTON_SAVE,
                 default_save_button_style,
-                "Cancel",
+                BUTTON_CANCEL,
                 close_button_style
             )
-        if menu_item_id == "add-player":
+        if menu_item_id == MenuItemId.ADD_PLAYER:
             return (
                 no_update,
                 get_bottom_panel_style(True),
                 True,
-                "add-edge",
-                "Add Player Dialogue",
+                FormType.ADD_EDGE,
+                TITLE_ADD_PLAYER,
                 "",
                 "",
                 "",
@@ -325,21 +378,19 @@ class App(Dash):
                 [],
                 False,
                 "",
-                "Save",
+                BUTTON_SAVE,
                 default_save_button_style,
-                "Cancel",
+                BUTTON_CANCEL,
                 close_button_style
             )
-        if menu_item_id == "add-player-dialogue":
+        if menu_item_id == MenuItemId.ADD_PLAYER_DIALOGUE:
             if (
                 not element_id 
                 or element_id in self.graph_editor.graph.edge_dict
             ):
                 return (
                     self.action_logger.append_status(
-                        current_log,
-                        "Could not create a Player node from this selection "
-                        "because the source must be an NPC node."
+                        current_log, ERROR_ADD_PLAYER_INVALID_SOURCE
                     ),
                     no_update,
                     no_update,
@@ -362,8 +413,8 @@ class App(Dash):
                 no_update,
                 get_bottom_panel_style(True),
                 True,
-                "add-edge",
-                "Add Player Dialogue",
+                FormType.ADD_EDGE,
+                TITLE_ADD_PLAYER,
                 "",
                 element_id or "",
                 "",
@@ -372,12 +423,12 @@ class App(Dash):
                 [],
                 False,
                 "",
-                "Save",
+                BUTTON_SAVE,
                 default_save_button_style,
-                "Cancel",
+                BUTTON_CANCEL,
                 close_button_style
             )
-        if menu_item_id == "edit-node" and element_id:
+        if menu_item_id == MenuItemId.EDIT_NODE and element_id:
             node_text = self.get_node_text(element_id)
             predicates_text = self.get_node_predicates(element_id)
             effects_text = self.get_node_effects(element_id)
@@ -389,8 +440,8 @@ class App(Dash):
                 no_update,
                 get_bottom_panel_style(True),
                 True,
-                "edit-edge" if is_edge else "edit-vertex",
-                "Edit Node",
+                FormType.EDIT_EDGE if is_edge else FormType.EDIT_VERTEX,
+                TITLE_EDIT_NODE,
                 node_text or "",
                 edit_from_vertex,
                 edit_to_vertex,
@@ -399,18 +450,21 @@ class App(Dash):
                 [],
                 False,
                 "",
-                "Save",
+                BUTTON_SAVE,
                 default_save_button_style,
-                "Cancel",
+                BUTTON_CANCEL,
                 close_button_style
             )
-        if menu_item_id == "delete-node" and element_id:
-            if element_id == "vertex_0":
+        if menu_item_id == MenuItemId.DELETE_NODE and element_id:
+            if element_id == START_VERTEX:
                 return (
                     self.action_logger.append_status(
                         current_log,
-                        'You could not delete NPC node "vertex_0" because '
-                        "the first NPC node cannot be deleted."
+                        ERROR_DELETE_START_VERTEX.format(
+                            node_id=self.action_logger.quote_value(
+                                START_VERTEX
+                            )
+                        )
                     ),
                     no_update,
                     no_update,
@@ -433,8 +487,8 @@ class App(Dash):
                 no_update,
                 get_bottom_panel_style(True),
                 True,
-                "delete",
-                "Delete Node",
+                FormType.DELETE,
+                TITLE_DELETE_NODE,
                 "",
                 "",
                 "",
@@ -443,9 +497,9 @@ class App(Dash):
                 [],
                 False,
                 "",
-                "Confirm Delete",
+                BUTTON_CONFIRM_DELETE,
                 delete_save_button_style,
-                "Cancel",
+                BUTTON_CANCEL,
                 close_button_style
             )
         raise PreventUpdate
@@ -462,39 +516,39 @@ class App(Dash):
         """
         return [
             {
-                "id": "edit-node",
-                "label": "Edit Selected Node",
-                "tooltipText": "Open edit form",
+                "id": MenuItemId.EDIT_NODE,
+                "label": MENU_EDIT_NODE,
+                "tooltipText": TOOLTIP_MENU_EDIT,
                 "availableOn": ["node"]
             },
             {
-                "id": "add-player-dialogue",
-                "label": "Add Player Dialogue",
-                "tooltipText": "Create a Player node from this NPC node",
+                "id": MenuItemId.ADD_PLAYER_DIALOGUE,
+                "label": TITLE_ADD_PLAYER,
+                "tooltipText": TOOLTIP_MENU_ADD_PLAYER_FROM_NPC,
                 "availableOn": ["node"]
             },
             {
-                "id": "delete-node",
-                "label": "Delete Selected Node",
-                "tooltipText": "Open delete confirmation",
+                "id": MenuItemId.DELETE_NODE,
+                "label": MENU_DELETE_NODE,
+                "tooltipText": TOOLTIP_MENU_DELETE,
                 "availableOn": ["node"]
             },
             {
-                "id": "add-npc",
-                "label": "Add NPC Dialogue",
-                "tooltipText": "Add a new NPC node",
+                "id": MenuItemId.ADD_NPC,
+                "label": TITLE_ADD_NPC,
+                "tooltipText": TOOLTIP_MENU_ADD_NPC,
                 "availableOn": ["canvas", "edge"]
             },
             {
-                "id": "add-player",
-                "label": "Add Player Dialogue",
-                "tooltipText": "Add a new Player node",
+                "id": MenuItemId.ADD_PLAYER,
+                "label": TITLE_ADD_PLAYER,
+                "tooltipText": TOOLTIP_MENU_ADD_PLAYER,
                 "availableOn": ["canvas", "edge"]
             },
             {
-                "id": "cancel",
-                "label": "Cancel",
-                "tooltipText": "Close menu",
+                "id": MenuItemId.CANCEL,
+                "label": BUTTON_CANCEL,
+                "tooltipText": TOOLTIP_MENU_CANCEL,
                 "availableOn": ["canvas", "edge", "node"]
             }
         ]
@@ -516,27 +570,27 @@ class App(Dash):
         """
         if not selected_nodes:
             return (
-                "Selected node: None",
+                LABEL_SELECTED_NODE.format(node_id=DEFAULT_NODE_DISPLAY),
                 [
                     {
-                        "label": "Cascade delete", 
-                        "value": "cascade", 
+                        "label": LABEL_CASCADE_DELETE, 
+                        "value": CascadeValue.CASCADE, 
                         "disabled": False
                     }
                 ],
                 current_delete_cascade or []
             )
-        node_id = selected_nodes[0].get("id", "None")
+        node_id = selected_nodes[0].get("id", DEFAULT_NODE_DISPLAY)
         is_edge = node_id in self.graph_editor.graph.edge_dict
         options = [
             {
-                "label": "Cascade delete", 
-                "value": "cascade", 
+                "label": LABEL_CASCADE_DELETE, 
+                "value": CascadeValue.CASCADE, 
                 "disabled": is_edge
             }
         ]
         value = [] if is_edge else (current_delete_cascade or [])
-        return f"Selected node: {node_id}", options, value
+        return (LABEL_SELECTED_NODE.format(node_id=node_id), options, value)
 
     def get_edge_endpoints_for_edit(self, node_id: str) -> tuple[str, str]:
         """Get edge endpoint values for edit controls.
@@ -551,10 +605,10 @@ class App(Dash):
             return "", ""
         edge = self.graph_editor.graph.edge_dict[node_id]
         from_vertex = (
-            "" if edge.from_vertex == self.MISSING_VERTEX else edge.from_vertex
+            "" if edge.from_vertex == MISSING_VERTEX else edge.from_vertex
         )
         to_vertex = (
-            "" if edge.to_vertex == self.MISSING_VERTEX else edge.to_vertex
+            "" if edge.to_vertex == MISSING_VERTEX else edge.to_vertex
         )
         return from_vertex, to_vertex
 
@@ -663,8 +717,11 @@ class App(Dash):
         if not errors:
             return []
         warning_lines = [
-            f"Runtime validation found {len(errors)} issue(s):",
-            *[f"- {error}" for error in errors]
+            STATUS_RUNTIME_VALIDATION_HEADER.format(count=len(errors)),
+            *[
+                STATUS_RUNTIME_VALIDATION_LINE.format(error=error)
+                for error in errors
+            ]
         ]
         return warning_lines
 
@@ -678,7 +735,7 @@ class App(Dash):
             str: Stripped name, or "Untitled" when empty.
         """
         normalized = (name or "").strip()
-        return normalized if normalized else "Untitled"
+        return normalized if normalized else DEFAULT_DOCUMENT_NAME
 
     def parse_effects(
         self, effects_text: str | None
@@ -708,7 +765,9 @@ class App(Dash):
                 effects.append(convert_text_to_effect(stripped_line))
             except ValueError as exception:
                 raise ValueError(
-                    f"Invalid effect on line {line_number}: {stripped_line}"
+                    ERROR_INVALID_EFFECT.format(
+                        line_number=line_number, line=stripped_line
+                    )
                 ) from exception
         return effects
 
@@ -743,7 +802,9 @@ class App(Dash):
                 predicates.append(convert_text_to_predicate(stripped_line))
             except ValueError as exception:
                 raise ValueError(
-                    f"Invalid predicate on line {line_number}: {stripped_line}"
+                    ERROR_INVALID_PREDICATE.format(
+                        line_number=line_number, line=stripped_line
+                    )
                 ) from exception
         return predicates
 
@@ -761,38 +822,22 @@ class App(Dash):
                 fails, or yaml root is not a dictionary.
         """
         if not upload_contents or "," not in upload_contents:
-            raise ValueError(
-                "Could not open the file because no file data was received. "
-                "Select the file again and try one more time."
-            )
+            raise ValueError(ERROR_UPLOAD_NO_DATA)
         _, encoded_content = upload_contents.split(",", 1)
         try:
             raw_bytes = b64decode(encoded_content, validate=True)
         except BinasciiError as e:
-            raise ValueError(
-                "Could not open the file because the upload data is "
-                "invalid. Select the file again and try one more time."
-            ) from e
+            raise ValueError(ERROR_UPLOAD_INVALID_DATA) from e
         try:
             decoded_text = raw_bytes.decode("utf-8")
         except UnicodeDecodeError as e:
-            raise ValueError(
-                "Could not open the file because it is not UTF-8 text. "
-                "Save the file as UTF-8 yaml and try again."
-            ) from e
+            raise ValueError(ERROR_UPLOAD_NOT_UTF8) from e
         try:
             parsed_yaml = safe_load(decoded_text) or {}
         except YAMLError as e:
-            raise ValueError(
-                "Could not open the file because the yaml format is "
-                "invalid. Fix the yaml syntax and try again."
-            ) from e
+            raise ValueError(ERROR_UPLOAD_INVALID_YAML) from e
         if not isinstance(parsed_yaml, dict):
-            raise ValueError(
-                "Could not open the file because the top level must be a "
-                "dictionary. Use a yaml object with name, vertices, and "
-                "edges."
-            )
+            raise ValueError(ERROR_UPLOAD_NOT_DICT)
         return parsed_yaml
 
     def register_callbacks(self) -> None:
@@ -809,8 +854,8 @@ class App(Dash):
                 return "";
             }
             """,
-            Output("quit-client-trigger", "children"),
-            Input("quit-signal", "data"),
+            Output(ElementId.QUIT_CLIENT_TRIGGER, "children"),
+            Input(ElementId.QUIT_SIGNAL, "data"),
             prevent_initial_call=True
         )
 
@@ -1099,11 +1144,11 @@ class App(Dash):
                 return "";
             }
             """,
-            Output("shortcut-listener-dummy", "children"),
-            Input("bottom-panel-visible", "data"),
-            Input("pick-mode-active", "data"),
-            Input("bottom-panel-form-type", "data"),
-            Input("shortcuts-help-visible", "data")
+            Output(ElementId.SHORTCUT_LISTENER_DUMMY, "children"),
+            Input(ElementId.BOTTOM_PANEL_VISIBLE, "data"),
+            Input(ElementId.PICK_MODE_ACTIVE, "data"),
+            Input(ElementId.BOTTOM_PANEL_FORM_TYPE, "data"),
+            Input(ElementId.SHORTCUTS_HELP_VISIBLE, "data")
         )
 
         self.clientside_callback(
@@ -1123,8 +1168,8 @@ class App(Dash):
                 };
             }
             """,
-            Output("shortcuts-overlay", "style"),
-            Input("shortcuts-help-visible", "data")
+            Output(ElementId.SHORTCUTS_OVERLAY, "style"),
+            Input(ElementId.SHORTCUTS_HELP_VISIBLE, "data")
         )
 
         self.clientside_callback(
@@ -1145,18 +1190,18 @@ class App(Dash):
                 return window.dash_clientside.no_update;
             }
             """,
-            Output("shortcuts-help-visible", "data"),
-            Input("open-shortcuts-help", "n_clicks"),
-            Input("shortcuts-help-close", "n_clicks"),
+            Output(ElementId.SHORTCUTS_HELP_VISIBLE, "data"),
+            Input(ElementId.OPEN_SHORTCUTS_HELP, "n_clicks"),
+            Input(ElementId.SHORTCUTS_HELP_CLOSE, "n_clicks"),
             prevent_initial_call=True
         )
 
         @self.callback(
-            Output("pick-mode-active", "data"),
-            Output("pick-mode-field", "data"),
-            Input("bottom-form-pick-source", "n_clicks"),
-            Input("bottom-form-pick-target", "n_clicks"),
-            State("pick-mode-active", "data"),
+            Output(ElementId.PICK_MODE_ACTIVE, "data"),
+            Output(ElementId.PICK_MODE_FIELD, "data"),
+            Input(ElementId.BOTTOM_FORM_PICK_SOURCE, "n_clicks"),
+            Input(ElementId.BOTTOM_FORM_PICK_TARGET, "n_clicks"),
+            State(ElementId.PICK_MODE_ACTIVE, "data"),
             prevent_initial_call=True
         )
         def activate_pick_mode(
@@ -1167,16 +1212,16 @@ class App(Dash):
             if not ctx.triggered:
                 raise PreventUpdate
             triggered_id = ctx.triggered_id
-            if triggered_id == "bottom-form-pick-source":
-                return True, "source"
-            if triggered_id == "bottom-form-pick-target":
-                return True, "target"
+            if triggered_id == ElementId.BOTTOM_FORM_PICK_SOURCE:
+                return True, PickField.SOURCE
+            if triggered_id == ElementId.BOTTOM_FORM_PICK_TARGET:
+                return True, PickField.TARGET
             raise PreventUpdate
 
         @self.callback(
-            Output("dialogue-editor", "elements", allow_duplicate=True),
-            Input("dialogue-editor", "selectedNodeData"),
-            State("dialogue-editor", "elements"),
+            Output(ElementId.DIALOGUE_EDITOR, "elements", allow_duplicate=True),
+            Input(ElementId.DIALOGUE_EDITOR, "selectedNodeData"),
+            State(ElementId.DIALOGUE_EDITOR, "elements"),
             prevent_initial_call=True
         )
         def enforce_single_selection(
@@ -1204,31 +1249,31 @@ class App(Dash):
             )
 
         @self.callback(
-            Output("bottom-panel", "style"),
-            Output("bottom-panel-visible", "data"),
-            Output("bottom-panel-form-type", "data"),
-            Output("bottom-panel-title", "children"),
-            Output("bottom-form-dialogue", "value"),
-            Output("bottom-form-source", "value"),
-            Output("bottom-form-target", "value"),
-            Output("bottom-form-predicates", "value"),
-            Output("bottom-form-effects", "value"),
-            Output("bottom-form-cascade", "value"),
-            Output("pick-mode-active", "data"),
-            Output("pick-mode-field", "data"),
-            Output("bottom-panel-save", "children"),
-            Output("bottom-panel-save", "style"),
-            Output("bottom-panel-close", "children"),
-            Output("bottom-panel-close", "style"),
-            Output("selected-node-id", "data", allow_duplicate=True),
-            Input("bottom-panel-close", "n_clicks"),
-            Input("bottom-panel-save", "n_clicks"),
-            Input("open-add-edge-modal", "n_clicks"),
-            Input("open-add-vertex-modal", "n_clicks"),
-            Input("open-edit-modal", "n_clicks"),
-            Input("open-delete-modal", "n_clicks"),
-            State("bottom-panel-visible", "data"),
-            State("dialogue-editor", "selectedNodeData"),
+            Output(ElementId.BOTTOM_PANEL, "style"),
+            Output(ElementId.BOTTOM_PANEL_VISIBLE, "data"),
+            Output(ElementId.BOTTOM_PANEL_FORM_TYPE, "data"),
+            Output(ElementId.BOTTOM_PANEL_TITLE, "children"),
+            Output(ElementId.BOTTOM_FORM_DIALOGUE, "value"),
+            Output(ElementId.BOTTOM_FORM_SOURCE, "value"),
+            Output(ElementId.BOTTOM_FORM_TARGET, "value"),
+            Output(ElementId.BOTTOM_FORM_PREDICATES, "value"),
+            Output(ElementId.BOTTOM_FORM_EFFECTS, "value"),
+            Output(ElementId.BOTTOM_FORM_CASCADE, "value"),
+            Output(ElementId.PICK_MODE_ACTIVE, "data"),
+            Output(ElementId.PICK_MODE_FIELD, "data"),
+            Output(ElementId.BOTTOM_PANEL_SAVE, "children"),
+            Output(ElementId.BOTTOM_PANEL_SAVE, "style"),
+            Output(ElementId.BOTTOM_PANEL_CLOSE, "children"),
+            Output(ElementId.BOTTOM_PANEL_CLOSE, "style"),
+            Output(ElementId.SELECTED_NODE_ID, "data", allow_duplicate=True),
+            Input(ElementId.BOTTOM_PANEL_CLOSE, "n_clicks"),
+            Input(ElementId.BOTTOM_PANEL_SAVE, "n_clicks"),
+            Input(ElementId.OPEN_ADD_EDGE_MODAL, "n_clicks"),
+            Input(ElementId.OPEN_ADD_VERTEX_MODAL, "n_clicks"),
+            Input(ElementId.OPEN_EDIT_MODAL, "n_clicks"),
+            Input(ElementId.OPEN_DELETE_MODAL, "n_clicks"),
+            State(ElementId.BOTTOM_PANEL_VISIBLE, "data"),
+            State(ElementId.DIALOGUE_EDITOR, "selectedNodeData"),
             prevent_initial_call=True
         )
         def manage_bottom_panel(
@@ -1261,37 +1306,16 @@ class App(Dash):
         ]:
             if not ctx.triggered:
                 raise PreventUpdate
-            default_save_button_style = {
-                "padding": "8px 14px",
-                "backgroundColor": "#4b5563",
-                "color": "#e6e6e6",
-                "border": "1px solid #666",
-                "borderRadius": "4px",
-                "cursor": "pointer"
-            }
-            delete_save_button_style = {
-                "padding": "8px 14px",
-                "backgroundColor": "#7f1d1d",
-                "color": "#e6e6e6",
-                "border": "1px solid #c53030",
-                "borderRadius": "4px",
-                "cursor": "pointer"
-            }
-            close_button_style = {
-                "padding": "8px 14px",
-                "backgroundColor": "#333",
-                "color": "#e6e6e6",
-                "border": "1px solid #555",
-                "borderRadius": "4px",
-                "cursor": "pointer"
-            }
+            default_save_button_style = get_primary_button_style()
+            delete_save_button_style = get_danger_button_style()
+            close_button_style = get_close_button_style()
             triggered_id = ctx.triggered_id
-            if triggered_id == "bottom-panel-close":
+            if triggered_id == ElementId.BOTTOM_PANEL_CLOSE:
                 return (
                     get_bottom_panel_style(False),
                     False,
                     "",
-                    "Form",
+                    TITLE_FORM,
                     "",
                     "",
                     "",
@@ -1300,13 +1324,13 @@ class App(Dash):
                     [],
                     False,
                     "",
-                    "Save",
+                    BUTTON_SAVE,
                     default_save_button_style,
-                    "Cancel",
+                    BUTTON_CANCEL,
                     close_button_style,
                     None
                 )
-            if triggered_id == "bottom-panel-save":
+            if triggered_id == ElementId.BOTTOM_PANEL_SAVE:
                 return (
                     no_update,
                     no_update,
@@ -1326,15 +1350,15 @@ class App(Dash):
                     no_update,
                     no_update
                 )
-            if triggered_id == "open-add-edge-modal":
+            if triggered_id == ElementId.OPEN_ADD_EDGE_MODAL:
                 if not self.graph_editor.graph.vertex_dict:
                     raise PreventUpdate
 
                 return (
                     get_bottom_panel_style(True),
                     True,
-                    "add-edge",
-                    "Add Player Dialogue",
+                    FormType.ADD_EDGE,
+                    TITLE_ADD_PLAYER,
                     "",
                     (
                         selected_nodes[0].get("id", "")
@@ -1351,18 +1375,18 @@ class App(Dash):
                     [],
                     False,
                     "",
-                    "Save",
+                    BUTTON_SAVE,
                     default_save_button_style,
-                    "Cancel",
+                    BUTTON_CANCEL,
                     close_button_style,
                     None
                 )
-            if triggered_id == "open-add-vertex-modal":
+            if triggered_id == ElementId.OPEN_ADD_VERTEX_MODAL:
                 return (
                     get_bottom_panel_style(True),
                     True,
-                    "add-vertex",
-                    "Add NPC Dialogue",
+                    FormType.ADD_VERTEX,
+                    TITLE_ADD_NPC,
                     "",
                     "",
                     "",
@@ -1371,13 +1395,13 @@ class App(Dash):
                     [],
                     False,
                     "",
-                    "Save",
+                    BUTTON_SAVE,
                     default_save_button_style,
-                    "Cancel",
+                    BUTTON_CANCEL,
                     close_button_style,
                     None
                 )
-            if triggered_id == "open-edit-modal":
+            if triggered_id == ElementId.OPEN_EDIT_MODAL:
                 if not selected_nodes:
                     raise PreventUpdate
                 node_id = selected_nodes[0].get("id", "")
@@ -1390,8 +1414,10 @@ class App(Dash):
                     self.get_edge_endpoints_for_edit(node_id)
                 )
                 is_edge = node_id in self.graph_editor.graph.edge_dict
-                form_type = "edit-edge" if is_edge else "edit-vertex"
-                title = "Edit Node"
+                form_type = (
+                    FormType.EDIT_EDGE if is_edge else FormType.EDIT_VERTEX
+                )
+                title = TITLE_EDIT_NODE
                 return (
                     get_bottom_panel_style(True),
                     True,
@@ -1405,20 +1431,20 @@ class App(Dash):
                     [],
                     False,
                     "",
-                    "Save",
+                    BUTTON_SAVE,
                     default_save_button_style,
-                    "Cancel",
+                    BUTTON_CANCEL,
                     close_button_style,
                     node_id
                 )
-            if triggered_id == "open-delete-modal":
+            if triggered_id == ElementId.OPEN_EDIT_MODAL:
                 if not selected_nodes:
                     raise PreventUpdate
                 return (
                     get_bottom_panel_style(True),
                     True,
-                    "delete",
-                    "Delete Node",
+                    FormType.DELETE,
+                    TITLE_DELETE_NODE,
                     "",
                     "",
                     "",
@@ -1427,23 +1453,23 @@ class App(Dash):
                     [],
                     False,
                     "",
-                    "Confirm Delete",
+                    BUTTON_CONFIRM_DELETE,
                     delete_save_button_style,
-                    "Cancel",
+                    BUTTON_CANCEL,
                     close_button_style,
                     selected_nodes[0].get("id", "")
                 )
             raise PreventUpdate
 
         @self.callback(
-            Output("bottom-form-dialogue-container", "style"),
-            Output("bottom-form-effects-container", "style"),
-            Output("bottom-form-source-container", "style"),
-            Output("bottom-form-target-container", "style"),
-            Output("bottom-form-predicates-container", "style"),
-            Output("bottom-form-cascade-container", "style"),
-            Output("bottom-form-delete-message-container", "style"),
-            Input("bottom-panel-form-type", "data")
+            Output(ElementId.BOTTOM_FORM_DIALOGUE_CONTAINER, "style"),
+            Output(ElementId.BOTTOM_FORM_EFFECTS_CONTAINER, "style"),
+            Output(ElementId.BOTTOM_FORM_SOURCE_CONTAINER, "style"),
+            Output(ElementId.BOTTOM_FORM_TARGET_CONTAINER, "style"),
+            Output(ElementId.BOTTOM_FORM_PREDICATES_CONTAINER, "style"),
+            Output(ElementId.BOTTOM_FORM_CASCADE_CONTAINER, "style"),
+            Output(ElementId.BOTTOM_FORM_DELETE_MESSAGE_CONTAINER, "style"),
+            Input(ElementId.BOTTOM_PANEL_FORM_TYPE, "data")
         )
         def manage_bottom_panel_fields(
             form_type: str
@@ -1462,7 +1488,7 @@ class App(Dash):
                 "marginRight": "8px"
             }
             effects_visible = {"flex": "1", "minWidth": "300px"}
-            if form_type in ("add-edge", "edit-edge"):
+            if form_type in (FormType.ADD_EDGE, FormType.EDIT_EDGE):
                 return (
                     dialogue_visible,
                     effects_visible,
@@ -1472,7 +1498,7 @@ class App(Dash):
                     hidden_style,
                     hidden_style
                 )
-            if form_type in ("add-vertex", "edit-vertex"):
+            if form_type in (FormType.ADD_VERTEX, FormType.EDIT_VERTEX):
                 return (
                     dialogue_visible,
                     effects_visible,
@@ -1482,7 +1508,7 @@ class App(Dash):
                     hidden_style,
                     hidden_style
                 )
-            if form_type == "delete":
+            if form_type == FormType.DELETE:
                 return (
                     hidden_style,
                     hidden_style,
@@ -1493,16 +1519,16 @@ class App(Dash):
                     {
                         "display": "block",
                         "marginBottom": "12px",
-                        "color": "#e6e6e6"
+                        "color": COLOR_TEXT
                     }
                 )
             return (hidden_style,) * 7
 
         @self.callback(
-            Output("bottom-panel", "style", allow_duplicate=True),
-            Input("pick-mode-active", "data"),
-            Input("bottom-panel-visible", "data"),
-            State("bottom-panel", "style"),
+            Output(ElementId.BOTTOM_PANEL, "style", allow_duplicate=True),
+            Input(ElementId.PICK_MODE_ACTIVE, "data"),
+            Input(ElementId.BOTTOM_PANEL_VISIBLE, "data"),
+            State(ElementId.BOTTOM_PANEL, "style"),
             prevent_initial_call=True
         )
         def manage_bottom_panel_graying(
@@ -1521,9 +1547,9 @@ class App(Dash):
             return style
 
         @self.callback(
-            Output("graph-container", "style"),
-            Input("pick-mode-active", "data"),
-            Input("bottom-panel-visible", "data"),
+            Output(ElementId.GRAPH_CONTAINER, "style"),
+            Input(ElementId.PICK_MODE_ACTIVE, "data"),
+            Input(ElementId.BOTTOM_PANEL_VISIBLE, "data"),
             prevent_initial_call=True
         )
         def manage_graph_graying(
@@ -1542,10 +1568,10 @@ class App(Dash):
                 return base_style
 
         @self.callback(
-            Output("dialogue-editor", "autoungrabify"),
-            Output("dialogue-editor", "autounselectify"),
-            Input("bottom-panel-visible", "data"),
-            Input("pick-mode-active", "data"),
+            Output(ElementId.DIALOGUE_EDITOR, "autoungrabify"),
+            Output(ElementId.DIALOGUE_EDITOR, "autounselectify"),
+            Input(ElementId.BOTTOM_PANEL_VISIBLE, "data"),
+            Input(ElementId.PICK_MODE_ACTIVE, "data"),
             prevent_initial_call=True
         )
         def manage_graph_interactions(
@@ -1558,28 +1584,28 @@ class App(Dash):
             return lock_graph_interactions, lock_graph_interactions
 
         @self.callback(
-            Output("dialogue-editor", "elements", allow_duplicate=True),
-            Output("action-log", "data", allow_duplicate=True),
-            Output("unsaved-changes", "data", allow_duplicate=True),
-            Output("bottom-panel", "style", allow_duplicate=True),
-            Output("bottom-panel-visible", "data", allow_duplicate=True),
-            Output("bottom-form-dialogue", "value", allow_duplicate=True),
-            Output("bottom-form-source", "value", allow_duplicate=True),
-            Output("bottom-form-target", "value", allow_duplicate=True),
-            Output("bottom-form-predicates", "value", allow_duplicate=True),
-            Output("bottom-form-effects", "value", allow_duplicate=True),
-            Output("bottom-form-cascade", "value", allow_duplicate=True),
-            Input("bottom-panel-save", "n_clicks"),
-            State("bottom-panel-form-type", "data"),
-            State("dialogue-editor", "selectedNodeData"),
-            State("bottom-form-dialogue", "value"),
-            State("bottom-form-source", "value"),
-            State("bottom-form-target", "value"),
-            State("bottom-form-predicates", "value"),
-            State("bottom-form-effects", "value"),
-            State("bottom-form-cascade", "value"),
-            State("selected-node-id", "data"),
-            State("action-log", "data"),
+            Output(ElementId.DIALOGUE_EDITOR, "elements", allow_duplicate=True),
+            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
+            Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
+            Output(ElementId.BOTTOM_PANEL, "style", allow_duplicate=True),
+            Output(ElementId.BOTTOM_PANEL_VISIBLE, "data", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_DIALOGUE, "value", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_SOURCE, "value", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_TARGET, "value", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_PREDICATES, "value", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_EFFECTS, "value", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_CASCADE, "value", allow_duplicate=True),
+            Input(ElementId.BOTTOM_PANEL_SAVE, "n_clicks"),
+            State(ElementId.BOTTOM_PANEL_FORM_TYPE, "data"),
+            State(ElementId.DIALOGUE_EDITOR, "selectedNodeData"),
+            State(ElementId.BOTTOM_FORM_DIALOGUE, "value"),
+            State(ElementId.BOTTOM_FORM_SOURCE, "value"),
+            State(ElementId.BOTTOM_FORM_TARGET, "value"),
+            State(ElementId.BOTTOM_FORM_PREDICATES, "value"),
+            State(ElementId.BOTTOM_FORM_EFFECTS, "value"),
+            State(ElementId.BOTTOM_FORM_CASCADE, "value"),
+            State(ElementId.SELECTED_NODE_ID, "data"),
+            State(ElementId.ACTION_LOG, "data"),
             prevent_initial_call=True
         )
         def on_bottom_panel_save(
@@ -1602,15 +1628,12 @@ class App(Dash):
             resolved_selected_nodes = selected_nodes
             if selected_node_id:
                 resolved_selected_nodes = [{"id": selected_node_id}]
-            if form_type == "add-edge":
+            if form_type == FormType.ADD_EDGE:
                 if not form_source or not form_source.strip():
                     return (
                         no_update,
                         self.action_logger.append_status(
-                            current_log,
-                            "Could not create a Player node because Source "
-                            "is required. Enter an NPC node ID in Source "
-                            "and save again."
+                            current_log, ERROR_ADD_PLAYER_SOURCE_REQUIRED
                         ),
                         True,
                         no_update,
@@ -1643,10 +1666,9 @@ class App(Dash):
                     return (
                         no_update,
                         self.action_logger.append_status(
-                            current_log,
-                            "Could not create a Player node because "
-                            f"{exception}. Fix Predicates/Effects and save "
-                            "again."
+                            current_log, ERROR_ADD_PLAYER_INVALID_FIELD(
+                                reason=exception
+                            )
                         ),
                         True,
                         no_update,
@@ -1659,15 +1681,15 @@ class App(Dash):
                         no_update
                     )
                 except VertexNotFoundError as exception:
-                    endpoint_name = exception.field_name or "Source/Target"
+                    endpoint_name = (
+                        exception.field_name or FIELD_SOURCE_OR_TARGET
+                    )
                     return (
                         no_update,
                         self.action_logger.append_status(
-                            current_log,
-                            "Could not create a Player node because "
-                            f"{endpoint_name} must be an existing NPC node "
-                            "ID. Enter a valid NPC node ID in "
-                            f"{endpoint_name} and save again."
+                            current_log, ERROR_ADD_PLAYER_ENDPOINT(
+                                endpoint=endpoint_name
+                            )
                         ),
                         True,
                         no_update,
@@ -1681,7 +1703,7 @@ class App(Dash):
                     )
                 create_lines = [
                     self.action_logger.build_create_log(
-                        "Player node",
+                        NODE_TYPE_PLAYER,
                         new_edge_name,
                         self.action_logger.get_player_log_fields(new_edge_name)
                     )
@@ -1691,7 +1713,7 @@ class App(Dash):
                     auto_created_npc = new_edge.to_vertex
                     create_lines.append(
                         self.action_logger.build_create_log(
-                            "NPC node",
+                            NODE_TYPE_NPC,
                             auto_created_npc,
                             self.action_logger.get_npc_log_fields(
                                 auto_created_npc
@@ -1714,7 +1736,7 @@ class App(Dash):
                     "",
                     []
                 )
-            if form_type == "add-vertex":
+            if form_type == FormType.ADD_VERTEX:
                 if not form_dialogue:
                     raise PreventUpdate
                 try:
@@ -1723,10 +1745,9 @@ class App(Dash):
                     return (
                         no_update,
                         self.action_logger.append_status(
-                            current_log,
-                            "Could not create an NPC node because "
-                            f"{exception}. Fix the Effects field and save "
-                            "again."
+                            current_log, ERROR_ADD_NPC_INVALID_FIELD(
+                                reason=exception
+                            )
                         ),
                         True,
                         no_update,
@@ -1742,7 +1763,7 @@ class App(Dash):
                     form_dialogue, new_vertex_effects
                 )
                 create_log = self.action_logger.build_create_log(
-                    "NPC node",
+                    NODE_TYPE_NPC,
                     new_vertex_name,
                     self.action_logger.get_npc_log_fields(new_vertex_name)
                 )
@@ -1759,7 +1780,7 @@ class App(Dash):
                     "",
                     []
                 )
-            if form_type in ["edit-edge", "edit-vertex"]:
+            if form_type in [FormType.EDIT_EDGE, FormType.EDIT_VERTEX]:
                 if not resolved_selected_nodes:
                     raise PreventUpdate
                 node_id = resolved_selected_nodes[0].get("id", "")
@@ -1777,11 +1798,13 @@ class App(Dash):
                     return (
                         no_update,
                         self.action_logger.append_status(
-                            current_log,
-                            f"Could not save changes for {node_type} "
-                            f"{self.action_logger.quote_value(node_id)} "
-                            f"because {exception}. Fix the invalid field "
-                            "and save again."
+                            current_log, ERROR_SAVE_INVALID_FIELD.format(
+                                node_type=node_type,
+                                node_id=self.action_logger.quote_value(
+                                    node_id
+                                ),
+                                reason=exception
+                            )
                         ),
                         True,
                         no_update,
@@ -1801,11 +1824,10 @@ class App(Dash):
                     return (
                         no_update,
                         self.action_logger.append_status(
-                            current_log,
-                            f"Could not save changes for {node_type} "
-                            f"{self.action_logger.quote_value(node_id)} "
-                            "because it no longer exists. Select a current "
-                            "node and try again."
+                            current_log, ERROR_SAVE_MISSING_NODE.format(
+                                node_type=node_type,
+                                node_id=self.action_logger.quote_value(node_id)
+                            )
                         ),
                         True,
                         no_update,
@@ -1820,7 +1842,7 @@ class App(Dash):
                 was_updated = self.update_node(
                     node_id, form_dialogue or "", predicates, effects
                 )
-                if form_type == "edit-edge":
+                if form_type == FormType.EDIT_EDGE:
                     from_vertex_str = (
                         form_source.strip() if form_source else ""
                     )
@@ -1860,9 +1882,10 @@ class App(Dash):
                     return (
                         no_update,
                         self.action_logger.append_status(
-                            current_log,
-                            f"No changes were made to {node_type} "
-                            f"{self.action_logger.quote_value(node_id)}."
+                            current_log, STATUS_NO_CHANGES.format(
+                                node_type=node_type,
+                                node_id=self.action_logger.quote_value(node_id)
+                            )
                         ),
                         no_update,
                         get_bottom_panel_style(False),
@@ -1893,13 +1916,15 @@ class App(Dash):
                     "",
                     []
                 )
-            if form_type == "delete":
+            if form_type == FormType.DELETE:
                 if not resolved_selected_nodes:
                     raise PreventUpdate
                 node_id = resolved_selected_nodes[0].get("id", "")
                 if not node_id:
                     raise PreventUpdate
-                cascade_delete_enabled = "cascade" in (form_cascade or [])
+                cascade_delete_enabled = (
+                    CascadeValue.CASCADE in (form_cascade or [])
+                )
                 was_edge_delete = node_id in self.graph_editor.graph.edge_dict
                 was_vertex_delete = (
                     node_id in self.graph_editor.graph.vertex_dict
@@ -1908,7 +1933,7 @@ class App(Dash):
                 if was_vertex_delete and cascade_delete_enabled:
                     delete_messages.append(
                         self.action_logger.build_delete_log(
-                            "NPC node",
+                            NODE_TYPE_NPC,
                             node_id,
                             self.action_logger.get_npc_log_fields(
                                 node_id, include_empty=True
@@ -1918,7 +1943,7 @@ class App(Dash):
                 if was_edge_delete:
                     delete_messages.append(
                         self.action_logger.build_delete_log(
-                            "Player node",
+                            NODE_TYPE_PLAYER,
                             node_id,
                             self.action_logger.get_player_log_fields(
                                 node_id, include_empty=True
@@ -1936,7 +1961,7 @@ class App(Dash):
                     for edge_name in connected_player_ids:
                         delete_messages.append(
                             self.action_logger.build_delete_log(
-                                "Player node",
+                                NODE_TYPE_PLAYER,
                                 edge_name,
                                 self.action_logger.get_player_log_fields(
                                     edge_name, include_empty=True
@@ -1963,10 +1988,9 @@ class App(Dash):
                     return (
                         no_update,
                         self.action_logger.append_status(
-                            current_log,
-                            "You could not delete NPC node "
-                            f"{self.action_logger.quote_value(node_id)} "
-                            "because the first NPC node cannot be deleted."
+                            current_log, ERROR_DELETE_START_VERTEX.FORMAT(
+                                node_id=self.action_logger.quote_value(node_id)
+                            )
                         ),
                         True,
                         no_update,
@@ -1982,11 +2006,9 @@ class App(Dash):
                     return (
                         no_update,
                         self.action_logger.append_status(
-                            current_log,
-                            "Could not delete "
-                            f"{self.action_logger.quote_value(node_id)} "
-                            "because it no longer exists. Select a current "
-                            "node and try again."
+                            current_log, ERROR_DELETE_MISSING_NODE.format(
+                                node_id=self.action_logger.quote_value(node_id)
+                            )
                         ),
                         True,
                         no_update,
@@ -2003,17 +2025,15 @@ class App(Dash):
                 )
                 if was_vertex_delete and not cascade_delete_enabled:
                     npc_delete_message = self.action_logger.build_delete_log(
-                        "NPC node",
+                        NODE_TYPE_NPC,
                         node_id,
                         npc_log_fields_before_delete
                     ).removesuffix(".")
                     new_log = self.action_logger.append_status(
-                        new_log,
-                        f"{npc_delete_message}. "
-                        f"{unresolved_connections_created} unresolved "
-                        "connections were left behind. Open each affected "
-                        "Player node and set Source/Target to a valid NPC "
-                        "node."
+                        new_log, STATUS_UNRESOLVED_CONNECTIONS.format(
+                            delete_message=npc_delete_message,
+                            count=unresolved_connections_created
+                        )
                     )
                 return (
                     self.get_elements(),
@@ -2031,10 +2051,10 @@ class App(Dash):
             raise PreventUpdate
 
         @self.callback(
-            Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
-            Output("pending-action", "data", allow_duplicate=True),
-            Output("pending-upload", "data", allow_duplicate=True),
-            Input("confirm-unsaved-work", "cancel_n_clicks"),
+            Output(ElementId.CONFIRM_UNSAVED_WORK, "displayed", allow_duplicate=True),
+            Output(ElementId.PENDING_ACTION, "data", allow_duplicate=True),
+            Output(ElementId.PENDING_UPLOAD, "data", allow_duplicate=True),
+            Input(ElementId.CONFIRM_UNSAVED_WORK, "cancel_n_clicks"),
             prevent_initial_call=True
         )
         def on_confirm_unsaved_cancel(
@@ -2045,19 +2065,19 @@ class App(Dash):
             return False, "", {}
 
         @self.callback(
-            Output("action-log", "data", allow_duplicate=True),
-            Output("graph-container", "children", allow_duplicate=True),
-            Output("unsaved-changes", "data", allow_duplicate=True),
-            Output("current-document", "data", allow_duplicate=True),
-            Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
-            Output("pending-action", "data", allow_duplicate=True),
-            Output("pending-upload", "data", allow_duplicate=True),
-            Output("quit-signal", "data", allow_duplicate=True),
-            Input("confirm-unsaved-work", "submit_n_clicks"),
-            State("pending-action", "data"),
-            State("pending-upload", "data"),
-            State("action-log", "data"),
-            State("quit-signal", "data"),
+            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
+            Output(ElementId.GRAPH_CONTAINER, "children", allow_duplicate=True),
+            Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
+            Output(ElementId.CURRENT_DOCUMENT, "data", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_WORK, "displayed", allow_duplicate=True),
+            Output(ElementId.PENDING_ACTION, "data", allow_duplicate=True),
+            Output(ElementId.PENDING_UPLOAD, "data", allow_duplicate=True),
+            Output(ElementId.QUIT_SIGNAL, "data", allow_duplicate=True),
+            Input(ElementId.CONFIRM_UNSAVED_WORK, "submit_n_clicks"),
+            State(ElementId.PENDING_ACTION, "data"),
+            State(ElementId.PENDING_UPLOAD, "data"),
+            State(ElementId.ACTION_LOG, "data"),
+            State(ElementId.QUIT_SIGNAL, "data"),
             prevent_initial_call=True
         )
         def on_confirm_unsaved_submit(
@@ -2069,13 +2089,11 @@ class App(Dash):
         ) -> tuple[object, object, object, object, bool, str, dict, object]:
             if not confirm_unsaved_submit_clicks:
                 raise PreventUpdate
-            if pending_action == self.PENDING_ACTION_NEW:
+            if pending_action == PendingAction.NEW:
                 self.graph_editor.load()
                 return (
                     self.action_logger.append_status(
-                        current_log,
-                        "Discarded unsaved changes and started a new "
-                        "dialogue graph."
+                        current_log, STATUS_DISCARD_NEW
                     ),
                     self.get_fresh_graph_component(),
                     False,
@@ -2085,17 +2103,16 @@ class App(Dash):
                     {},
                     no_update
                 )
-            if pending_action == self.PENDING_ACTION_UPLOAD:
+            if pending_action == PendingAction.UPLOAD:
                 queued_upload = pending_upload or {}
                 queued_contents = queued_upload.get("contents")
-                queued_filename = queued_upload.get("filename") or "Untitled"
+                queued_filename = (
+                    queued_upload.get("filename") or DEFAULT_DOCUMENT_NAME
+                )
                 if not queued_contents:
                     return (
                         self.action_logger.append_status(
-                            current_log,
-                            "Could not open the file because no pending "
-                            "file data was found. Select the file again "
-                            "and try one more time."
+                            current_log, ERROR_UPLOAD_NO_PENDING
                         ),
                         no_update,
                         no_update,
@@ -2127,9 +2144,11 @@ class App(Dash):
                     self.get_runtime_validation_warnings()
                 )
                 new_log = self.action_logger.append_status(
-                    new_log,
-                    "Discarded unsaved changes and opened "
-                    f"{self.action_logger.quote_value(queued_filename)}."
+                    new_log, STATUS_DISCARD_OPENED.format(
+                        filename=self.action_logger.quote_value(
+                            queued_filename
+                        )
+                    )
                 )
                 return (
                     new_log,
@@ -2141,13 +2160,11 @@ class App(Dash):
                     {},
                     no_update
                 )
-            if pending_action == self.PENDING_ACTION_QUIT:
+            if pending_action == PendingAction.QUIT:
                 self.request_app_shutdown()
                 return (
                     self.action_logger.append_status(
-                        current_log,
-                        "Discarded unsaved changes and quit the dialogue "
-                        "editor session."
+                        current_log, STATUS_DISCARD_QUIT
                     ),
                     no_update,
                     no_update,
@@ -2160,11 +2177,11 @@ class App(Dash):
             raise PreventUpdate
 
         @self.callback(
-            Output("action-log", "data", allow_duplicate=True),
-            Output("download-yaml", "data", allow_duplicate=True),
-            Input("download-graph", "n_clicks"),
-            State("action-log", "data"),
-            State("current-document", "data"),
+            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
+            Output(ElementId.DOWNLOAD_YAML, "data", allow_duplicate=True),
+            Input(ElementId.DOWNLOAD_GRAPH, "n_clicks"),
+            State(ElementId.ACTION_LOG, "data"),
+            State(ElementId.CURRENT_DOCUMENT, "data"),
             prevent_initial_call=True
         )
         def on_download_graph(
@@ -2176,33 +2193,31 @@ class App(Dash):
                 raise PreventUpdate
             download_name = self.get_filename(current_document)
             new_log = self.action_logger.append_grouped_status(
-                current_log,
-                self.get_runtime_validation_warnings()
+                current_log, self.get_runtime_validation_warnings()
             )
             return (
                 self.action_logger.append_status(
-                    new_log,
-                    "Saved a copy as "
-                    f"{self.action_logger.quote_value(download_name)}."
+                    new_log, STATUS_SAVED_COPY.format(
+                        filename=self.action_logger.quote_value(download_name)
+                    )
                 ),
                 dcc.send_string(
-                    self.graph_editor.export_yaml_text(),
-                    download_name
+                    self.graph_editor.export_yaml_text(), download_name
                 )
             )
 
         @self.callback(
-            Output("bottom-form-source", "value"),
-            Output("bottom-form-target", "value"),
-            Output("pick-mode-active", "data", allow_duplicate=True),
-            Output("pick-mode-field", "data", allow_duplicate=True),
-            Output("action-log", "data", allow_duplicate=True),
-            Input("dialogue-editor", "tapNodeData"),
-            State("pick-mode-active", "data"),
-            State("pick-mode-field", "data"),
-            State("bottom-form-source", "value"),
-            State("bottom-form-target", "value"),
-            State("action-log", "data"),
+            Output(ElementId.BOTTOM_FORM_SOURCE, "value"),
+            Output(ElementId.BOTTOM_FORM_TARGET, "value"),
+            Output(ElementId.PICK_MODE_ACTIVE, "data", allow_duplicate=True),
+            Output(ElementId.PICK_MODE_FIELD, "data", allow_duplicate=True),
+            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
+            Input(ElementId.DIALOGUE_EDITOR, "tapNodeData"),
+            State(ElementId.PICK_MODE_ACTIVE, "data"),
+            State(ElementId.PICK_MODE_FIELD, "data"),
+            State(ElementId.BOTTOM_FORM_SOURCE, "value"),
+            State(ElementId.BOTTOM_FORM_TARGET, "value"),
+            State(ElementId.ACTION_LOG, "data"),
             prevent_initial_call=True
         )
         def on_graph_click_during_pick_mode(
@@ -2219,19 +2234,22 @@ class App(Dash):
             if not node_id:
                 raise PreventUpdate
             if tapped_node.get("is_edge_node", False):
-                field_label = "Source" if pick_field == "source" else "Target"
+                field_label = (
+                    FIELD_SOURCE 
+                    if pick_field == PickField.SOURCE else FIELD_TARGET
+                )
                 return (
                     no_update,
                     no_update,
                     no_update,
                     no_update,
                     self.action_logger.append_status(
-                        current_log,
-                        f"Pick mode: {field_label} must be an NPC node. "
-                        "Click an NPC node to select it."
+                        current_log, STATUS_PICK_MODE.format(
+                            field_label=field_label
+                        )
                     )
                 )
-            if pick_field == "source":
+            if pick_field == PickField.SOURCE:
                 return (
                     node_id,
                     current_target or "",
@@ -2239,7 +2257,7 @@ class App(Dash):
                     "",
                     no_update
                 )
-            if pick_field == "target":
+            if pick_field == PickField.TARGET:
                 return (
                     current_source or "",
                     node_id,
@@ -2250,17 +2268,17 @@ class App(Dash):
             raise PreventUpdate
 
         @self.callback(
-            Output("action-log", "data", allow_duplicate=True),
-            Output("graph-container", "children", allow_duplicate=True),
-            Output("unsaved-changes", "data", allow_duplicate=True),
-            Output("current-document", "data", allow_duplicate=True),
-            Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
-            Output("confirm-unsaved-work", "message", allow_duplicate=True),
-            Output("pending-action", "data", allow_duplicate=True),
-            Output("pending-upload", "data", allow_duplicate=True),
-            Input("new-graph", "n_clicks"),
-            State("action-log", "data"),
-            State("unsaved-changes", "data"),
+            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
+            Output(ElementId.GRAPH_CONTAINER, "children", allow_duplicate=True),
+            Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
+            Output(ElementId.CURRENT_DOCUMENT, "data", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_WORK, "displayed", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_WORK, "message", allow_duplicate=True),
+            Output(ElementId.PENDING_ACTION, "data", allow_duplicate=True),
+            Output(ElementId.PENDING_UPLOAD, "data", allow_duplicate=True),
+            Input(ElementId.NEW_GRAPH, "n_clicks"),
+            State(ElementId.ACTION_LOG, "data"),
+            State(ElementId.UNSAVED_CHANGES, "data"),
             prevent_initial_call=True
         )
         def on_new_graph(
@@ -2277,15 +2295,14 @@ class App(Dash):
                     no_update,
                     no_update,
                     True,
-                    "You have unsaved changes. Start a new graph anyway?",
-                    self.PENDING_ACTION_NEW,
+                    CONFIRM_UNSAVED_NEW,
+                    PendingAction.NEW,
                     {}
                 )
             self.graph_editor.load()
             return (
                 self.action_logger.append_status(
-                    current_log,
-                    "Started a new dialogue graph."
+                    current_log, STATUS_NEW_GRAPH
                 ),
                 self.get_fresh_graph_component(),
                 False,
@@ -2297,16 +2314,16 @@ class App(Dash):
             )
 
         @self.callback(
-            Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
-            Output("confirm-unsaved-work", "message", allow_duplicate=True),
-            Output("pending-action", "data", allow_duplicate=True),
-            Output("pending-upload", "data", allow_duplicate=True),
-            Output("action-log", "data", allow_duplicate=True),
-            Output("quit-signal", "data", allow_duplicate=True),
-            Input("quit-editor", "n_clicks"),
-            State("unsaved-changes", "data"),
-            State("action-log", "data"),
-            State("quit-signal", "data"),
+            Output(ElementId.CONFIRM_UNSAVED_WORK, "displayed", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_WORK, "message", allow_duplicate=True),
+            Output(ElementId.PENDING_ACTION, "data", allow_duplicate=True),
+            Output(ElementId.PENDING_UPLOAD, "data", allow_duplicate=True),
+            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
+            Output(ElementId.QUIT_SIGNAL, "data", allow_duplicate=True),
+            Input(ElementId.QUIT_EDITOR, "n_clicks"),
+            State(ElementId.UNSAVED_CHANGES, "data"),
+            State(ElementId.ACTION_LOG, "data"),
+            State(ElementId.QUIT_SIGNAL, "data"),
             prevent_initial_call=True
         )
         def on_quit_editor(
@@ -2320,8 +2337,8 @@ class App(Dash):
             if unsaved_changes:
                 return (
                     True,
-                    "You have unsaved changes. Quit anyway?",
-                    self.PENDING_ACTION_QUIT,
+                    CONFIRM_UNSAVED_QUIT,
+                    PendingAction.QUIT,
                     {},
                     no_update,
                     no_update
@@ -2332,20 +2349,17 @@ class App(Dash):
                 no_update,
                 "",
                 {},
-                self.action_logger.append_status(
-                    current_log,
-                    "Quit the dialogue editor session."
-                ),
+                self.action_logger.append_status(current_log, STATUS_QUIT),
                 (quit_signal or 0) + 1
             )
 
         @self.callback(
-            Output("action-log", "data", allow_duplicate=True),
-            Output("unsaved-changes", "data", allow_duplicate=True),
-            Output("current-document", "data", allow_duplicate=True),
-            Input("save-name", "n_clicks"),
-            State("action-log", "data"),
-            State("document-name", "value"),
+            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
+            Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
+            Output(ElementId.CURRENT_DOCUMENT, "data", allow_duplicate=True),
+            Input(ElementId.SAVE_NAME, "n_clicks"),
+            State(ElementId.ACTION_LOG, "data"),
+            State(ElementId.DOCUMENT_NAME, "value"),
             prevent_initial_call=True
         )
         def on_save_name(
@@ -2359,27 +2373,27 @@ class App(Dash):
             self.graph_editor.edit_name(normalized)
             return (
                 self.action_logger.append_status(
-                    current_log,
-                    "Saved NPC name as "
-                    f"{self.action_logger.quote_value(normalized)}."
+                    current_log, STATUS_SAVED_NAME.format(
+                        name=self.action_logger.quote_value(normalized)
+                    )
                 ),
                 True,
                 normalized
             )
 
         @self.callback(
-            Output("action-log", "data", allow_duplicate=True),
-            Output("graph-container", "children", allow_duplicate=True),
-            Output("unsaved-changes", "data", allow_duplicate=True),
-            Output("current-document", "data", allow_duplicate=True),
-            Output("confirm-unsaved-work", "displayed", allow_duplicate=True),
-            Output("confirm-unsaved-work", "message", allow_duplicate=True),
-            Output("pending-action", "data", allow_duplicate=True),
-            Output("pending-upload", "data", allow_duplicate=True),
-            Input("upload-graph", "contents"),
-            State("upload-graph", "filename"),
-            State("action-log", "data"),
-            State("unsaved-changes", "data"),
+            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
+            Output(ElementId.GRAPH_CONTAINER, "children", allow_duplicate=True),
+            Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
+            Output(ElementId.CURRENT_DOCUMENT, "data", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_WORK, "displayed", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_WORK, "message", allow_duplicate=True),
+            Output(ElementId.PENDING_ACTION, "data", allow_duplicate=True),
+            Output(ElementId.PENDING_UPLOAD, "data", allow_duplicate=True),
+            Input(ElementId.UPLOAD_GRAPH, "contents"),
+            State(ElementId.UPLOAD_GRAPH, "filename"),
+            State(ElementId.ACTION_LOG, "data"),
+            State(ElementId.UNSAVED_CHANGES, "data"),
             prevent_initial_call=True
         )
         def on_upload_graph(
@@ -2397,11 +2411,11 @@ class App(Dash):
                     no_update,
                     no_update,
                     True,
-                    "You have unsaved changes. Upload and replace anyway?",
-                    self.PENDING_ACTION_UPLOAD,
+                    CONFIRM_UNSAVED_UPLOAD,
+                    PendingAction.UPLOAD,
                     {
                         "contents": upload_contents,
-                        "filename": upload_filename or "Untitled"
+                        "filename": upload_filename or DEFAULT_DOCUMENT_NAME
                     }
                 )
             try:
@@ -2427,9 +2441,9 @@ class App(Dash):
                 self.get_runtime_validation_warnings()
             )
             new_log = self.action_logger.append_status(
-                new_log,
-                "Opened "
-                f"{self.action_logger.quote_value(quoted_value)}."
+                new_log, STATUS_OPENED.format(
+                    filename=self.action_logger.quote_value(quoted_value)
+                )
             )
             return (
                 new_log,
@@ -2443,28 +2457,28 @@ class App(Dash):
             )
 
         @self.callback(
-            Output("dialogue-editor", "elements", allow_duplicate=True),
-            Output("selected-node-id", "data", allow_duplicate=True),
-            Output("action-log", "data", allow_duplicate=True),
-            Output("bottom-panel", "style", allow_duplicate=True),
-            Output("bottom-panel-visible", "data", allow_duplicate=True),
-            Output("bottom-panel-form-type", "data", allow_duplicate=True),
-            Output("bottom-panel-title", "children", allow_duplicate=True),
-            Output("bottom-form-dialogue", "value", allow_duplicate=True),
-            Output("bottom-form-source", "value", allow_duplicate=True),
-            Output("bottom-form-target", "value", allow_duplicate=True),
-            Output("bottom-form-predicates", "value", allow_duplicate=True),
-            Output("bottom-form-effects", "value", allow_duplicate=True),
-            Output("bottom-form-cascade", "value", allow_duplicate=True),
-            Output("pick-mode-active", "data", allow_duplicate=True),
-            Output("pick-mode-field", "data", allow_duplicate=True),
-            Output("bottom-panel-save", "children", allow_duplicate=True),
-            Output("bottom-panel-save", "style", allow_duplicate=True),
-            Output("bottom-panel-close", "children", allow_duplicate=True),
-            Output("bottom-panel-close", "style", allow_duplicate=True),
-            Input("dialogue-editor", "contextMenuData"),
-            State("dialogue-editor", "elements"),
-            State("action-log", "data"),
+            Output(ElementId.DIALOGUE_EDITOR, "elements", allow_duplicate=True),
+            Output(ElementId.SELECTED_NODE_ID, "data", allow_duplicate=True),
+            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
+            Output(ElementId.BOTTOM_PANEL, "style", allow_duplicate=True),
+            Output(ElementId.BOTTOM_PANEL_VISIBLE, "data", allow_duplicate=True),
+            Output(ElementId.BOTTOM_PANEL_FORM_TYPE, "data", allow_duplicate=True),
+            Output(ElementId.BOTTOM_PANEL_TITLE, "children", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_DIALOGUE, "value", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_SOURCE, "value", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_TARGET, "value", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_PREDICATES, "value", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_EFFECTS, "value", allow_duplicate=True),
+            Output(ElementId.BOTTOM_FORM_CASCADE, "value", allow_duplicate=True),
+            Output(ElementId.PICK_MODE_ACTIVE, "data", allow_duplicate=True),
+            Output(ElementId.PICK_MODE_FIELD, "data", allow_duplicate=True),
+            Output(ElementId.BOTTOM_PANEL_SAVE, "children", allow_duplicate=True),
+            Output(ElementId.BOTTOM_PANEL_SAVE, "style", allow_duplicate=True),
+            Output(ElementId.BOTTOM_PANEL_CLOSE, "children", allow_duplicate=True),
+            Output(ElementId.BOTTOM_PANEL_CLOSE, "style", allow_duplicate=True),
+            Input(ElementId.DIALOGUE_EDITOR, "contextMenuData"),
+            State(ElementId.DIALOGUE_EDITOR, "elements"),
+            State(ElementId.ACTION_LOG, "data"),
             prevent_initial_call=True
         )
         def open_bottom_panel_from_context_menu(
@@ -2510,8 +2524,8 @@ class App(Dash):
             return (selected_elements, selected_node_id, *panel_outputs)
 
         @self.callback(
-            Output("action-log-display", "children"),
-            Input("action-log", "data")
+            Output(ElementId.ACTION_LOG_DISPLAY, "children"),
+            Input(ElementId.ACTION_LOG, "data")
         )
         def render_action_log(
             log_entries: list[dict[str, str]] | None
@@ -2519,21 +2533,21 @@ class App(Dash):
             return build_log_children(log_entries)
 
         @self.callback(
-            Output("current-document-label", "children"),
-            Input("current-document", "data"),
-            Input("unsaved-changes", "data")
+            Output(ElementId.CURRENT_DOCUMENT_LABEL, "children"),
+            Input(ElementId.CURRENT_DOCUMENT, "data"),
+            Input(ElementId.UNSAVED_CHANGES, "data")
         )
         def render_document_label(
             current_document: str | None,
             unsaved_changes: bool
         ) -> str:
             document_name = self.get_filename(current_document)
-            dirty_marker = " *" if unsaved_changes else ""
-            return f"Document: {document_name}{dirty_marker}"
+            dirty_marker = DIRTY_MARKER if unsaved_changes else ""
+            return LABEL_DOCUMENT.format(name=f"{document_name}{dirty_marker}")
 
         @self.callback(
-            Output("upload-graph-container", "children"),
-            Input("action-log", "data"),
+            Output(ElementId.UPLOAD_GRAPH_CONTAINER, "children"),
+            Input(ElementId.ACTION_LOG, "data"),
             prevent_initial_call=True
         )
         def reset_upload_contents_after_actions(
@@ -2542,9 +2556,9 @@ class App(Dash):
             return get_upload_graph()
 
         @self.callback(
-            Output("dialogue-editor", "elements", allow_duplicate=True),
-            Input("dialogue-editor", "contextMenuData"),
-            State("dialogue-editor", "elements"),
+            Output(ElementId.DIALOGUE_EDITOR, "elements", allow_duplicate=True),
+            Input(ElementId.DIALOGUE_EDITOR, "contextMenuData"),
+            State(ElementId.DIALOGUE_EDITOR, "elements"),
             prevent_initial_call=True
         )
         def select_context_menu_target(
@@ -2561,17 +2575,17 @@ class App(Dash):
             return self.build_context_menu_selection(elements, element_id)
 
         @self.callback(
-            Output("document-name", "value"),
-            Input("current-document", "data")
+            Output(ElementId.DOCUMENT_NAME, "value"),
+            Input(ElementId.CURRENT_DOCUMENT, "data")
         )
         def sync_document_name(current_document: str | None) -> str:
             return self.normalize_name(current_document)
 
         @self.callback(
-            Output("open-add-edge-modal", "disabled"),
-            Output("open-add-edge-modal", "style"),
-            Output("open-add-edge-tooltip", "title"),
-            Input("dialogue-editor", "elements")
+            Output(ElementId.OPEN_ADD_EDGE_MODAL, "disabled"),
+            Output(ElementId.OPEN_ADD_EDGE_MODAL, "style"),
+            Output(ElementId.OPEN_ADD_EDGE_TOOLTIP, "title"),
+            Input(ElementId.DIALOGUE_EDITOR, "elements")
         )
         def toggle_add_player_button(
             elements: list[dict] | None
@@ -2579,76 +2593,39 @@ class App(Dash):
             return self.get_add_player_button_state()
         
         @self.callback(
-            Output("open-edit-modal", "disabled"),
-            Output("open-edit-modal", "style"),
-            Output("open-edit-tooltip", "title"),
-            Output("open-delete-modal", "disabled"),
-            Output("open-delete-modal", "style"),
-            Output("open-delete-tooltip", "title"),
-            Input("dialogue-editor", "selectedNodeData")
+            Output(ElementId.OPEN_EDIT_MODAL, "disabled"),
+            Output(ElementId.OPEN_EDIT_MODAL, "style"),
+            Output(ElementId.OPEN_EDIT_TOOLTIP, "title"),
+            Output(ElementId.OPEN_DELETE_MODAL, "disabled"),
+            Output(ElementId.OPEN_DELETE_MODAL, "style"),
+            Output(ElementId.OPEN_DELETE_TOOLTIP, "title"),
+            Input(ElementId.DIALOGUE_EDITOR, "selectedNodeData")
         )
         def toggle_edit_delete_buttons(
             selected_nodes: list[dict] | None
         ) -> tuple[bool, dict, str, bool, dict, str]:
-            edit_base_style = {
-                "width": "100%",
-                "padding": "10px",
-                "marginBottom": "8px",
-                "border": "1px solid #666",
-                "borderRadius": "4px"
-            }
-            delete_base_style = {
-                "width": "100%",
-                "padding": "10px",
-                "marginBottom": "8px",
-                "borderRadius": "4px"
-            }
             if not selected_nodes:
                 return (
-                    True, 
-                    {
-                        **edit_base_style,
-                        "backgroundColor": "#374151",
-                        "color": "#6b7280",
-                        "cursor": "not-allowed",
-                        "opacity": 0.5
-                    },
-                    "Select a node to edit.",
                     True,
-                    {
-                        **delete_base_style,
-                        "backgroundColor": "#4b1c1c",
-                        "color": "#6b7280",
-                        "border": "1px solid #7f1d1d",
-                        "cursor": "not-allowed",
-                        "opacity": 0.5
-                    },
-                    "Select a node to delete."
+                    get_panel_button_disabled_style(),
+                    TOOLTIP_EDIT_DISABLED,
+                    True,
+                    get_panel_button_danger_disabled_style(),
+                    TOOLTIP_DELETE_DISABLED
                 )
             return (
-                False, 
-                {
-                    **edit_base_style,
-                    "backgroundColor": "#4b5563",
-                    "color": "#e6e6e6",
-                    "cursor": "pointer"
-                },
-                "Edit the selected node's text, effects, and predicates (E)",
                 False,
-                {
-                    **delete_base_style,
-                    "backgroundColor": "#7f1d1d",
-                    "color": "#e6e6e6",
-                    "border": "1px solid #c53030",
-                    "cursor": "pointer"
-                },
-                "Remove the selected node from the graph (Delete / Backspace)"
+                get_panel_button_enabled_style(),
+                TOOLTIP_EDIT_ENABLED,
+                False,
+                get_panel_button_danger_style(),
+                TOOLTIP_DELETE_ENABLED
             )
 
         @self.callback(
-            Output("dialogue-editor", "contextMenu"),
-            Input("pick-mode-active", "data"),
-            Input("bottom-panel-visible", "data"),
+            Output(ElementId.DIALOGUE_EDITOR, "contextMenu"),
+            Input(ElementId.PICK_MODE_ACTIVE, "data"),
+            Input(ElementId.BOTTOM_PANEL_VISIBLE, "data"),
             prevent_initial_call=True
         )
         def update_context_menu(
@@ -2660,15 +2637,15 @@ class App(Dash):
             return self.get_context_menu()
         
         @self.callback(
-            Output("selected-node-display", "children"),
-            Input("dialogue-editor", "selectedNodeData")
+            Output(ElementId.SELECTED_NODE_DISPLAY, "children"),
+            Input(ElementId.DIALOGUE_EDITOR, "selectedNodeData")
         )
         def update_selected_node_display(
             selected_nodes: list[dict] | None
         ) -> str:
             if not selected_nodes:
-                return "None"
-            node_id = selected_nodes[0].get("id", "None")
+                return DEFAULT_NODE_DISPLAY
+            node_id = selected_nodes[0].get("id", DEFAULT_NODE_DISPLAY)
             return node_id
 
     def remove_node(self, node_id: str, cascade_delete: bool = False) -> bool:
@@ -2693,9 +2670,9 @@ class App(Dash):
         """Stop the server after the current callback response is sent."""
         shutdown_server = request.environ.get("werkzeug.server.shutdown")
         if shutdown_server:
-            Timer(0.1, shutdown_server).start()
+            Timer(SERVER_SHUTDOWN_DELAY_SECONDS, shutdown_server).start()
             return
-        Timer(0.1, _exit, args=(0,)).start()
+        Timer(SERVER_SHUTDOWN_DELAY_SECONDS, _exit, args=(0,)).start()
 
     def update_edge_endpoints(
         self, 
@@ -2729,21 +2706,22 @@ class App(Dash):
                     was_updated = True
             else:
                 warnings.append(
-                    "Could not update Source for Player node "
-                    f"{self.action_logger.quote_value(node_id)} "
-                    "because NPC node "
-                    f"{self.action_logger.quote_value(candidate_from_vertex)} "
-                    "does not exist. Enter an existing NPC node ID in Source "
-                    "and save again."
+                    ERROR_UPDATE_ENDPOINT_MISSING.format(
+                        field=FIELD_SOURCE,
+                        node_id=self.action_logger.quote_value(node_id),
+                        vertex_id=self.action_logger.quote_value(
+                            candidate_from_vertex
+                        )
+                    )
                 )
-        elif edge.from_vertex == self.MISSING_VERTEX:
+        elif edge.from_vertex == MISSING_VERTEX:
             pass
         else:
             warnings.append(
-                "Could not update Source for Player node "
-                f"{self.action_logger.quote_value(node_id)} because "
-                "Source cannot be empty. Enter an existing NPC node ID in "
-                "Source and save again."
+                ERROR_UPDATE_ENDPOINT_EMPTY.format(
+                    field=FIELD_SOURCE,
+                    node_id=self.action_logger.quote_value(node_id)
+                )
             )
         if candidate_to_vertex:
             if candidate_to_vertex in self.graph_editor.graph.vertex_dict:
@@ -2754,21 +2732,22 @@ class App(Dash):
                     was_updated = True
             else:
                 warnings.append(
-                    "Could not update Target for Player node "
-                    f"{self.action_logger.quote_value(node_id)} "
-                    "because NPC node "
-                    f"{self.action_logger.quote_value(candidate_to_vertex)} "
-                    "does not exist. Enter an existing NPC node ID in Target "
-                    "and save again."
+                    ERROR_UPDATE_ENDPOINT_MISSING.format(
+                        field=FIELD_TARGET,
+                        node_id=self.action_logger.quote_value(node_id),
+                        vertex_id=self.action_logger.quote_value(
+                            candidate_to_vertex
+                        )
+                    )
                 )
-        elif edge.to_vertex == self.MISSING_VERTEX:
+        elif edge.to_vertex == MISSING_VERTEX:
             pass
         else:
             warnings.append(
-                "Could not update Target for Player node "
-                f"{self.action_logger.quote_value(node_id)} because "
-                "Target cannot be empty. Enter an existing NPC node ID in "
-                "Target and save again."
+                ERROR_UPDATE_ENDPOINT_EMPTY.format(
+                    field=FIELD_TARGET,
+                    node_id=self.action_logger.quote_value(node_id)
+                )
             )
         return was_updated, warnings
 
@@ -2814,6 +2793,6 @@ class App(Dash):
 
 def main():
     """Launch the local Dash dialogue editor application."""
-    open_url("http://localhost:8050")
+    open_url(SERVER_URL)
     app = App()
     app.run()
