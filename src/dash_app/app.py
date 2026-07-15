@@ -1178,6 +1178,12 @@ class App(Dash):
                         return;
                     }
                     if (state.bottomPanelVisible) {
+                        if (event.ctrlKey && !event.metaKey
+                            && !event.altKey && key === "Enter") {
+                            event.preventDefault();
+                            clickById("bottom-panel-save");
+                            return;
+                        }
                         if (state.formType === "delete" && key === "Enter") {
                             event.preventDefault();
                             clickById("bottom-panel-save");

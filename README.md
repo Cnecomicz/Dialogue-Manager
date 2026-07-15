@@ -84,7 +84,7 @@ may experience a collision with built in browser/system level shortcuts.
 | `E` | Edit the selected node |
 | `Delete` / `Backspace` | Delete the selected node |
 | `Arrow keys` | Move the selection to the next node |
-| `Enter` | Confirm |
+| `Ctrl+Enter` | Confirm selection or save an open form |
 | `Esc` | Cancel |
 | `?` | Show the keyboard shortcut help overlay |
 

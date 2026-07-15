@@ -148,7 +148,7 @@ SHORTCUTS_HELP = [
     ("Edit selected node", "E"),
     ("Delete selected node", "Delete / Backspace"),
     ("Navigate between nodes", "\u2190 \u2191 \u2192 \u2193"),
-    ("Confirm new/open/delete", "Enter"),
+    ("Confirm selection or save an open form", "Ctrl+Enter"),
     ("Cancel, close panel, or exit node picking", "Esc"),
     ("Show this help", "?")
 ]
