@@ -1437,7 +1437,7 @@ class App(Dash):
                     close_button_style,
                     node_id
                 )
-            if triggered_id == ElementId.OPEN_EDIT_MODAL:
+            if triggered_id == ElementId.OPEN_DELETE_MODAL:
                 if not selected_nodes:
                     raise PreventUpdate
                 return (
