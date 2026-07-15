@@ -169,7 +169,7 @@ predicates or effects by hand for a given vertex/edge.
 
 * Checking a value: `player.gold >= 1` <-> 
     `{type: "check_value", path: "player.gold", op: ">=", value: 1}`
-* Checkling list membership: `Flower in zeke.inventory` <-> 
+* Checking list membership: `Flower in zeke.inventory` <-> 
     `{type: "check_list", path: "zeke.inventory", op: "in", value: "Flower"}`
 
 ## Programmatic usage MWE:
