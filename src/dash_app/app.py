@@ -11,10 +11,11 @@ from typing import Any
 from webbrowser import open as open_url
 from yaml import YAMLError, safe_load
 
-from dash_app.element_ids import ElementId
-from dash_app.enums import (
+from dash_app.constants import (
     CascadeValue,
+    ElementId,
     FormType,
+    HISTORY_LIMIT,
     MenuItemId,
     PendingAction,
     PickField
@@ -78,14 +79,18 @@ from dash_app.messages import (
     STATUS_DISCARD_QUIT,
     STATUS_NEW_GRAPH,
     STATUS_NO_CHANGES,
+    STATUS_NOTHING_TO_REDO,
+    STATUS_NOTHING_TO_UNDO,
     STATUS_OPENED,
     STATUS_PICK_MODE,
     STATUS_QUIT,
     STATUS_READY,
+    STATUS_REDO,
     STATUS_RUNTIME_VALIDATION_HEADER,
     STATUS_RUNTIME_VALIDATION_LINE,
     STATUS_SAVED_COPY,
     STATUS_SAVED_NAME,
+    STATUS_UNDO,
     STATUS_UNRESOLVED_CONNECTIONS,
     TITLE_ADD_NPC,
     TITLE_ADD_PLAYER,
@@ -114,6 +119,8 @@ from dash_app.theme import (
     get_panel_button_disabled_style,
     get_panel_button_enabled_style,
     get_primary_button_style,
+    get_toolbar_button_disabled_style,
+    get_toolbar_button_style,
     SERVER_SHUTDOWN_DELAY_SECONDS,
     SERVER_URL
 )
@@ -146,6 +153,7 @@ class App(Dash):
         self.graph_render_count = 0
         if yaml_file is not None:
             self.graph_editor.load(yaml_file=yaml_file)
+        self.reset_history()
         load_extra_layouts()
         author, version = get_project_metadata()
         initial_name = self.normalize_name(self.graph_editor.graph.name)
@@ -170,6 +178,10 @@ class App(Dash):
                 dcc.Store(id=ElementId.PICK_MODE_FIELD, data=""),
                 dcc.Store(id=ElementId.SHORTCUTS_HELP_VISIBLE, data=False),
                 dcc.Store(id=ElementId.CONFIRM_UNSAVED_VISIBLE, data=False),
+                dcc.Store(
+                    id=ElementId.UNDO_REDO_STATE, 
+                    data=self.get_undo_redo_state()
+                ),
                 dcc.Download(id=ElementId.DOWNLOAD_YAML),
                 get_unsaved_work_modal(),
                 html.Div(
@@ -260,6 +272,33 @@ class App(Dash):
                 updated_element["selected"] = False
             selected_elements.append(updated_element)
         return selected_elements
+
+    def capture_snapshot(
+        self,
+        selected_node_id: str | None,
+        document_name: str | None,
+        label: str
+    ) -> dict[str, Any]:
+        """Build a restorable snapshot of the current editor state.
+
+        Args:
+            selected_node_id (str | None): Node selected when the snapshot
+                is taken, restored on undo/redo.
+            document_name (str | None): Document name shown for this state.
+            label (str): Description of the action that produced this state,
+                echoed by undo/redo log messages.
+
+        Returns:
+            dict[str, Any]: Snapshot mapping consumed by restore_snapshot.
+        """
+        return {
+            "yaml": self.graph_editor.export_yaml_text(),
+            "next_vertex_index": self.graph_editor.next_vertex_index,
+            "next_edge_index": self.graph_editor.next_edge_index,
+            "selected_node_id": selected_node_id,
+            "document_name": document_name,
+            "label": label
+        }
 
     def count_unresolved_connections(self, vertex_name: str) -> int:
         """Count edges referencing a vertex that is about to be removed.
@@ -724,6 +763,18 @@ class App(Dash):
         ]
         return warning_lines
 
+    def get_undo_redo_state(self) -> dict[str, bool]:
+        """Return whether undo and redo are currently available.
+
+        Returns:
+            dict[str, bool]: Mapping with "can_undo" and "can_redo" flags
+                derived from the history cursor position.
+        """
+        return {
+            "can_undo": self.history_cursor > 0,
+            "can_redo": self.history_cursor < len(self.history) - 1
+        }
+
     def normalize_name(self, name: str | None) -> str:
         """Normalize an NPC name to a non-empty display value.
 
@@ -838,6 +889,36 @@ class App(Dash):
         if not isinstance(parsed_yaml, dict):
             raise ValueError(ERROR_UPLOAD_NOT_DICT)
         return parsed_yaml
+
+    def record_history(
+        self,
+        log_entries: list[dict[str, str]] | None,
+        selected_node_id: str | None,
+        document_name: str | None
+    ) -> dict[str, bool]:
+        """Capture a new snapshot when the graph changed since the last one.
+
+        Args:
+            log_entries (list[dict[str, str]] | None): Current action log.
+            selected_node_id (str | None): Currently selected node.
+            document_name (str | None): Current document name.
+
+        Returns:
+            dict[str, bool]: Updated undo/redo availability.
+        """
+        current_yaml = self.graph_editor.export_yaml_text()
+        if current_yaml == self.history[self.history_cursor]["yaml"]:
+            return self.get_undo_redo_state()
+        label = ""
+        if log_entries:
+            label = str(log_entries[-1].get("message", "")).split("\n")[0]
+        self.history = self.history[: self.history_cursor+1]
+        self.history.append(
+            self.capture_snapshot(selected_node_id, document_name, label)
+        )
+        self.history_cursor += 1
+        self.trim_history()
+        return self.get_undo_redo_state()
 
     def register_callbacks(self) -> None:
         """Register all Dash callbacks for graph editing actions."""
@@ -1106,6 +1187,13 @@ class App(Dash):
                     if (isEditableTarget()) {
                         return;
                     }
+                    if (event.ctrlKey && event.shiftKey
+                        && !event.metaKey && !event.altKey
+                        && key.toLowerCase() === "z") {
+                        event.preventDefault();
+                        clickById("redo-action");
+                        return;
+                    }
                     if (event.ctrlKey && !event.metaKey
                         && !event.altKey && !event.shiftKey) {
                         var lowered = key.toLowerCase();
@@ -1127,6 +1215,16 @@ class App(Dash):
                         if (lowered === "q") {
                             event.preventDefault();
                             clickById("quit-editor");
+                            return;
+                        }
+                        if (lowered === "z") {
+                            event.preventDefault();
+                            clickById("undo-action");
+                            return;
+                        }
+                        if (lowered === "y") {
+                            event.preventDefault();
+                            clickById("redo-action");
                             return;
                         }
                         return;
@@ -1614,6 +1712,29 @@ class App(Dash):
                 bottom_panel_visible and not pick_mode_active
             )
             return lock_graph_interactions, lock_graph_interactions
+
+        @self.callback(
+            Output(ElementId.UNDO_ACTION, "disabled"),
+            Output(ElementId.UNDO_ACTION, "style"),
+            Output(ElementId.REDO_ACTION, "disabled"),
+            Output(ElementId.REDO_ACTION, "style"),
+            Input(ElementId.UNDO_REDO_STATE, "data")
+        )
+        def manage_undo_redo_buttons(
+            undo_redo_state: dict[str, bool] | None
+        ) -> tuple[bool, dict[str, str], bool, dict[str, str]]:
+            state = undo_redo_state or {}
+            can_undo = bool(state.get("can_undo"))
+            can_redo = bool(state.get("can_redo"))
+            undo_style = (
+                get_toolbar_button_style() if can_undo
+                else get_toolbar_button_disabled_style()
+            )
+            redo_style = (
+                get_toolbar_button_style() if can_redo
+                else get_toolbar_button_disabled_style()
+            )
+            return not can_undo, undo_style, not can_redo, redo_style
 
         @self.callback(
             Output(ElementId.DIALOGUE_EDITOR, "elements", allow_duplicate=True),
@@ -2125,6 +2246,7 @@ class App(Dash):
                 raise PreventUpdate
             if pending_action == PendingAction.NEW:
                 self.graph_editor.load()
+                self.reset_history()
                 return (
                     self.action_logger.append_status(
                         current_log, STATUS_DISCARD_NEW
@@ -2172,6 +2294,7 @@ class App(Dash):
                         no_update
                     )
                 self.graph_editor.load(yaml_data=parsed_yaml)
+                self.reset_history()
                 loaded_name = self.normalize_name(self.graph_editor.graph.name)
                 new_log = self.action_logger.append_grouped_status(
                     current_log,
@@ -2335,6 +2458,7 @@ class App(Dash):
                     {}
                 )
             self.graph_editor.load()
+            self.reset_history()
             return (
                 self.action_logger.append_status(
                     current_log, STATUS_NEW_GRAPH
@@ -2371,6 +2495,46 @@ class App(Dash):
             )
 
         @self.callback(
+            Output(ElementId.DIALOGUE_EDITOR, "elements", allow_duplicate=True),
+            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
+            Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
+            Output(ElementId.CURRENT_DOCUMENT, "data", allow_duplicate=True),
+            Output(ElementId.SELECTED_NODE_ID, "data", allow_duplicate=True),
+            Input(ElementId.REDO_ACTION, "n_clicks"),
+            State(ElementId.ACTION_LOG, "data"),
+            prevent_initial_call=True
+        )
+        def on_redo(
+            redo_clicks: int,
+            current_log: list[dict[str, str]] | None
+        ) -> tuple[object, object, object, object, object]:
+            if not redo_clicks:
+                raise PreventUpdate
+            if self.history_cursor >= len(self.history) - 1:
+                return (
+                    no_update,
+                    self.action_logger.append_status(
+                        current_log, STATUS_NOTHING_TO_REDO
+                    ),
+                    no_update,
+                    no_update,
+                    no_update
+                )
+            snapshot = self.restore_snapshot(self.history_cursor+1)
+            elements = self.build_context_menu_selection(
+                self.get_elements(), snapshot["selected_node_id"] or ""
+            )
+            return (
+                elements,
+                self.action_logger.append_status(
+                    current_log, STATUS_REDO.format(action=snapshot["label"])
+                ),
+                self.history_cursor != self.clean_cursor,
+                snapshot["document_name"],
+                snapshot["selected_node_id"]
+            )
+
+        @self.callback(
             Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
             Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
             Output(ElementId.CURRENT_DOCUMENT, "data", allow_duplicate=True),
@@ -2396,6 +2560,47 @@ class App(Dash):
                 ),
                 True,
                 normalized
+            )
+
+        @self.callback(
+            Output(ElementId.DIALOGUE_EDITOR, "elements", allow_duplicate=True),
+            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
+            Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
+            Output(ElementId.CURRENT_DOCUMENT, "data", allow_duplicate=True),
+            Output(ElementId.SELECTED_NODE_ID, "data", allow_duplicate=True),
+            Input(ElementId.UNDO_ACTION, "n_clicks"),
+            State(ElementId.ACTION_LOG, "data"),
+            prevent_initial_call=True
+        )
+        def on_undo(
+            undo_clicks: int,
+            current_log: list[dict[str, str]] | None
+        ) -> tuple[object, object, object, object, object]:
+            if not undo_clicks:
+                raise PreventUpdate
+            if self.history_cursor <= 0:
+                return (
+                    no_update,
+                    self.action_logger.append_status(
+                        current_log, STATUS_NOTHING_TO_UNDO
+                    ),
+                    no_update,
+                    no_update,
+                    no_update
+                )
+            undone_label = self.history[self.history_cursor]["label"]
+            snapshot = self.restore_snapshot(self.history_cursor-1)
+            elements = self.build_context_menu_selection(
+                self.get_elements(), snapshot["selected_node_id"] or ""
+            )
+            return (
+                elements,
+                self.action_logger.append_status(
+                    current_log, STATUS_UNDO.format(action=undone_label)
+                ),
+                self.history_cursor != self.clean_cursor,
+                snapshot["document_name"],
+                snapshot["selected_node_id"]
             )
 
         @self.callback(
@@ -2451,6 +2656,7 @@ class App(Dash):
                     {}
                 )
             self.graph_editor.load(yaml_data=parsed_yaml)
+            self.reset_history()
             loaded_name = self.normalize_name(self.graph_editor.graph.name)
             quoted_value = upload_filename or loaded_name
             new_log = self.action_logger.append_grouped_status(
@@ -2539,6 +2745,22 @@ class App(Dash):
                 menu_item_id, element_id or None, current_log
             )
             return (selected_elements, selected_node_id, *panel_outputs)
+
+        @self.callback(
+            Output(ElementId.UNDO_REDO_STATE, "data"),
+            Input(ElementId.ACTION_LOG, "data"),
+            State(ElementId.SELECTED_NODE_ID, "data"),
+            State(ElementId.CURRENT_DOCUMENT, "data"),
+            prevent_initial_call=True
+        )
+        def refresh_history(
+            log_entries: list[dict[str, str]] | None,
+            selected_node_id: str | None,
+            current_document: str | None
+        ) -> dict[str, bool]:
+            return self.record_history(
+                log_entries, selected_node_id, current_document
+            )
 
         @self.callback(
             Output(ElementId.ACTION_LOG_DISPLAY, "children"),
@@ -2690,6 +2912,43 @@ class App(Dash):
             Timer(SERVER_SHUTDOWN_DELAY_SECONDS, shutdown_server).start()
             return
         Timer(SERVER_SHUTDOWN_DELAY_SECONDS, _exit, args=(0,)).start()
+
+    def reset_history(self) -> None:
+        """Reset undo history to a single snapshot of the current graph."""
+        document_name = self.normalize_name(self.graph_editor.graph.name)
+        self.history = [
+            self.capture_snapshot(None, document_name, STATUS_READY)
+        ]
+        self.history_cursor = 0
+        self.clean_cursor = 0
+
+    def restore_snapshot(self, index: int) -> dict[str, Any]:
+        """Load the graph state stored in a history snapshot.
+
+        Args:
+            index (int): History index to restore.
+
+        Returns:
+            dict[str, Any]: The restored snapshot, whose selection and
+                document name callers apply to the corresponding stores.
+        """
+        snapshot = self.history[index]
+        self.graph_editor.load(yaml_data=safe_load(snapshot["yaml"]))
+        self.graph_editor.next_vertex_index = snapshot["next_vertex_index"]
+        self.graph_editor.next_edge_index = snapshot["next_edge_index"]
+        self.history_cursor = index
+        return snapshot
+
+    def trim_history(self) -> None:
+        """Bound history length to HISTORY_LIMIT, dropping oldest snapshots."""
+        overflow = len(self.history) - HISTORY_LIMIT
+        if overflow <= 0:
+            return
+        self.history = self.history[overflow:]
+        self.history_cursor -= overflow
+        self.clean_cursor -= overflow
+        if self.clean_cursor < 0:
+            self.clean_cursor = -1
 
     def update_edge_endpoints(
         self, 

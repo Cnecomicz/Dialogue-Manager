@@ -4,8 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from tomllib import load as toml_load
 
-from dash_app.element_ids import ElementId
-from dash_app.enums import CascadeValue
+from dash_app.constants import CascadeValue, ElementId
 from dash_app.messages import (
     BUTTON_CANCEL,
     BUTTON_CLOSE,
@@ -13,9 +12,11 @@ from dash_app.messages import (
     BUTTON_NEW,
     BUTTON_OPEN,
     BUTTON_QUIT,
+    BUTTON_REDO,
     BUTTON_SAVE,
     BUTTON_SELECT_FROM_GRAPH,
     BUTTON_SHORTCUTS,
+    BUTTON_UNDO,
     CONFIRM_DELETE_NODE_QUESTION,
     CONFIRM_UNSAVED_CONTINUE,
     DEFAULT_DOCUMENT_NAME,
@@ -48,8 +49,10 @@ from dash_app.messages import (
     TOOLTIP_NEW,
     TOOLTIP_OPEN,
     TOOLTIP_QUIT,
+    TOOLTIP_REDO,
     TOOLTIP_SAVE_COPY,
-    TOOLTIP_SHORTCUTS
+    TOOLTIP_SHORTCUTS,
+    TOOLTIP_UNDO
 )
 from dash_app.theme import (
     COLOR_DANGER_BG,
@@ -85,6 +88,7 @@ from dash_app.theme import (
     get_pick_button_style,
     get_primary_button_style,
     get_textarea_style,
+    get_toolbar_button_disabled_style,
     get_toolbar_button_style,
     PANEL_WIDTH,
     RADIUS,
@@ -602,6 +606,22 @@ def get_header() -> html.Div:
                 n_clicks=0,
                 title=TOOLTIP_SAVE_COPY,
                 style=button_style
+            ),
+            html.Button(
+                BUTTON_UNDO,
+                id=ElementId.UNDO_ACTION,
+                n_clicks=0,
+                title=TOOLTIP_UNDO,
+                disabled=True,
+                style=get_toolbar_button_disabled_style()
+            ),
+            html.Button(
+                BUTTON_REDO,
+                id=ElementId.REDO_ACTION,
+                n_clicks=0,
+                title=TOOLTIP_REDO,
+                disabled=True,
+                style=get_toolbar_button_disabled_style()
             ),
             html.Div(
                 LABEL_DOCUMENT.format(name=DEFAULT_DOCUMENT_NAME),

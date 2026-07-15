@@ -7,9 +7,11 @@ BUTTON_CONFIRM_DELETE = "Confirm Delete"
 BUTTON_NEW = "New"
 BUTTON_OPEN = "Open"
 BUTTON_QUIT = "Quit"
+BUTTON_REDO = "Redo"
 BUTTON_SAVE = "Save"
 BUTTON_SELECT_FROM_GRAPH = "Select From Graph"
 BUTTON_SHORTCUTS = "Shortcuts"
+BUTTON_UNDO = "Undo"
 CONFIRM_DELETE_NODE_QUESTION = (
     "Are you sure you want to delete the selected node?"
 )
@@ -138,6 +140,8 @@ SHORTCUTS_HELP = [
     ("New graph", "Ctrl+N"),
     ("Open a graph", "Ctrl+O"),
     ("Save a copy", "Ctrl+S"),
+    ("Undo", "Ctrl+Z"),
+    ("Redo", "Ctrl+Y / Ctrl+Shift+Z"),
     ("Quit the editor", "Ctrl+Q"),
     ("Add NPC dialogue", "N"),
     ("Add Player dialogue", "P"),
@@ -159,6 +163,8 @@ STATUS_DISCARD_OPENED = "Discarded unsaved changes and opened {filename}."
 STATUS_DISCARD_QUIT = "Discarded unsaved changes and quit the dialogue editor."
 STATUS_NEW_GRAPH = "Started a new dialogue graph."
 STATUS_NO_CHANGES = "No changes were made to {node_type} {node_id}."
+STATUS_NOTHING_TO_REDO = "Nothing to redo."
+STATUS_NOTHING_TO_UNDO = "Nothing to undo."
 STATUS_OPENED = "Opened {filename}."
 STATUS_PICK_MODE = (
     "Pick mode: {field_label} must be an NPC node. Click an NPC node to "
@@ -166,10 +172,12 @@ STATUS_PICK_MODE = (
 )
 STATUS_QUIT = "Quit the dialogue editor."
 STATUS_READY = "Ready."
+STATUS_REDO = "Redid: {action}"
 STATUS_RUNTIME_VALIDATION_HEADER = "Runtime validation found {count} issue(s):"
 STATUS_RUNTIME_VALIDATION_LINE = "- {error}"
 STATUS_SAVED_COPY = "Saved a copy as {filename}."
 STATUS_SAVED_NAME = "Saved NPC name as {name}."
+STATUS_UNDO = "Undid: {action}"
 STATUS_UNRESOLVED_CONNECTIONS = (
     "{delete_message}. {count} unresolved connections were left behind. "
     f"Open each affected Player node and set {FIELD_SOURCE_OR_TARGET} to "
@@ -202,5 +210,7 @@ TOOLTIP_MENU_EDIT = "Open edit form"
 TOOLTIP_NEW = "Start a new empty graph (Ctrl+N)"
 TOOLTIP_OPEN = "Open a graph from a yaml file (Ctrl+O)"
 TOOLTIP_QUIT = "Close the editor (Ctrl+Q)"
+TOOLTIP_REDO = "Redo the last undone change (Ctrl+Y / Ctrl+Shift+Z)"
 TOOLTIP_SAVE_COPY = "Download a copy of this graph as yaml (Ctrl+S)"
 TOOLTIP_SHORTCUTS = "Show all keyboard shortcuts (?)"
+TOOLTIP_UNDO = "Undo the last change (Ctrl+Z)"

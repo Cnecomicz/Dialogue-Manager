@@ -1,5 +1,12 @@
 from enum import StrEnum
 
+HISTORY_LIMIT = 100
+
+class CascadeValue(StrEnum):
+    """Enumerate the cascade-delete checklist values."""
+
+    CASCADE = "cascade"
+
 class ElementId(StrEnum):
     """Enumerate the DOM identifiers for Dash components and state stores.
 
@@ -67,6 +74,7 @@ class ElementId(StrEnum):
     QUIT_CLIENT_TRIGGER = "quit-client-trigger"
     QUIT_EDITOR = "quit-editor"
     QUIT_SIGNAL = "quit-signal"
+    REDO_ACTION = "redo-action"
     SAVE_NAME = "save-name"
     SELECTED_NODE_DISPLAY = "selected-node-display"
     SELECTED_NODE_ID = "selected-node-id"
@@ -74,7 +82,41 @@ class ElementId(StrEnum):
     SHORTCUTS_HELP_CLOSE = "shortcuts-help-close"
     SHORTCUTS_HELP_VISIBLE = "shortcuts-help-visible"
     SHORTCUTS_OVERLAY = "shortcuts-overlay"
+    UNDO_ACTION = "undo-action"
+    UNDO_REDO_STATE = "undo-redo-state"
     UNSAVED_CHANGES = "unsaved-changes"
     UPLOAD_GRAPH = "upload-graph"
     UPLOAD_GRAPH_BUTTON = "upload-graph-button"
     UPLOAD_GRAPH_CONTAINER = "upload-graph-container"
+
+class FormType(StrEnum):
+    """Enumerate the bottom-panel form types."""
+
+    ADD_EDGE = "add-edge"
+    ADD_VERTEX = "add-vertex"
+    DELETE = "delete"
+    EDIT_EDGE = "edit-edge"
+    EDIT_VERTEX = "edit-vertex"
+
+class MenuItemId(StrEnum):
+    """Enumerate the right click context menu item identifiers."""
+
+    ADD_NPC = "add-npc"
+    ADD_PLAYER = "add-player"
+    ADD_PLAYER_DIALOGUE = "add-player-dialogue"
+    CANCEL = "cancel"
+    DELETE_NODE = "delete-node"
+    EDIT_NODE = "edit-node"
+
+class PendingAction(StrEnum):
+    """Enumerate the deferred actions awaiting unsaved work confirmation."""
+
+    NEW = "new"
+    QUIT = "quit"
+    UPLOAD = "upload"
+
+class PickField(StrEnum):
+    """Enumerate the pick mode endpoint fields."""
+
+    SOURCE = "source"
+    TARGET = "target"

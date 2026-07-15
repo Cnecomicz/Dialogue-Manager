@@ -259,6 +259,19 @@ def get_textarea_style(height: str = "auto") -> dict[str, str | int]:
         "boxSizing": "border-box"
     }
 
+def get_toolbar_button_disabled_style() -> dict[str, str]:
+    """Build the style for a disabled header/toolbar action button.
+
+    Returns:
+        dict[str, str]: Anew inline style mapping for a disabled button.
+    """
+    return {
+        **get_toolbar_button_style(),
+        "color": COLOR_TEXT_MUTED,
+        "cursor": "not-allowed",
+        "opacity": "0.5"
+    }
+
 def get_toolbar_button_style() -> dict[str, str]:
     """Build the style for a header/toolbar action button.
 

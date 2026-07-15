@@ -296,7 +296,7 @@ def test_restore_snapshot_restores_counters(app):
     assert app.graph_editor.next_vertex_index < added_next_vertex_index
     app.restore_snapshot(1)
     assert app.graph_editor.next_vertex_index == added_next_vertex_index
-    app.add_edge("vertex_0", text="New edge.")
+    app.add_edge("vertex_0", "vertex_0", "New edge.")
     app.record_history([{"message": "Created"}], None, "Alice")
     added_next_edge_index = app.graph_editor.next_edge_index
     app.restore_snapshot(0)
