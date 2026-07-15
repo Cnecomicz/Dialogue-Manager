@@ -2337,6 +2337,7 @@ class App(Dash):
         @self.callback(
             Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
             Output(ElementId.DOWNLOAD_YAML, "data", allow_duplicate=True),
+            Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
             Input(ElementId.DOWNLOAD_GRAPH, "n_clicks"),
             State(ElementId.ACTION_LOG, "data"),
             State(ElementId.CURRENT_DOCUMENT, "data"),
@@ -2346,7 +2347,7 @@ class App(Dash):
             download_graph_clicks: int,
             current_log: list[dict[str, str]] | None,
             current_document: str | None
-        ) -> tuple[str, object]:
+        ) -> tuple[str, object, bool]:
             if not download_graph_clicks:
                 raise PreventUpdate
             download_name = self.get_filename(current_document)
@@ -2361,7 +2362,8 @@ class App(Dash):
                 ),
                 dcc.send_string(
                     self.graph_editor.export_yaml_text(), download_name
-                )
+                ),
+                False
             )
 
         @self.callback(

@@ -76,6 +76,8 @@ may experience a collision with built in browser/system level shortcuts.
 | `Ctrl+N` | Start a new empty graph |
 | `Ctrl+O` | Open a graph |
 | `Ctrl+S` | Save a copy of the graph |
+| `Ctrl+Z` | Undo the last change |
+| `Ctrl+Y / Ctrl+Shift+Z` | Redo the last undone change |
 | `Ctrl+Q` | Quit the editor |
 | `N` | Add an NPC dialogue node |
 | `P` | Add a Player dialogue node |
@@ -274,8 +276,8 @@ The editor uses these terms in the log:
 * Non-cascade delete: Leave the checkbox unselected before clicking Confirm
     Delete. Logs the deletion and flags the number of unresolved connections 
     of Source/Target NPC nodes that need to be addressed.
-* New/Open/Save: Click the corresponding buttons in the header of the user
-    interface. Logs outcomes and filenames when relevant.
+* New/Open/Save/Undo/Redo: Click the corresponding buttons in the header 
+    of the user interface. Logs outcomes and filenames when relevant.
 * Validation and parsing failures: Logs plain-language explanations with
     direct guidance on how to resolve.
 
