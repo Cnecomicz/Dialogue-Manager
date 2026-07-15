@@ -905,10 +905,11 @@ def get_project_metadata() -> tuple[str, str]:
         package_metadata = metadata("dialogue")
     except PackageNotFoundError:
         return "", ""
-    version = package_metadata["Version"] or ""
-    author = package_metadata["Author"] or ""
-    if not author:
-        author = parseaddr(package_metadata["Author-email"] or "")[0]
+    version = package_metadata.get("Version", "")
+    author = (
+        package_metadata.get("Author")
+        or parseaddr(package_metadata.get("Author-email", ""))[0]
+    )
     return author, version
 
 def get_right_panel() -> html.Div:
