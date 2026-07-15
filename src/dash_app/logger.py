@@ -1,6 +1,21 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from dash_app.messages import (
+    LABEL_DIALOGUE,
+    LABEL_EFFECTS,
+    LABEL_PREDICATES,
+    LOG_CHANGE,
+    LOG_CREATE,
+    LOG_DELETE,
+    LOG_FIELD_SEPARATOR,
+    LOG_FIELDS_PREFIX,
+    LOG_UPDATE,
+    NODE_TYPE_NODE,
+    NODE_TYPE_NPC,
+    NODE_TYPE_PLAYER
+)
+from dialogue_editor.messages import FIELD_SOURCE, FIELD_TARGET
 from dialogue_model.codecs import (
     convert_effect_to_text, convert_predicate_to_text
 )
@@ -86,7 +101,9 @@ class Logger:
         Returns:
             str: User-facing create log line.
         """
-        base_message = f"Created {node_type} {self.quote_value(node_id)}"
+        base_message = LOG_CREATE.format(
+            node_type=node_type, node_value=self.quote_value(node_id)
+        )
         return f"{base_message}{self.format_fields(fields)}."
 
     def build_delete_log(
@@ -105,7 +122,9 @@ class Logger:
         Returns:
             str: User-facing delete log line.
         """
-        base_message = f"Deleted {node_type} {self.quote_value(node_id)}"
+        base_message = LOG_DELETE.format(
+            node_type=node_type, node_value=self.quote_value(node_id)
+        )
         return f"{base_message}{self.format_fields(fields)}."
 
     def build_log_entry(
@@ -154,18 +173,18 @@ class Logger:
             if old_value is None or new_value is None:
                 continue
             change_fragments.append(
-                f"{field_name} changed from "
-                f"{self.quote_value(old_value)} to "
-                f"{self.quote_value(new_value)}"
+                LOG_CHANGE.format(
+                    field=field_name, 
+                    old_value=self.quote_value(old_value),
+                    new_value=self.quote_value(new_value)
+                )
             )
-        if not change_fragments:
-            return (
-                f"Updated {node_type} {self.quote_value(node_id)}."
-            )
-        return (
-            f"Updated {node_type} {self.quote_value(node_id)}: "
-            f"{'; '.join(change_fragments)}."
+        base_message = LOG_UPDATE.format(
+            node_type=node_type, node_value=self.quote_value(node_id)
         )
+        if not change_fragments:
+            return f"{base_message}."
+        return f"{base_message}: {LOG_FIELD_SEPARATOR.join(change_fragments)}."
 
     def format_fields(
         self, fields: list[tuple[str, str | None]]
@@ -185,7 +204,7 @@ class Logger:
         ]
         if not present_fields:
             return ""
-        return " with " + "; ".join(present_fields)
+        return LOG_FIELDS_PREFIX + LOG_FIELD_SEPARATOR.join(present_fields)
 
     def get_node_log_fields(
         self,
@@ -203,13 +222,15 @@ class Logger:
                 ordered field/value pairs.
         """
         if node_id in self.graph_editor.graph.vertex_dict:
-            return "NPC node", self.get_npc_log_fields(node_id, include_empty)
+            return (
+                NODE_TYPE_NPC, self.get_npc_log_fields(node_id, include_empty)
+            )
         if node_id in self.graph_editor.graph.edge_dict:
             return (
-                "Player node",
+                NODE_TYPE_PLAYER,
                 self.get_player_log_fields(node_id, include_empty)
             )
-        return "Node", []
+        return NODE_TYPE_NODE, []
 
     def get_npc_log_fields(
         self,
@@ -228,11 +249,11 @@ class Logger:
         vertex = self.graph_editor.graph.vertex_dict[node_id]
         return [
             (
-                "Dialogue",
+                LABEL_DIALOGUE,
                 self.serialize_text_value(vertex.text, include_empty)
             ),
             (
-                "Effects",
+                LABEL_EFFECTS,
                 self.serialize_effects_value(vertex.effects, include_empty)
             )
         ]
@@ -254,23 +275,23 @@ class Logger:
         edge = self.graph_editor.graph.edge_dict[node_id]
         return [
             (
-                "Dialogue",
+                LABEL_DIALOGUE,
                 self.serialize_text_value(edge.text, include_empty)
             ),
             (
-                "Source",
+                FIELD_SOURCE,
                 self.serialize_text_value(edge.from_vertex, include_empty)
             ),
             (
-                "Target",
+                FIELD_TARGET,
                 self.serialize_text_value(edge.to_vertex, include_empty)
             ),
             (
-                "Predicates",
+                LABEL_PREDICATES,
                 self.serialize_predicates_value(edge.predicates, include_empty)
             ),
             (
-                "Effects",
+                LABEL_EFFECTS,
                 self.serialize_effects_value(edge.effects, include_empty)
             )
         ]
@@ -293,7 +314,9 @@ class Logger:
             return None
         if not effects:
             return "" if include_empty else None
-        return "; ".join(convert_effect_to_text(effect) for effect in effects)
+        return LOG_FIELD_SEPARATOR.join(
+            convert_effect_to_text(effect) for effect in effects
+        )
 
     def serialize_predicates_value(
         self,
@@ -313,7 +336,7 @@ class Logger:
             return None
         if not predicates:
             return "" if include_empty else None
-        return "; ".join(
+        return LOG_FIELD_SEPARATOR.join(
             convert_predicate_to_text(predicate) for predicate in predicates
         )
 
