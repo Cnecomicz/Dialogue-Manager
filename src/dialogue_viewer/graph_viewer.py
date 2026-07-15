@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 from graphviz import Digraph
 from os import PathLike
 
@@ -154,11 +155,21 @@ class GraphViewer:
         return True
 
 def main() -> None:
-    """Run a CLI prompt and render one yaml dialogue graph."""
-    yaml_file = input("Enter file path (copy with Option-Command-C): ")
-    graph_viewer = GraphViewer(yaml_file)
+    """Parse CLI arguments and render one yaml dialogue graph."""
+    parser = ArgumentParser(
+        description=(
+            "Render a dialogue graph yaml file to an SVG in the same "
+            "directory as the source file."
+        )
+    )
+    parser.add_argument(
+        "yaml_file",
+        help="Path to a .yaml or .yml dialogue graph file."
+    )
+    args = parser.parse_args()
+    graph_viewer = GraphViewer(args.yaml_file)
     result = graph_viewer.render()
-    if not result:
-        print("Render failed.")
     if result:
         print("Render successful.")
+    else:
+        print("Render failed.")

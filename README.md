@@ -93,8 +93,9 @@ button.
 
 ### Dialogue renderer
 
-Render a dialogue graph to svg with `render`. You will be prompted for a 
-yaml file path. An svg is generated in the same directory.
+Render a dialogue graph to svg with `dialogue-render <path>`, for example
+`dialogue-render data/alice_dialogue_graph.yaml`. An svg is generated in
+the same directory as the source file.
 
 ### Test suite
 
@@ -285,4 +286,5 @@ The editor uses these terms in the log:
 
 `dialogue-editor` launches the Dash browser editor.
 
-`render` prompts for a yaml path and renders svg.
+`dialogue-render <path>` renders a yaml graph to svg in the same directory
+as the source file.

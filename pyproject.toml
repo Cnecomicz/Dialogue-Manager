@@ -36,7 +36,7 @@ Issues = "https://github.com/Cnecomicz/dialogue/issues"
 
 [project.scripts]
 dialogue-editor = "dash_app.app:main"
-render = "dialogue_viewer.graph_viewer:main"
+dialogue-render = "dialogue_viewer.graph_viewer:main"
 
 [tool.hatch.build.targets.wheel]
 packages = [
