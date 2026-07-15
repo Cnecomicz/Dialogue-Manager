@@ -197,7 +197,7 @@ TOOLTIP_DELETE_DISABLED = "Select a node to delete."
 TOOLTIP_DELETE_ENABLED = (
     "Remove the selected node from the graph (Delete / Backspace)"
 )
-TOOLTIP_EDIT_DISABLED = "Selected a node to edit."
+TOOLTIP_EDIT_DISABLED = "Select a node to edit."
 TOOLTIP_EDIT_ENABLED = (
     "Edit the selected node's text, effects, and predicates (E)"
 )

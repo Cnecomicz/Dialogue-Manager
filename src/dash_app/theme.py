@@ -263,7 +263,7 @@ def get_toolbar_button_disabled_style() -> dict[str, str]:
     """Build the style for a disabled header/toolbar action button.
 
     Returns:
-        dict[str, str]: Anew inline style mapping for a disabled button.
+        dict[str, str]: A new inline style mapping for a disabled button.
     """
     return {
         **get_toolbar_button_style(),

@@ -1,8 +1,8 @@
 from dash import dcc, html
 from dash_cytoscape import Cytoscape
 from datetime import datetime
-from pathlib import Path
-from tomllib import load as toml_load
+from email.utils import parseaddr
+from importlib.metadata import PackageNotFoundError, metadata
 
 from dash_app.constants import CascadeValue, ElementId
 from dash_app.messages import (
@@ -896,22 +896,20 @@ def get_name_section(initial_value: str = DEFAULT_DOCUMENT_NAME) -> list:
     ]
 
 def get_project_metadata() -> tuple[str, str]:
-    """Get author name and version from pyproject.toml.
+    """Get author name and version from installed package metadata.
 
     Returns:
         tuple[str, str]: (author, version) strings, empty if unavailable.
     """
-    toml_path = Path(__file__).parent.parent.parent / "pyproject.toml"
     try:
-        with open(toml_path, "rb") as f:
-            data = toml_load(f)
-        project = data.get("project", {})
-        version = project.get("version", "")
-        authors = project.get("authors", [])
-        author = authors[0].get("name", "") if authors else ""
-        return author, version
-    except (FileNotFoundError, KeyError, IndexError):
+        package_metadata = metadata("dialogue")
+    except PackageNotFoundError:
         return "", ""
+    version = package_metadata["Version"] or ""
+    author = package_metadata["Author"] or ""
+    if not author:
+        author = parseaddr(package_metadata["Author-email"] or "")[0]
+    return author, version
 
 def get_right_panel() -> html.Div:
     """Build the right sidebar panel containing the action log.

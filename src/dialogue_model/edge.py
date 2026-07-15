@@ -11,7 +11,7 @@ class Edge:
         to_vertex (str): Target vertex id.
         text (str): Dialogue text for the choice.
         predicates (list[dict[str, str | int]]): Predicates gating selection.
-        effects (list[dict[str, str | int]]): effects applied on selection.
+        effects (list[dict[str, str | int]]): Effects applied on selection.
     """
 
     def __init__(self, edge_name: str, data: dict) -> None:

@@ -14,7 +14,7 @@ MSG_INVALID_EDGE = (
     "current game state."
 )
 MSG_MISSING_EDGE_ENDPOINT = (
-    'Edge "{edge_name} has {endpoint} endpoint set to "{missing_vertex}".'
+    'Edge "{edge_name}" has {endpoint} endpoint set to "{missing_vertex}".'
 )
 MSG_START_VERTEX_MISSING = (
     "Required start vertex " + f'"{START_VERTEX}" is missing.'

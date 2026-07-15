@@ -237,7 +237,7 @@ class Logger:
         node_id: str,
         include_empty: bool = False
     ) -> list[tuple[str, str | None]]:
-        """Reteurn NPC node fields for logging.
+        """Return NPC node fields for logging.
 
         Args:
             node_id (str): NPC node identifier.

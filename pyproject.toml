@@ -12,22 +12,27 @@ description = "An engine and library for handling dialogue graphs in video games
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
-    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
     "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Games/Entertainment",
+    "Topic :: Software Development :: Libraries",
 ]
 dependencies = [
-  "dash", 
-  "dash-cytoscape", 
-  "graphviz", 
-  "PyYAML",
+  "dash>=4.4.0",
+  "dash-cytoscape>=1.0.2",
+  "graphviz>=0.21",
+  "PyYAML>=6.0.3",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "pytest",
-  "pytest-cov",
-  "pytest-testmon",
-  "pytest-xdist",
+  "pytest>=9.1.1",
+  "pytest-cov>=7.1.0",
+  "pytest-testmon>=2.2.0",
+  "pytest-xdist>=3.8.0",
 ]
 
 [project.urls]

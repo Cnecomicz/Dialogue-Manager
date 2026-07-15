@@ -33,6 +33,8 @@ choices while handling predicates and effects
 
 ## Installation
 
+This project requires Python 3.11 or newer.
+
 Using the static svg render requires [Graphviz](https://graphviz.org) installed 
 on your system.
 
@@ -107,7 +109,7 @@ use `COVERAGE=1 ./run_tests.sh`.
 
 Use the `GraphNavigator` API to handle presenting, filtering, and selecting
 dialogue options in your game engine. See a minimal working example 
-[below](## Programmatic usage MWE).
+[below](#programmatic-usage-mwe).
 
 ## Dialogue model yaml format
 
@@ -177,7 +179,7 @@ game engine:
 
 ```
 from dialogue_model.graph import Graph
-from dialogue_navigator.graph_navigator import GraphNavigator
+from dialogue_navigator.graph_navigator import GraphNavigator, InvalidEdgeError
 
 graph = Graph("data/alice_dialogue_graph.yaml")
 

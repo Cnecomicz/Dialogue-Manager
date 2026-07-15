@@ -51,7 +51,7 @@ class DisconnectedGraphError(Exception):
         """Initialize the error with the connected components.
 
         Args:
-            components (list[str[str]]): List of vertex lists, each
+            components (list[list[str]]): List of vertex lists, each
                 representing a connected component.
         """
         self.components = components
@@ -217,8 +217,8 @@ def collect_validation_errors(graph: Graph) -> list[Exception]:
                             frontier.append(edge.from_vertex)
             if component:
                 connected_components.append(sorted(component))
-        if len(connected_components) > 1:
-            errors.append(DisconnectedGraphError(connected_components))
+    if len(connected_components) > 1:
+        errors.append(DisconnectedGraphError(connected_components))
     return errors
 
 class GraphNavigator:
@@ -268,7 +268,7 @@ class GraphNavigator:
             edge_name (str): Edge identifier to evaluate.
 
         Returns:
-            bool: "True" when every predicate is satisified.
+            bool: "True" when every predicate is satisfied.
         """
         edge = self.graph.edge_dict[edge_name]
         is_valid_edge = True

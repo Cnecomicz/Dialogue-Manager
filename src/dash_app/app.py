@@ -2147,7 +2147,7 @@ class App(Dash):
                     return (
                         no_update,
                         self.action_logger.append_status(
-                            current_log, ERROR_DELETE_START_VERTEX.FORMAT(
+                            current_log, ERROR_DELETE_START_VERTEX.format(
                                 node_id=self.action_logger.quote_value(node_id)
                             )
                         ),

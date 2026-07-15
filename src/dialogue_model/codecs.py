@@ -71,7 +71,7 @@ def convert_text_to_effect(effect: str) -> dict[str, str | int]:
         effect (str): Text expression representing an effect.
 
     Returns:
-        dict[str, str | int] Parsed effect mapping.
+        dict[str, str | int]: Parsed effect mapping.
 
     Raises:
         ValueError: If the text does not match a supported effect syntax.
@@ -86,7 +86,7 @@ def convert_text_to_effect(effect: str) -> dict[str, str | int]:
         try:
             delta = int(delta)
         except ValueError:
-            delta = delta
+            pass
         return {
             "type": EffectType.MODIFY_VALUE.value, 
             "target": target, 
@@ -126,7 +126,7 @@ def convert_text_to_predicate(predicate: str) -> dict[str, str | int]:
         try:
             value = int(value)
         except ValueError:
-            value = value
+            pass
         return {
             "type": PredicateType.CHECK_VALUE.value, 
             "path": path, 
@@ -139,7 +139,7 @@ def convert_text_to_predicate(predicate: str) -> dict[str, str | int]:
         try:
             value = int(value)
         except ValueError:
-            value = value
+            pass
         return {
             "type": PredicateType.CHECK_LIST.value, 
             "path": path, 

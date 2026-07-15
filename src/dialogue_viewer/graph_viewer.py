@@ -145,10 +145,11 @@ class GraphViewer:
                 edge_name,
                 edge.to_vertex
             )
-        if self.yaml_file.endswith(".yaml"):
-            render_file = self.yaml_file[:-5]
-        elif self.yaml_file.endswith(".yml"):
-            render_file = self.yaml_file[:-4]
+        yaml_file = str(self.yaml_file)
+        if yaml_file.endswith(".yaml"):
+            render_file = yaml_file[:-5]
+        elif yaml_file.endswith(".yml"):
+            render_file = yaml_file[:-4]
         else:
             return False
         dot.render(render_file, format="svg", cleanup=True)
