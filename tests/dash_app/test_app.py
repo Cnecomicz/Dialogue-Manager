@@ -251,3 +251,109 @@ def test_pick_mode_bottom_panel_graying_callback_registered(app):
     callback_state = callback["state"]
     assert {"id": "pick-mode-active", "property": "data"} in callback_inputs
     assert {"id": "bottom-panel", "property": "style"} in callback_state
+
+# Undo history starts with a clean baseline
+def test_history_initialized_with_single_snapshot(app):
+    assert len(app.history) == 1
+    assert app.history_cursor == 0
+    assert app.clean_cursor == 0
+    assert app.get_undo_redo_state() == {"can_undo": False, "can_redo": False}
+
+# Actions are tracked in history when they change the underlying yaml
+def test_record_history_captures_mutation(app):
+    app.add_vertex("New vertex.")
+    state = app.record_history([{"message": "Created NPC line"}], "vertex_5", "Alice")
+    assert len(app.history) == 2
+    assert app.history_cursor == 1
+    assert state == {"can_undo": True, "can_redo": False}
+    assert app.history[1]["label"] == "Created NPC line"
+    assert app.history[1]["selected_node_id"] == "vertex_5"
+
+# Actions are not tracked if they don't change the graph
+def test_record_history_ignores_non_mutation(app):
+    state = app.record_history([{"message": "Ready."}], None, "Alice")
+    assert len(app.history) == 1
+    assert app.history_cursor == 0
+    assert state == {"can_undo": False, "can_redo": False}
+
+# Restore snapshot to undo
+def test_restore_snapshot_undoes_mutation(app):
+    before_count = len(app.graph_editor.graph.vertex_dict)
+    app.add_vertex("New vertex.")
+    assert len(app.graph_editor.graph.vertex_dict) == before_count + 1
+    app.record_history([{"message": "Created"}], None, "Alice")
+    snapshot = app.restore_snapshot(app.history_cursor-1)
+    assert len(app.graph_editor.graph.vertex_dict) == before_count
+    assert app.history_cursor == 0
+    assert snapshot["label"] == "Ready."
+
+# Restore snapshot maintains next_*_index across snapshots
+def test_restore_snapshot_restores_counters(app):
+    app.add_vertex("New vertex.")
+    app.record_history([{"message": "Created"}], None, "Alice")
+    added_next_vertex_index = app.graph_editor.next_vertex_index
+    app.restore_snapshot(0)
+    assert app.graph_editor.next_vertex_index < added_next_vertex_index
+    app.restore_snapshot(1)
+    assert app.graph_editor.next_vertex_index == added_next_vertex_index
+    app.add_edge("vertex_0", text="New edge.")
+    app.record_history([{"message": "Created"}], None, "Alice")
+    added_next_edge_index = app.graph_editor.next_edge_index
+    app.restore_snapshot(0)
+    assert app.graph_editor.next_edge_index < added_next_edge_index
+    app.restore_snapshot(1)
+    assert app.graph_editor.next_edge_index < added_next_edge_index
+    app.restore_snapshot(2)
+    assert app.graph_editor.next_edge_index == added_next_edge_index
+
+# If you make a change with pending redos you lose them
+def test_record_history_truncates_redo_tail(app):
+    app.add_vertex("First vertex.")
+    app.record_history([{"message": "Created first"}], None, "Alice")
+    app.add_vertex("Second vertex.")
+    app.record_history([{"message": "Created second"}], None, "Alice")
+    app.restore_snapshot(1)
+    app.add_vertex("New edit timeline branch.")
+    state = app.record_history([{"message": "Created new"}], None, "Alice")
+    assert len(app.history) == 3
+    assert app.history_cursor == 2
+    assert app.history[2]["label"] == "Created new"
+    assert state == {"can_undo": True, "can_redo": False}
+
+# There is a reset_history() method to be called for things like new/open
+def test_reset_history_clears_history(app):
+    app.add_vertex("New vertex.")
+    app.record_history([{"message": "Created"}], None, "Alice")
+    app.reset_history()
+    assert len(app.history) == 1
+    assert app.history_cursor == 0
+    assert app.clean_cursor == 0
+
+# There is a large upper bound on history length
+def test_history_caps_length(app):
+    for index in range(105):
+        app.add_vertex(f"Vertex number {index}.")
+        app.record_history([{"message": f"Created {index}"}], None, "Alice")
+    assert len(app.history) == 100
+    assert app.history_cursor == 99
+    assert app.clean_cursor == -1
+
+# Undo and redo actions are wired to action log and history stores
+def test_undo_redo_callbacks_registered(app):
+    undo_callbacks = [
+        callback
+        for callback in app.callback_map.values()
+        if {"id": "redo-action", "property": "n_clicks"}
+        in callback.get("inputs", [])
+    ]
+    redo_callbacks = [
+        callback
+        for callback in app.callback_map.values()
+        if {"id": "redo-action", "property": "n_clicks"}
+        in callback.get("inputs", [])
+    ]
+    assert undo_callbacks
+    assert redo_callbacks
+    state_key = "undo-redo-state.data"
+    assert state_key in app.callback_map
+    assert {"id": "action-log", "property": "data"} in app.callback_map[state_key]["inputs"]
