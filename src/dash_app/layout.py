@@ -9,6 +9,7 @@ from dash_app.enums import CascadeValue
 from dash_app.messages import (
     BUTTON_CANCEL,
     BUTTON_CLOSE,
+    BUTTON_CONFIRM,
     BUTTON_NEW,
     BUTTON_OPEN,
     BUTTON_QUIT,
@@ -16,6 +17,7 @@ from dash_app.messages import (
     BUTTON_SELECT_FROM_GRAPH,
     BUTTON_SHORTCUTS,
     CONFIRM_DELETE_NODE_QUESTION,
+    CONFIRM_UNSAVED_CONTINUE,
     DEFAULT_DOCUMENT_NAME,
     DEFAULT_NODE_DISPLAY,
     HEADER_LOG,
@@ -821,6 +823,28 @@ def get_log_row(entry: dict[str, str]) -> html.Div:
         }
     )
 
+def get_modal_backdrop_style(is_open: bool) -> dict[str, str | int]:
+    """Return style for a centered modal backdrop overlay.
+
+    Args:
+        is_open (bool): Whether the overlay is visible.
+
+    Returns:
+        dict[str, str | int]: Style mapping for the overlay container.
+    """
+    return {
+        "display": "flex" if is_open else "none",
+        "position": "fixed",
+        "top": "0",
+        "left": "0",
+        "right": "0",
+        "bottom": "0",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "backgroundColor": "rgba(0, 0, 0, 0.6)",
+        "zIndex": "1000"
+    }
+
 def get_name_section(initial_value: str = DEFAULT_DOCUMENT_NAME) -> list:
     """Build the sidebar controls for editing NPC name.
 
@@ -923,7 +947,7 @@ def get_shortcuts_overlay() -> html.Div:
     """Build the modal overlay that lists all keyboard shortcuts.
 
     Returns:
-        html.Div: Full-screen overlay component listing keyboard shortcuts.
+        html.Div: Full screen overlay component listing keyboard shortcuts.
     """
     shortcuts = SHORTCUTS_HELP
     key_style = get_key_badge_style()
@@ -999,30 +1023,62 @@ def get_shortcuts_overlay() -> html.Div:
             }
         ),
         id=ElementId.SHORTCUTS_OVERLAY,
-        style=get_shortcuts_overlay_style(False)
+        style=get_modal_backdrop_style(False)
     )
 
-def get_shortcuts_overlay_style(is_open: bool) -> dict[str, str | int]:
-    """Return style for the shortcuts overlay backdrop.
-
-    Args:
-        is_open (bool): Whether the overlay is visible.
+def get_unsaved_work_modal() -> html.Div:
+    """Build the confirmation modal for unsaved-work actions.
 
     Returns:
-        dict[str, str | int]: Style mapping for the overlay container.
+        html.Div: Full screen overlay containing the confirmation dialog.
     """
-    return {
-        "display": "flex" if is_open else "none",
-        "position": "fixed",
-        "top": "0",
-        "left": "0",
-        "right": "0",
-        "bottom": "0",
-        "alignItems": "center",
-        "justifyContent": "center",
-        "backgroundColor": "rgba(0, 0, 0, 0.6)",
-        "zIndex": "1000"
-    }
+    return html.Div(
+        html.Div(
+            [
+                html.Div(
+                    CONFIRM_UNSAVED_CONTINUE,
+                    id=ElementId.CONFIRM_UNSAVED_MESSAGE,
+                    style={
+                        "color": COLOR_TEXT,
+                        "fontSize": FONT_SIZE_LG,
+                        "marginBottom": "20px"
+                    }
+                ),
+                html.Div(
+                    [
+                        html.Button(
+                            BUTTON_CANCEL,
+                            id=ElementId.CONFIRM_UNSAVED_CANCEL,
+                            n_clicks=0,
+                            style=get_close_button_style()
+                        ),
+                        html.Button(
+                            BUTTON_CONFIRM,
+                            id=ElementId.CONFIRM_UNSAVED_CONFIRM,
+                            n_clicks=0,
+                            style=get_primary_button_style()
+                        )
+                    ],
+                    style={
+                        "display": "flex",
+                        "justifyContent": "flex-end",
+                        "gap": "8px"
+                    }
+                )
+            ],
+            style={
+                "width": "min(420px, 90vw)",
+                "backgroundColor": COLOR_PANEL_ALT_BG,
+                "border": thin_border(COLOR_PANEL_BORDER),
+                "borderRadius": RADIUS_LG,
+                "padding": "20px",
+                "boxSizing": "border-box",
+                "boxShadow": "0 8px 32px rgba(0, 0, 0, 0.5)"
+            }
+        ),
+        id=ElementId.CONFIRM_UNSAVED_WORK,
+        style=get_modal_backdrop_style(False)
+    )
 
 def get_upload_graph(
     button_style: dict[str, str | int] | None = None

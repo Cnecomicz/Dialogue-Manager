@@ -29,6 +29,7 @@ from dash_app.layout import (
     get_project_metadata,
     get_right_panel,
     get_shortcuts_overlay,
+    get_unsaved_work_modal,
     get_upload_graph
 )
 from dash_app.logger import Logger
@@ -36,7 +37,7 @@ from dash_app.messages import (
     BUTTON_CANCEL,
     BUTTON_CONFIRM_DELETE,
     BUTTON_SAVE,
-    CONFIRM_UNSAVED_CONTINUE,
+    CONFIRM_QUIT,
     CONFIRM_UNSAVED_NEW,
     CONFIRM_UNSAVED_QUIT,
     CONFIRM_UNSAVED_UPLOAD,
@@ -168,11 +169,9 @@ class App(Dash):
                 dcc.Store(id=ElementId.PICK_MODE_ACTIVE, data=False),
                 dcc.Store(id=ElementId.PICK_MODE_FIELD, data=""),
                 dcc.Store(id=ElementId.SHORTCUTS_HELP_VISIBLE, data=False),
+                dcc.Store(id=ElementId.CONFIRM_UNSAVED_VISIBLE, data=False),
                 dcc.Download(id=ElementId.DOWNLOAD_YAML),
-                dcc.ConfirmDialog(
-                    id=ElementId.CONFIRM_UNSAVED_WORK,
-                    message=CONFIRM_UNSAVED_CONTINUE
-                ),
+                get_unsaved_work_modal(),
                 html.Div(
                     id=ElementId.QUIT_CLIENT_TRIGGER, 
                     style={"display": "none"}
@@ -862,7 +861,7 @@ class App(Dash):
         self.clientside_callback(
             """
             function(bottomPanelVisible, pickModeActive, formType,
-                     helpVisible) {
+                     helpVisible, confirmVisible) {
                 if (!window.dmShortcuts) {
                     window.dmShortcuts = {installed: false, state: {}};
                 }
@@ -870,7 +869,8 @@ class App(Dash):
                     bottomPanelVisible: !!bottomPanelVisible,
                     pickModeActive: !!pickModeActive,
                     formType: formType || "",
-                    helpVisible: !!helpVisible
+                    helpVisible: !!helpVisible,
+                    confirmVisible: !!confirmVisible
                 };
                 if (window.dmShortcuts.installed) {
                     return "";
@@ -1060,6 +1060,16 @@ class App(Dash):
                 document.addEventListener("keydown", function(event) {
                     var state = window.dmShortcuts.state || {};
                     var key = event.key;
+                    if (state.confirmVisible) {
+                        if (key === "Enter") {
+                            event.preventDefault();
+                            clickById("confirm-unsaved-confirm");
+                        } else if (key === "Escape") {
+                            event.preventDefault();
+                            clickById("confirm-unsaved-cancel");
+                        }
+                        return;
+                    }
                     if (key === "Escape") {
                         if (state.helpVisible) {
                             setProps(
@@ -1148,7 +1158,8 @@ class App(Dash):
             Input(ElementId.BOTTOM_PANEL_VISIBLE, "data"),
             Input(ElementId.PICK_MODE_ACTIVE, "data"),
             Input(ElementId.BOTTOM_PANEL_FORM_TYPE, "data"),
-            Input(ElementId.SHORTCUTS_HELP_VISIBLE, "data")
+            Input(ElementId.SHORTCUTS_HELP_VISIBLE, "data"),
+            Input(ElementId.CONFIRM_UNSAVED_VISIBLE, "data")
         )
 
         self.clientside_callback(
@@ -1170,6 +1181,27 @@ class App(Dash):
             """,
             Output(ElementId.SHORTCUTS_OVERLAY, "style"),
             Input(ElementId.SHORTCUTS_HELP_VISIBLE, "data")
+        )
+
+        self.clientside_callback(
+            """
+            function(confirmVisible) {
+                return {
+                    "display": confirmVisible ? "flex" : "none",
+                    "position": "fixed",
+                    "top": "0",
+                    "left": "0",
+                    "right": "0",
+                    "bottom": "0",
+                    "alignItems": "center",
+                    "justifyContent": "center",
+                    "backgroundColor": "rgba(0, 0, 0, 0.6)",
+                    "zIndex": "1000"
+                };
+            }
+            """,
+            Output(ElementId.CONFIRM_UNSAVED_WORK, "style"),
+            Input(ElementId.CONFIRM_UNSAVED_VISIBLE, "data")
         )
 
         self.clientside_callback(
@@ -2051,10 +2083,10 @@ class App(Dash):
             raise PreventUpdate
 
         @self.callback(
-            Output(ElementId.CONFIRM_UNSAVED_WORK, "displayed", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_VISIBLE, "data", allow_duplicate=True),
             Output(ElementId.PENDING_ACTION, "data", allow_duplicate=True),
             Output(ElementId.PENDING_UPLOAD, "data", allow_duplicate=True),
-            Input(ElementId.CONFIRM_UNSAVED_WORK, "cancel_n_clicks"),
+            Input(ElementId.CONFIRM_UNSAVED_CANCEL, "n_clicks"),
             prevent_initial_call=True
         )
         def on_confirm_unsaved_cancel(
@@ -2069,15 +2101,16 @@ class App(Dash):
             Output(ElementId.GRAPH_CONTAINER, "children", allow_duplicate=True),
             Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
             Output(ElementId.CURRENT_DOCUMENT, "data", allow_duplicate=True),
-            Output(ElementId.CONFIRM_UNSAVED_WORK, "displayed", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_VISIBLE, "data", allow_duplicate=True),
             Output(ElementId.PENDING_ACTION, "data", allow_duplicate=True),
             Output(ElementId.PENDING_UPLOAD, "data", allow_duplicate=True),
             Output(ElementId.QUIT_SIGNAL, "data", allow_duplicate=True),
-            Input(ElementId.CONFIRM_UNSAVED_WORK, "submit_n_clicks"),
+            Input(ElementId.CONFIRM_UNSAVED_CONFIRM, "n_clicks"),
             State(ElementId.PENDING_ACTION, "data"),
             State(ElementId.PENDING_UPLOAD, "data"),
             State(ElementId.ACTION_LOG, "data"),
             State(ElementId.QUIT_SIGNAL, "data"),
+            State(ElementId.UNSAVED_CHANGES, "data"),
             prevent_initial_call=True
         )
         def on_confirm_unsaved_submit(
@@ -2085,7 +2118,8 @@ class App(Dash):
             pending_action: str | None,
             pending_upload: dict | None,
             current_log: list[dict[str, str]] | None,
-            quit_signal: int | None
+            quit_signal: int | None,
+            unsaved_changes: bool,
         ) -> tuple[object, object, object, object, bool, str, dict, object]:
             if not confirm_unsaved_submit_clicks:
                 raise PreventUpdate
@@ -2164,7 +2198,8 @@ class App(Dash):
                 self.request_app_shutdown()
                 return (
                     self.action_logger.append_status(
-                        current_log, STATUS_DISCARD_QUIT
+                        current_log,
+                        STATUS_DISCARD_QUIT if unsaved_changes else STATUS_QUIT
                     ),
                     no_update,
                     no_update,
@@ -2272,8 +2307,8 @@ class App(Dash):
             Output(ElementId.GRAPH_CONTAINER, "children", allow_duplicate=True),
             Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
             Output(ElementId.CURRENT_DOCUMENT, "data", allow_duplicate=True),
-            Output(ElementId.CONFIRM_UNSAVED_WORK, "displayed", allow_duplicate=True),
-            Output(ElementId.CONFIRM_UNSAVED_WORK, "message", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_VISIBLE, "data", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_MESSAGE, "children", allow_duplicate=True),
             Output(ElementId.PENDING_ACTION, "data", allow_duplicate=True),
             Output(ElementId.PENDING_UPLOAD, "data", allow_duplicate=True),
             Input(ElementId.NEW_GRAPH, "n_clicks"),
@@ -2314,43 +2349,25 @@ class App(Dash):
             )
 
         @self.callback(
-            Output(ElementId.CONFIRM_UNSAVED_WORK, "displayed", allow_duplicate=True),
-            Output(ElementId.CONFIRM_UNSAVED_WORK, "message", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_VISIBLE, "data", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_MESSAGE, "children", allow_duplicate=True),
             Output(ElementId.PENDING_ACTION, "data", allow_duplicate=True),
             Output(ElementId.PENDING_UPLOAD, "data", allow_duplicate=True),
-            Output(ElementId.ACTION_LOG, "data", allow_duplicate=True),
-            Output(ElementId.QUIT_SIGNAL, "data", allow_duplicate=True),
             Input(ElementId.QUIT_EDITOR, "n_clicks"),
             State(ElementId.UNSAVED_CHANGES, "data"),
-            State(ElementId.ACTION_LOG, "data"),
-            State(ElementId.QUIT_SIGNAL, "data"),
             prevent_initial_call=True
         )
         def on_quit_editor(
             quit_editor_clicks: int,
-            unsaved_changes: bool,
-            current_log: list[dict[str, str]] | None,
-            quit_signal: int | None
-        ) -> tuple[bool, object, str, dict, object, object]:
+            unsaved_changes: bool
+        ) -> tuple[bool, str, str, dict]:
             if not quit_editor_clicks:
                 raise PreventUpdate
-            if unsaved_changes:
-                return (
-                    True,
-                    CONFIRM_UNSAVED_QUIT,
-                    PendingAction.QUIT,
-                    {},
-                    no_update,
-                    no_update
-                )
-            self.request_app_shutdown()
             return (
-                False,
-                no_update,
-                "",
-                {},
-                self.action_logger.append_status(current_log, STATUS_QUIT),
-                (quit_signal or 0) + 1
+                True,
+                CONFIRM_UNSAVED_QUIT if unsaved_changes else CONFIRM_QUIT,
+                PendingAction.QUIT,
+                {}
             )
 
         @self.callback(
@@ -2386,8 +2403,8 @@ class App(Dash):
             Output(ElementId.GRAPH_CONTAINER, "children", allow_duplicate=True),
             Output(ElementId.UNSAVED_CHANGES, "data", allow_duplicate=True),
             Output(ElementId.CURRENT_DOCUMENT, "data", allow_duplicate=True),
-            Output(ElementId.CONFIRM_UNSAVED_WORK, "displayed", allow_duplicate=True),
-            Output(ElementId.CONFIRM_UNSAVED_WORK, "message", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_VISIBLE, "data", allow_duplicate=True),
+            Output(ElementId.CONFIRM_UNSAVED_MESSAGE, "children", allow_duplicate=True),
             Output(ElementId.PENDING_ACTION, "data", allow_duplicate=True),
             Output(ElementId.PENDING_UPLOAD, "data", allow_duplicate=True),
             Input(ElementId.UPLOAD_GRAPH, "contents"),

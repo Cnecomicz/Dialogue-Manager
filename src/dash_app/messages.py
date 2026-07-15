@@ -2,6 +2,7 @@ from dialogue_editor.messages import FIELD_SOURCE, FIELD_TARGET
 
 BUTTON_CANCEL = "Cancel"
 BUTTON_CLOSE = "Close"
+BUTTON_CONFIRM = "Confirm"
 BUTTON_CONFIRM_DELETE = "Confirm Delete"
 BUTTON_NEW = "New"
 BUTTON_OPEN = "Open"
@@ -12,10 +13,20 @@ BUTTON_SHORTCUTS = "Shortcuts"
 CONFIRM_DELETE_NODE_QUESTION = (
     "Are you sure you want to delete the selected node?"
 )
-CONFIRM_UNSAVED_CONTINUE = "You have unsaved changes. Continue?"
-CONFIRM_UNSAVED_NEW = "You have unsaved changes. Start a new graph anyway?"
-CONFIRM_UNSAVED_QUIT = "You have unsaved changes. Quit anyway?"
-CONFIRM_UNSAVED_UPLOAD = "You have unsaved changes. Upload and replace anyway?"
+CONFIRM_QUIT = "Are you sure you want to quit?"
+CONFIRM_UNSAVED_CONTINUE = (
+    "You have unsaved changes. Are you sure you want to continue?"
+)
+CONFIRM_UNSAVED_NEW = (
+    "You have unsaved changes. Are you sure you want to start a new graph?"
+)
+CONFIRM_UNSAVED_QUIT = (
+    "You have unsaved changes. Are you sure you want to quit?"
+)
+CONFIRM_UNSAVED_UPLOAD = (
+    "You have unsaved changes. Are you sure you want to open a file and "
+    "replace the current graph?"
+)
 DEFAULT_DOCUMENT_NAME = "Untitled"
 DEFAULT_NODE_DISPLAY = "None"
 DIRTY_MARKER = " *"
@@ -139,7 +150,7 @@ SHORTCUTS_HELP = [
 ]
 SHORTCUTS_HELP_FOOTER = (
     "Shortcuts work while the graph is in focus and you are not typing in "
-    "a text field."
+    "a text field. Shortcuts are not guaranteed to work on all devices."
 )
 STATUS_DISCARD_NEW = (
     "Discarded unsaved changes and started a new dialogue graph."
