@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from graphviz import Digraph
 from os import PathLike
 
-from dialogue_model.constants import START_VERTEX
+from dialogue_model.constants import MISSING_VERTEX, START_VERTEX
 from dialogue_model.graph import Graph
 from dialogue_model.codecs import (
     convert_effect_to_text, convert_predicate_to_text
@@ -21,14 +21,18 @@ from dialogue_viewer.theme import (
     COLOR_EDGE_LINE,
     COLOR_EDGE_NODE_FILL,
     COLOR_FONT,
+    COLOR_MISSING_ENDPOINT_BORDER,
+    COLOR_MISSING_ENDPOINT_FILL,
     COLOR_NODE_BORDER,
     COLOR_START_VERTEX_BORDER,
     COLOR_START_VERTEX_FILL,
     COLOR_VERTEX_FILL,
     LABEL_EFFECTS,
+    LABEL_FROM_MISSING,
     LABEL_PREDICATES,
     LABEL_START,
-    LABEL_TEXT
+    LABEL_TEXT,
+    LABEL_TO_MISSING
 )
 
 class GraphViewer:
@@ -131,29 +135,49 @@ class GraphViewer:
                 color=border_color
             )
         for edge_name, edge in graph.edge_dict.items():
+            has_missing_from = edge.from_vertex == MISSING_VERTEX
+            has_missing_to = edge.to_vertex == MISSING_VERTEX
+            unresolved_text = ""
+            if has_missing_from:
+                unresolved_text += fr"{LABEL_FROM_MISSING}\n"
+            if has_missing_to:
+                unresolved_text += fr"{LABEL_TO_MISSING}\n"
             dialogue_text = fr"{LABEL_TEXT}\n{edge.text}\n"
             predicates_text = self.get_predicates_text(edge.predicates)
             effects_text = self.get_effects_text(edge.effects)
-            text = dialogue_text
+            text = unresolved_text + dialogue_text
             if predicates_text:
                 text += fr"\n{predicates_text}"
             if effects_text:
                 text += fr"\n{effects_text}"
+            if has_missing_from or has_missing_to:
+                fill_color = COLOR_MISSING_ENDPOINT_FILL
+                border_color = COLOR_MISSING_ENDPOINT_BORDER
+                pen_width = "4"
+            else:
+                fill_color = COLOR_EDGE_NODE_FILL
+                border_color = COLOR_NODE_BORDER
+                pen_width = "1"
             dot.node(
                 edge_name,
                 text,
                 style="filled",
-                fillcolor=COLOR_EDGE_NODE_FILL,
-                color=COLOR_NODE_BORDER
+                fillcolor=fill_color,
+                color=border_color,
+                penwidth=pen_width
             )
-            dot.edge(
-                edge.from_vertex, 
-                edge_name
-            )
-            dot.edge(
-                edge_name,
+            if (
+                edge.from_vertex
+                and edge.from_vertex != MISSING_VERTEX
+                and edge.from_vertex in graph.vertex_dict
+            ):
+                dot.edge(edge.from_vertex, edge_name)
+            if (
                 edge.to_vertex
-            )
+                and edge.to_vertex != MISSING_VERTEX
+                and edge.to_vertex in graph.vertex_dict
+            ):
+                dot.edge(edge_name, edge.to_vertex)
         yaml_file = str(self.yaml_file)
         if yaml_file.endswith(".yaml"):
             render_file = yaml_file[:-5]
