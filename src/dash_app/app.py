@@ -134,7 +134,7 @@ from dialogue_model.codecs import (
     convert_text_to_predicate
 )
 from dialogue_model.constants import MISSING_VERTEX, START_VERTEX
-from dialogue_navigator.graph_navigator import collect_validation_errors
+from dialogue_validator.graph_validator import collect_validation_errors
 from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 
 class App(Dash):

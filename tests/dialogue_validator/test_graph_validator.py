@@ -1,12 +1,11 @@
 from pytest import raises
 
 from dialogue_model.graph import Graph
+from dialogue_navigator.graph_navigator import GraphNavigator
 from dialogue_validator.graph_validator import (
     AggregatedValidationErrors,
     DisconnectedGraphError,
     EndpointNotFoundError,
-    GraphNavigator,
-    InvalidEdgeError,
     MissingEdgeEndpointError,
     StartVertexMissingError,
     UnreachableVertexError
