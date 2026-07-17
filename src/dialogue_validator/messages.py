@@ -9,6 +9,15 @@ MSG_ENDPOINT_NOT_FOUND = (
     'Edge "{edge_name}" {endpoint} endpoint references unknown vertex '
     '"{vertex_name}".'
 )
+MSG_INVALID_EFFECT = (
+    'Effect in "{owner_name}" is invalid ({reason}): {effect}.'
+)
+MSG_INVALID_PREDICATE = (
+    'Predicate in "{owner_name}" is invalid ({reason}): {predicate}.'
+)
+MSG_MALFORMED_PLACEHOLDER = (
+    'Text in "{owner_name}" has malformed placeholder braces: "{text}".'
+)
 MSG_MISSING_EDGE_ENDPOINT = (
     'Edge "{edge_name}" has {endpoint} endpoint set to "{missing_vertex}".'
 )
@@ -18,5 +27,8 @@ MSG_START_VERTEX_MISSING = (
 MSG_UNREACHABLE_VERTEX = (
     'Vertex "{vertex_name}" is unreachable from vertex ' + f'"{START_VERTEX}".'
 )
-MSG_VALIDATION_ERROR_LINE = "- {error}"
-MSG_VALIDATION_FAILED_HEADER = "Graph failed runtime validation:"
+MSG_VALIDATION_HEADER = "Graph failed runtime validation:"
+MSG_VALIDATION_LINE = "- {error}"
+REASON_MISSING_KEY = 'missing key "{key}"'
+REASON_UNKNOWN_METHOD = "unknown method"
+REASON_UNKNOWN_TYPE = "unknown type"

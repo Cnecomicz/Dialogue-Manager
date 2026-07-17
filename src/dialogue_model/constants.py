@@ -12,6 +12,11 @@ class EffectType(StrEnum):
     MODIFY_LIST = "modify_list"
     MODIFY_VALUE = "modify_value"
 
+EFFECT_REQUIRED_KEYS = {
+    EffectType.MODIFY_LIST: ("target", "method", "value"),
+    EffectType.MODIFY_VALUE: ("target", "delta")
+}
+
 class Endpoint(StrEnum):
     """Enumerate the edge endpoint labels."""
 
@@ -29,3 +34,8 @@ class PredicateType(StrEnum):
 
     CHECK_LIST = "check_list"
     CHECK_VALUE = "check_value"
+
+PREDICATE_REQUIRED_KEYS = {
+    PredicateType.CHECK_LIST: ("path", "op", "value"),
+    PredicateType.CHECK_VALUE: ("path", "op", "value")
+}

@@ -113,7 +113,7 @@ def test_unknown_list_method():
 def test_malformed_placeholder_braces():
     def make_graph_with_text(text: str) -> Graph:
         return Graph(
-            yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "", "effects": []}}, "edges": {}}
+            yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": text, "effects": []}}, "edges": {}}
         )
     graph_1 = make_graph_with_text("You have {player.gold gold.")
     graph_2 = make_graph_with_text("You have player.gold} gold.")
