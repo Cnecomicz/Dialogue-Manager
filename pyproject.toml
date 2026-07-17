@@ -42,6 +42,7 @@ Issues = "https://github.com/Cnecomicz/dialogue/issues"
 [project.scripts]
 dialogue-editor = "dash_app.app:main"
 dialogue-render = "dialogue_viewer.graph_viewer:main"
+dialogue-validate = "dialogue_validator.graph_validator:main"
 
 [tool.hatch.build.targets.wheel]
 packages = [
@@ -49,5 +50,6 @@ packages = [
   "src/dialogue_editor",
   "src/dialogue_model",
   "src/dialogue_navigator",
+  "src/dialogue_validator",
   "src/dialogue_viewer",
 ]

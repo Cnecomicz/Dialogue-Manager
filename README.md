@@ -99,6 +99,13 @@ Render a dialogue graph to svg with `dialogue-render <path>`, for example
 `dialogue-render data/alice_dialogue_graph.yaml`. An svg is generated in
 the same directory as the source file.
 
+### Dialogue validator
+
+Check a dialogue graph for runtime validity with `dialogue-validate <path>`,
+for example `dialogue-validate data/alice_dialogue_graph.yaml`. It prints
+a success line when the graph is valid, or a validation report and a non-zero
+exist status when it is not.
+
 ### Test suite
 
 With dev dependencies installed, run the test suite with `./run_tests.sh`. 
@@ -172,10 +179,37 @@ predicates or effects by hand for a given vertex/edge.
 * Checking list membership: `Flower in zeke.inventory` <-> 
     `{type: "check_list", path: "zeke.inventory", op: "in", value: "Flower"}`
 
-## Programmatic usage MWE:
+## Graph validation
+
+A dialogue graph is runtime-valid when it satisfies every guarantee below.
+The editor deliberately tolerates invalid graphs while authoring (surfacing
+warnings rather than blocking), but the runtime navigator requires a valid
+graph.
+
+Structural guarantees:
+
+* The start vertex `vertex_0` exists.
+* No edge endpoint is left unresolved (`__MISSING__`).
+* Every edge endpoint references an existing vertex.
+* Every vertex is reachable from `vertex_0` (along directed edges).
+* The graph is a single connected component.
+
+Well-formedness guarantees:
+
+* Each effect type is supported, and `modify_list` effects use supported
+    list methods.
+* Each predicate type is supported.
+* Each effect/predicate contains the keys required per that type.
+* Each vertex/edge has text with no empty or nested placeholder braces `{}`.
+
+Validation can be done in the command line with `dialogue-navigate <path>`
+or programmatically by importing methods from the `dialogue_validator` package.
+
+## Programmatic game engine usage MWE:
 
 This is a sample of how the runtime dialogue navigator will be used in the
-game engine:
+game engine (note validation implicitly occurs when instantiating a
+`GraphNavigator`):
 
 ```
 from dialogue_model.graph import Graph
@@ -243,6 +277,15 @@ and python syntax.
 GraphNavigator runtime edge validation and effect processing. Handles complete
 dialogue turn life cycle. 
 
+### dialogue_validator
+
+Graph validation API. Provides `collect_validation_errors` (non-raising),
+`validate` (raising), and the validation error family.
+
+### dialogue_viewer
+
+GraphViewer class, a static svg renderer.
+
 ## Behavior notes
 
 GraphEditor and consequently the `dialogue-editor` browser app handle vertex
@@ -290,3 +333,6 @@ The editor uses these terms in the log:
 
 `dialogue-render <path>` renders a yaml graph to svg in the same directory
 as the source file.
+
+`dialogue-validate <path>` checks a yaml graph for runtime validity, printing
+status report and 0 or nonzero exit codes.

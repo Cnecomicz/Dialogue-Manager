@@ -86,8 +86,6 @@ from dash_app.messages import (
     STATUS_QUIT,
     STATUS_READY,
     STATUS_REDO,
-    STATUS_RUNTIME_VALIDATION_HEADER,
-    STATUS_RUNTIME_VALIDATION_LINE,
     STATUS_SAVED_COPY,
     STATUS_SAVED_NAME,
     STATUS_UNDO,
@@ -134,7 +132,9 @@ from dialogue_model.codecs import (
     convert_text_to_predicate
 )
 from dialogue_model.constants import MISSING_VERTEX, START_VERTEX
-from dialogue_validator.graph_validator import collect_validation_errors
+from dialogue_validator.graph_validator import (
+    build_validation_report, collect_validation_errors
+)
 from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 
 class App(Dash):
@@ -754,14 +754,7 @@ class App(Dash):
         errors = collect_validation_errors(self.graph_editor.graph)
         if not errors:
             return []
-        warning_lines = [
-            STATUS_RUNTIME_VALIDATION_HEADER.format(count=len(errors)),
-            *[
-                STATUS_RUNTIME_VALIDATION_LINE.format(error=error)
-                for error in errors
-            ]
-        ]
-        return warning_lines
+        return build_validation_report(errors)
 
     def get_undo_redo_state(self) -> dict[str, bool]:
         """Return whether undo and redo are currently available.

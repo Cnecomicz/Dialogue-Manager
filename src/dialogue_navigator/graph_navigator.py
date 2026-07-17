@@ -3,12 +3,7 @@ from dialogue_navigator.helper_functions import (
 )
 from dialogue_navigator.messages import MSG_INVALID_EDGE
 from dialogue_model.constants import (
-    EffectType,
-    Endpoint,
-    ListMethod,
-    MISSING_VERTEX,
-    PredicateType,
-    START_VERTEX
+    EffectType, ListMethod, PredicateType, START_VERTEX
 )
 from dialogue_model.edge import Edge
 from dialogue_model.graph import Graph

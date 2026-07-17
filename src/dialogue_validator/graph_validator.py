@@ -1,3 +1,5 @@
+from argparse import ArgumentParser
+
 from dialogue_model.constants import (
     EFFECT_REQUIRED_KEYS,
     EffectType,
@@ -10,6 +12,9 @@ from dialogue_model.constants import (
 )
 from dialogue_model.graph import Graph
 from dialogue_validator.messages import (
+    MSG_CLI_DESCRIPTION,
+    MSG_CLI_VALID,
+    MSG_CLI_YAML_FILE_HELP,
     MSG_COMPONENT,
     MSG_COMPONENT_LINE,
     MSG_DISCONNECTED_GRAPH,
@@ -38,14 +43,7 @@ class AggregatedValidationErrors(Exception):
                 for the graph.
         """
         self.errors = errors
-        message_lines = [
-            MSG_VALIDATION_HEADER,
-            *[
-                MSG_VALIDATION_LINE.format(error=error) 
-                for error in errors
-            ]
-        ]
-        super().__init__("\n".join(message_lines))
+        super().__init__("\n".join(build_validation_report(errors)))
 
 class DisconnectedGraphError(Exception):
     """Raised when graph has multiple connected components."""
@@ -168,9 +166,7 @@ class MissingEdgeEndpointError(Exception):
         self.endpoint = endpoint
         super().__init__(
             MSG_MISSING_EDGE_ENDPOINT.format(
-                edge_name=edge_name, 
-                endpoint=endpoint, 
-                missing_vertex=MISSING_VERTEX
+                edge_name=edge_name, endpoint=endpoint
             )
         )
 
@@ -193,6 +189,21 @@ class UnreachableVertexError(Exception):
         super().__init__(
             MSG_UNREACHABLE_VERTEX.format(vertex_name=vertex_name)
         )
+
+def build_validation_report(errors: list[Exception]) -> list[str]:
+    """Build the aggregated validation report lines from validation errors.
+
+    Args:
+        errors (list[Exception]): Individual validation errors gathered for
+            the graph.
+
+    Returns:
+        list[str]: A header line followed by one line per error.
+    """
+    return [
+        MSG_VALIDATION_HEADER.format(count=len(errors)),
+        *[MSG_VALIDATION_LINE.format(error=error) for error in errors]
+    ]
 
 def collect_validation_errors(graph: Graph) -> list[Exception]:
     """Collect all runtime validation errors.
@@ -380,3 +391,24 @@ def validate(graph: Graph) -> None:
     errors = collect_validation_errors(graph)
     if errors:
         raise AggregatedValidationErrors(errors)
+
+def main() -> None:
+    """Parse CLI arguments and validate one yaml dialogue graph.
+
+    Prints the validation report and exists with a nonzero status when the
+    graph is invalid.
+
+    Raises:
+        SystemExit: With code 1 when the graph fails validation.
+    """
+    parser = ArgumentParser(description=MSG_CLI_DESCRIPTION)
+    parser.add_argument("yaml_file", help=MSG_CLI_YAML_FILE_HELP)
+    args = parser.parse_args()
+    graph = Graph(yaml_file=args.yaml_file)
+    errors = collect_validation_errors(graph)
+    if not errors:
+        print(MSG_CLI_VALID)
+        return
+    for line in build_validation_report(errors):
+        print(line)
+    raise SystemExit(1)

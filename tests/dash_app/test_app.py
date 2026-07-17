@@ -204,7 +204,7 @@ def test_runtime_validation_warnings_are_nonempty_for_invalid_graph(app):
         yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start.", "effects": []}, "vertex_1": {"text": "Disconnected.", "effects": []}}, "edges": {"edge_0": {"from": "vertex_0", "to": "__MISSING__", "text": "Missing target", "predicates": [], "effects": []}, "edge_1": {"from": "vertex_0", "to": "vertex_99", "text": "Missing target.", "predicates": [], "effects": []}}}
     )
     warnings = app.get_runtime_validation_warnings()
-    assert warnings[0] == "Runtime validation found 4 issue(s):"
+    assert warnings[0] == "Graph validation found 4 issue(s):"
     assert any("__MISSING__" in warning for warning in warnings)
     assert any('unknown vertex "vertex_99"' in warning for warning in warnings)
     assert any('Vertex "vertex_1" is unreachable' in warning for warning in warnings)

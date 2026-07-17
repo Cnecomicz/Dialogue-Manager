@@ -7,6 +7,15 @@ from dialogue_model.graph import Graph
 from dialogue_model.codecs import (
     convert_effect_to_text, convert_predicate_to_text
 )
+from dialogue_validator.graph_validator import (
+    build_validation_report, collect_validation_errors
+)
+from dialogue_viewer.messages import (
+    MSG_CLI_DESCRIPTION, 
+    MSG_CLI_FAILURE, 
+    MSG_CLI_SUCCESS, 
+    MSG_CLI_YAML_FILE_HELP
+)
 from dialogue_viewer.theme import (
     COLOR_BACKGROUND,
     COLOR_EDGE_LINE,
@@ -156,21 +165,22 @@ class GraphViewer:
         return True
 
 def main() -> None:
-    """Parse CLI arguments and render one yaml dialogue graph."""
-    parser = ArgumentParser(
-        description=(
-            "Render a dialogue graph yaml file to an SVG in the same "
-            "directory as the source file."
-        )
-    )
-    parser.add_argument(
-        "yaml_file",
-        help="Path to a .yaml or .yml dialogue graph file."
-    )
+    """Parse CLI arguments and render one yaml dialogue graph to svg.
+
+    Raises:
+        SystemExit: With code 1 when the svg fails to render.
+    """
+    parser = ArgumentParser(description=MSG_CLI_DESCRIPTION)
+    parser.add_argument("yaml_file", help=MSG_CLI_YAML_FILE_HELP)
     args = parser.parse_args()
     graph_viewer = GraphViewer(args.yaml_file)
     result = graph_viewer.render()
     if result:
-        print("Render successful.")
-    else:
-        print("Render failed.")
+        print(MSG_CLI_SUCCESS)
+        errors = collect_validation_errors(Graph(yaml_file=args.yaml_file))
+        if errors:
+            for line in build_validation_report(errors):
+                print(line)
+        return
+    print(MSG_CLI_FAILURE)
+    raise SystemExit(1)
