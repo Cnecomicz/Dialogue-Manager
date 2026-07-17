@@ -5,11 +5,26 @@ from dialogue_validator.graph_validator import (
     AggregatedValidationErrors,
     DisconnectedGraphError,
     EndpointNotFoundError,
+    InvalidEffectError,
+    InvalidPredicateError,
+    MalformedPlaceholderError,
     MissingEdgeEndpointError,
     StartVertexMissingError,
     UnreachableVertexError,
-    collect_validation_errors
+    collect_validation_errors,
+    validate
 )
+
+# No errors for a valid graph, errors for an invalid graph
+def test_valid_graph_has_no_errors_and_invalid_graphs_do(alice_graph):
+    invalid_graph = Graph(
+        yaml_data={"name": "Error", "vertices": {"vertex_1": {"text": "Orphaned.", "effects": []}}, "edges": {}}
+    )
+    assert len(collect_validation_errors(invalid_graph)) > 0
+    with raises(AggregatedValidationErrors):
+        validate(invalid_graph)
+    assert collect_validation_errors(alice_graph) == []
+    assert validate(alice_graph) is None
 
 # Validation that vertex_0 exists
 def test_vertex_0_exists():
@@ -67,3 +82,51 @@ def test_aggregate_multiple_validations():
     assert any(isinstance(error, EndpointNotFoundError) for error in errors)
     assert any(isinstance(error, DisconnectedGraphError) for error in errors)
     assert len(errors) == 4
+
+# Validation that effect/predicate types are legitimate
+def test_unknown_effect_or_predicate_type():
+    graph = Graph(
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start.", "effects": [{"type": "explode", "target": "player.gold", "delta": 1}]}}, "edges": {"edge_0": {"from": "vertex_0", "to": "vertex_0", "text": "Go.", "predicates": [{"type": "check_mood", "path": "player.mood", "op": "==", "value": "happy"}], "effects": []}}}
+    )
+    errors = collect_validation_errors(graph)
+    assert any(isinstance(error, InvalidEffectError) for error in errors)
+    assert any(isinstance(error, InvalidPredicateError) for error in errors)
+
+# Validation that effect or predicate key is missing
+def test_missing_effect_or_predicate_key():
+    graph = Graph(
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start.", "effects": [{"type": "modify_value", "target": "player.gold"}]}}, "edges": {"edge_0": {"from": "vertex_0", "to": "vertex_0", "text": "Go.", "predicates": [{"type": "check_value", "path": "player.gold"}], "effects": []}}}
+    )
+    errors = collect_validation_errors(graph)
+    assert any(isinstance(error, InvalidEffectError) for error in errors)
+    assert any(isinstance(error, InvalidPredicateError) for error in errors)
+
+# Validation that list methods are legitimate
+def test_unknown_list_method():
+    graph = Graph(
+        yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "Start.", "effects": [{"type": "modify_list", "target": "player.inventory", "method": "destroy", "value": "Box"}]}}, "effects": {}, "edges": {}}
+    )
+    errors = collect_validation_errors(graph)
+    assert any(isinstance(error, InvalidEffectError) for error in errors)
+
+# Validation that braces properly lint
+def test_malformed_placeholder_braces():
+    def make_graph_with_text(text: str) -> Graph:
+        return Graph(
+            yaml_data={"name": "Error", "vertices": {"vertex_0": {"text": "", "effects": []}}, "edges": {}}
+        )
+    graph_1 = make_graph_with_text("You have {player.gold gold.")
+    graph_2 = make_graph_with_text("You have player.gold} gold.")
+    graph_3 = make_graph_with_text("You have {player.{gold}} gold.")
+    graph_4 = make_graph_with_text("You have {} gold.")
+    graph_5 = make_graph_with_text("You have {player.gold} gold.")
+    errors_1 = collect_validation_errors(graph_1)
+    errors_2 = collect_validation_errors(graph_2)
+    errors_3 = collect_validation_errors(graph_3)
+    errors_4 = collect_validation_errors(graph_4)
+    errors_5 = collect_validation_errors(graph_5)
+    assert any(isinstance(error, MalformedPlaceholderError) for error in errors_1)
+    assert any(isinstance(error, MalformedPlaceholderError) for error in errors_2)
+    assert any(isinstance(error, MalformedPlaceholderError) for error in errors_3)
+    assert any(isinstance(error, MalformedPlaceholderError) for error in errors_4)
+    assert not any(isinstance(error, MalformedPlaceholderError) for error in errors_5)

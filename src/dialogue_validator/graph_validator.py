@@ -85,6 +85,15 @@ class EndpointNotFoundError(Exception):
             )
         )
 
+class InvalidEffectError(Exception):
+    pass
+
+class InvalidPredicateError(Exception):
+    pass
+
+class MalformedPlaceholderError(Exception):
+    pass
+
 class MissingEdgeEndpointError(Exception):
     """Raised when an edge endpoint is set to "__MISSING__"."""
 
