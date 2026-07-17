@@ -26,7 +26,7 @@ class GraphNavigator:
         """
         self.graph = graph
         self.game_state = game_state
-        self.validate_graph()
+        validate(self.graph)
         self.enter_vertex(START_VERTEX)
 
     @property
@@ -127,7 +127,7 @@ class GraphNavigator:
         """
         vertex_text = self.graph.vertex_dict[self.current_vertex].text
         evaluated_text = evaluate_text(vertex_text, self.game_state)
-        return {self.current_vertex:  evaluated_text}
+        return {self.current_vertex: evaluated_text}
 
     def proc_effect(self, effect: dict[str, str | int]) -> None:
         """Apply an effect to the game state.
@@ -174,14 +174,6 @@ class GraphNavigator:
         for effect in edge.effects:
             self.proc_effect(effect)
         self.enter_vertex(edge.to_vertex)
-
-    def validate_graph(self) -> None:
-        """Raise errors if graph is invalid.
-
-        Raises:
-            AggregatedValidationErrors: If the graph has any validation errors.
-        """
-        validate(self.graph)
 
 
     

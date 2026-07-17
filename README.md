@@ -9,12 +9,13 @@ own purposes.
 It includes:
 
 * A dialogue model which standardizes dialogue graphs, tracking the text,
-predicates, and effects per each vertex or edge, and saves/loads into yaml.
+    predicates, and effects per each vertex or edge, and saves/loads into
+    yaml.
 * A runtime graph navigator API that traverses dialogue graphs, getting
-NPC and player text, filtering player options by game state predicates, 
-and setting game state effects upon node entry.
+    NPC and player text, filtering player options by game state predicates, 
+    and setting game state effects upon node entry.
 * A Dash + Cytoscape visual editor with underlying editor API for creating
-and mutating graphs. 
+    and mutating graphs. 
 * A Graphviz renderer for static svg output.
 
 ## Features
@@ -22,12 +23,12 @@ and mutating graphs.
 * Load/save dialogue graphs as yaml
 * Represent NPC lines as vertices and player choices as edges
 * Attach effects (game state consequences of dialogue choices) to vertices 
-and edges
+    and edges
 * Attach predicates (game state conditions upon which an option is available) 
-to edges 
+    to edges 
 * Parse plain text predicate/effect expressions to and from structured data
 * Navigate a graph at runtime, providing NPC lines and available player 
-choices while handling predicates and effects
+    choices while handling predicates and effects
 * Visualize and edit graphs interactively in the browser
 * Render graphs to svg for docs and design review
 
@@ -124,13 +125,16 @@ A graph has this top-level shape:
 
 * name: NPC name
 * vertices: map of vertex_name -> vertex object. A vertex object has text,
-representing the NPC dialogue, and optionally effects, representing game
-state changes that occur upon entering this vertex.
-* edges: map of edge_name -> edge object. An edge object has from, representing
-the source vertex, to, representing the target vertex, text, representing 
-the player dialogue, optionally predicates, representing game state conditions
-that must be true for the edge to be available, and optionally effects,
-representing game state changes that occur upon selecting this edge.
+    representing the NPC dialogue, and optionally effects, representing
+    game state changes that occur upon entering this vertex.
+* edges: map of edge_name -> edge object. An edge object has:
+    * from, representing the source vertex,
+    * to, representing the target vertex,
+    * text, representing  the player dialogue,
+    * optionally predicates, representing game state conditions that must 
+        be true for the edge to be available, and
+    * optionally effects, representing game state changes that occur upon
+        selecting this edge.
 
 Example:
 
@@ -145,6 +149,7 @@ vertices:
         text: "Here you go."
         effects:
             - {type: "modify_list", target: "player.inventory", method: "append", value: "Flower"}
+            - {type: "modify_list", target: "zeke.inventory", method: "remove", value: "Flower"}
 
 edges:
     edge_0:
@@ -161,9 +166,11 @@ edges:
 For a larger example, see 
 [data/alice_dialogue_graph.yaml](data/alice_dialogue_graph.yaml). 
 
-The editor supports text forms for effects and predicates that are parsed 
-into the above yaml examples. These forms are used in the editor to key 
-predicates or effects by hand for a given vertex/edge.
+The editor supports Python-esque text forms of effects and predicates. These
+forms are parsed and converted into the above standardized yaml examples.
+This availability exists to support the editor where users can key predicates
+or effects by hand for a given vertex/edge. The following outlines the
+conversion between forms.
 
 ### Effects:
 
@@ -182,7 +189,7 @@ predicates or effects by hand for a given vertex/edge.
 ## Graph validation
 
 A dialogue graph is runtime-valid when it satisfies every guarantee below.
-The editor deliberately tolerates invalid graphs while authoring (surfacing
+The editor deliberately tolerates invalid graphs while working (logging 
 warnings rather than blocking), but the runtime navigator requires a valid
 graph.
 
@@ -207,9 +214,9 @@ or programmatically by importing methods from the `dialogue_validator` package.
 
 ## Programmatic game engine usage MWE:
 
-This is a sample of how the runtime dialogue navigator will be used in the
-game engine (note validation implicitly occurs when instantiating a
-`GraphNavigator`):
+This is a sample of how the runtime dialogue navigator could be used in 
+a game engine, with supporting helpful print statements in order to minimize
+the MWE.
 
 ```
 from dialogue_model.graph import Graph
@@ -255,6 +262,12 @@ for edge_name, edge_text in current_turn["edge_texts"].items():
     print(f"{edge_text} ({edge_name})")
 
 ```
+
+Note that validation automatically occurs when instantiating a 
+`GraphNavigator` and so need not be explicitly invoked. The game engine
+is not expected to edit a Graph in any way; changes in dialogue availability
+should occur by changing GameState flags that the predicates will then check 
+against, and therefore a single validation check on creation should suffice.
 
 ## Package Layout
 
