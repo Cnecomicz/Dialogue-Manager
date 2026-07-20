@@ -2,6 +2,7 @@ from operator import eq, ge, gt, le, lt, ne
 from re import sub
 from typing import Callable
 
+from dialogue_model.constants import ListOperator, ValueOperator
 from dialogue_navigator.state_accessor import GameStatePathError, StateAccessor
 
 def evaluate_text(text: str, accessor: StateAccessor) -> str:
@@ -34,13 +35,13 @@ def get_operator(op: str) -> Callable[[object, object], bool]:
         Callable[[object, object], bool]: Callable implementing the operator.
     """
     operators = {
-        "==": eq, 
-        ">=": ge, 
-        ">": gt, 
-        "in": lambda a, b: a in b, 
-        "<=": le, 
-        "<": lt, 
-        "!=": ne,
-        "not in": lambda a, b: a not in b,
+        ListOperator.IN: lambda a, b: a in b,
+        ListOperator.NOT_IN: lambda a, b: a not in b,
+        ValueOperator.EQUAL: eq,
+        ValueOperator.GREATER: gt,
+        ValueOperator.GREATER_OR_EQUAL: ge,
+        ValueOperator.LESS: lt,
+        ValueOperator.LESS_OR_EQUAL: le,
+        ValueOperator.NOT_EQUAL: ne
     }
     return operators[op]

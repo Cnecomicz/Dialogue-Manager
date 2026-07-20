@@ -210,7 +210,8 @@ Well-formedness guarantees:
 
 * Each effect type is supported, and `modify_list` effects use supported
     list methods.
-* Each predicate type is supported.
+* Each predicate type is supported, and each predicate uses an operator
+    supported for its type.
 * Each effect/predicate contains the keys required per that type.
 * Each vertex/edge has text with no empty or nested placeholder braces `{}`.
 

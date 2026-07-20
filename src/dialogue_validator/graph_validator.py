@@ -6,6 +6,7 @@ from dialogue_model.constants import (
     Endpoint,
     ListMethod,
     MISSING_VERTEX,
+    PREDICATE_ALLOWED_OPERATORS,
     PREDICATE_REQUIRED_KEYS,
     PredicateType,
     START_VERTEX
@@ -29,6 +30,7 @@ from dialogue_validator.messages import (
     MSG_VALIDATION_LINE,
     REASON_MISSING_KEY,
     REASON_UNKNOWN_METHOD,
+    REASON_UNKNOWN_OPERATOR,
     REASON_UNKNOWN_TYPE
 )
 
@@ -350,6 +352,10 @@ def get_predicate_error_reason(predicate: dict[str, str | int]) -> str | None:
     for key in PREDICATE_REQUIRED_KEYS[PredicateType(predicate_type)]:
         if key not in predicate:
             return REASON_MISSING_KEY.format(key=key)
+    if predicate["op"] not in PREDICATE_ALLOWED_OPERATORS[
+        PredicateType(predicate_type)
+    ]:
+        return REASON_UNKNOWN_OPERATOR
     return None
 
 def has_malformed_braces(text: str) -> bool:

@@ -29,12 +29,32 @@ class ListMethod(StrEnum):
     APPEND = "append"
     REMOVE = "remove"
 
+class ListOperator(StrEnum):
+    """Enumerate the supported list membership operators."""
+
+    IN = "in"
+    NOT_IN = "not in"
+
 class PredicateType(StrEnum):
     """Enumerate the supported predicate types."""
 
     CHECK_LIST = "check_list"
     CHECK_VALUE = "check_value"
 
+class ValueOperator(StrEnum):
+    """Enumerate the supported value comparison operators."""
+
+    EQUAL = "=="
+    GREATER = ">"
+    GREATER_OR_EQUAL = ">="
+    LESS = "<"
+    LESS_OR_EQUAL = "<="
+    NOT_EQUAL = "!="
+
+PREDICATE_ALLOWED_OPERATORS = {
+    PredicateType.CHECK_LIST: set(ListOperator),
+    PredicateType.CHECK_VALUE: set(ValueOperator)
+}
 PREDICATE_REQUIRED_KEYS = {
     PredicateType.CHECK_LIST: ("path", "op", "value"),
     PredicateType.CHECK_VALUE: ("path", "op", "value")

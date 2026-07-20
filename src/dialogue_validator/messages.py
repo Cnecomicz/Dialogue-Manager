@@ -36,4 +36,5 @@ MSG_VALIDATION_HEADER = "Graph validation found {count} issue(s):"
 MSG_VALIDATION_LINE = "- {error}"
 REASON_MISSING_KEY = 'missing key "{key}"'
 REASON_UNKNOWN_METHOD = "unknown method"
+REASON_UNKNOWN_OPERATOR = "unknown operator"
 REASON_UNKNOWN_TYPE = "unknown type"

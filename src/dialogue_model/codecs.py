@@ -1,9 +1,10 @@
 from re import match
 
-from dialogue_model.constants import EffectType, PredicateType
+from dialogue_model.constants import EffectType, ListMethod, PredicateType
 from dialogue_model.messages import (
     MSG_UNKNOWN_EFFECT,
     MSG_UNKNOWN_EFFECT_SYNTAX,
+    MSG_UNKNOWN_LIST_METHOD,
     MSG_UNKNOWN_PREDICATE,
     MSG_UNKNOWN_PREDICATE_SYNTAX
 )
@@ -95,6 +96,8 @@ def convert_text_to_effect(effect: str) -> dict[str, str | int]:
     match_list = match(r"^(\w+(?:\.\w+)*)\.(\w+)\((.+)\)$", effect)
     if match_list:
         target, method, value = match_list.groups()
+        if method not in set(ListMethod):
+            raise ValueError(MSG_UNKNOWN_LIST_METHOD.format(effect=effect))
         return {
             "type": EffectType.MODIFY_LIST.value, 
             "target": target, 
@@ -136,6 +139,11 @@ def convert_text_to_predicate(predicate: str) -> dict[str, str | int]:
     match_list = match(r"^(.+?)\s+(not in|in)\s+(\w+(?:\.\w+)*)$", predicate)
     if match_list:
         value, op, path = match_list.groups()
+        stripped_value = value.strip()
+        if stripped_value and stripped_value[0] in "<>=!":
+            raise ValueError(
+                MSG_UNKNOWN_PREDICATE_SYNTAX.format(predicate=predicate)
+            )
         try:
             value = int(value)
         except ValueError:
