@@ -1,7 +1,9 @@
-from dialogue_navigator.helper_functions import (
-    evaluate_text, get_operator, get_nested_attr, set_nested_attr
-)
+from dialogue_navigator.helper_functions import evaluate_text, get_operator
 from dialogue_navigator.messages import MSG_INVALID_EDGE
+from dialogue_navigator.state_accessor import (
+    AttributeStateAccessor, StateAccessor
+)
+from dialogue_navigator.turn import Option, Turn
 from dialogue_model.constants import (
     EffectType, ListMethod, PredicateType, START_VERTEX
 )
@@ -17,17 +19,54 @@ class InvalidEdgeError(Exception):
 class GraphNavigator:
     """Navigate a dialogue graph using predicates and effects."""
 
-    def __init__(self, graph: Graph, game_state: "GameState") -> None:
+    def __init__(
+        self,
+        graph: Graph,
+        *,
+        game_state: object | None = None,
+        accessor: StateAccessor | None = None
+    ) -> None:
         """Initialize a navigator at the default starting vertex.
+
+        Provide exactly one of game_state or accessor. Passing game_state
+        wraps it in an AttributeStateAccessor, which resolves the dotted
+        paths used by the graph's text, predicates, and effects as object
+        attributes. Pass a custom accessor when game state is not stored
+        as plain attributes.
 
         Args:
             graph (Graph): Dialogue graph to navigate.
-            game_state (GameState): Mutable game state object.
+            game_state (object | None): Mutable game state object whose
+                attribute tree matches the graph's paths.
+            accessor (StateAccessor | None): Custom state accessor.
+
+        Raises:
+            ValueError: If not exactly one of either game_state or accessor
+                is provided.
         """
+        if (game_state is None) == (accessor is None):
+            raise ValueError(
+                'Provide exactly one of "game_state" or "accessor".'
+            )
         self.graph = graph
-        self.game_state = game_state
+        self.accessor = (
+            accessor 
+            if accessor is not None 
+            else AttributeStateAccessor(game_state)
+        )
         validate(self.graph)
         self.enter_vertex(START_VERTEX)
+
+    def __repr__(self) -> str:
+        """Return a debug representation of this navigator.
+
+        Returns:
+            str: String representation of this navigator.
+        """
+        return (
+            f"<Graph Navigator current_vertex={self.current_vertex!r} "
+            f"options={len(self.current_edges)}>"
+        )
 
     @property
     def current_edges(self) -> dict[str, Edge]:
@@ -69,65 +108,39 @@ class GraphNavigator:
             match predicate["type"]:
                 case PredicateType.CHECK_VALUE:
                     operator_function = get_operator(predicate["op"])
-                    current_value = get_nested_attr(
-                        self.game_state, predicate["path"]
-                    )
+                    current_value = self.accessor.get(predicate["path"])
                     predicate_value = predicate["value"]
                     if not(operator_function(current_value, predicate_value)):
                         is_valid_edge = False
                 case PredicateType.CHECK_LIST:
                     operator_function = get_operator(predicate["op"])
-                    current_list = get_nested_attr(
-                        self.game_state, predicate["path"]
-                    )
+                    current_list = self.accessor.get(predicate["path"])
                     predicate_value = predicate["value"]
                     if not(operator_function(predicate_value, current_list)):
                         is_valid_edge = False
         return is_valid_edge
 
-    def get_current_edges(self) -> list[str]:
-        """Return identifiers of currently selectable edges.
+    def get_current_turn(self) -> Turn:
+        """Return the current turn for the game engine to present.
 
         Returns:
-            list[str]: Edge identifiers from "self.current_edges".
+            Turn: Current vertex text, available player options, and whether
+                the conversation is over, with all placeholders evaluated.
         """
-        return list(self.current_edges.keys())
-
-    def get_current_edge_texts(self) -> dict[str, str]:
-        """Return current selectable edge text keyed by edge_name, with 
-        placeholders evaluated.
-
-        Returns:
-            dict[str, str]: Mapping of edge_name to edge dialogue text.
-        """
-        return {
-            edge_name: evaluate_text(edge.text, self.game_state)
+        vertex = self.graph.vertex_dict[self.current_vertex]
+        options = [
+            Option(
+                edge=edge_name,
+                text=evaluate_text(edge.text, self.accessor)
+            )
             for edge_name, edge in self.current_edges.items()
-        }
-
-    def get_current_turn(self) -> dict[str, dict[str, str]]:
-        """Return current turn text payload for game UI handshakes.
-
-        Returns:
-            dict[str, dict[str, str]]: Mapping containing current
-            vertex dialogue text and available edge text options.
-        """
-        return {
-            "vertex_text": self.get_current_vertex_text(),
-            "edge_texts": self.get_current_edge_texts()
-        }
-
-    def get_current_vertex_text(self) -> dict[str, str]:
-        """Return the current vertex dialogue text keyed by vertex_name, with
-        placeholders evaluated.
-
-        Returns:
-            dict[str, str]: Mapping of "self.current_vertex" to vertex dialogue
-            text.
-        """
-        vertex_text = self.graph.vertex_dict[self.current_vertex].text
-        evaluated_text = evaluate_text(vertex_text, self.game_state)
-        return {self.current_vertex: evaluated_text}
+        ]
+        return Turn(
+            vertex=self.current_vertex,
+            text=evaluate_text(vertex.text, self.accessor),
+            options=options,
+            is_over=not options
+        )
 
     def proc_effect(self, effect: dict[str, str | int]) -> None:
         """Apply an effect to the game state.
@@ -137,22 +150,16 @@ class GraphNavigator:
         """
         match effect["type"]:
             case EffectType.MODIFY_VALUE:
-                target_value = get_nested_attr(
-                    self.game_state, effect["target"]
-                )
+                target_value = self.accessor.get(effect["target"])
                 new_value = target_value + effect["delta"]
-                set_nested_attr(self.game_state, effect["target"], new_value)
+                self.accessor.set(effect["target"], new_value)
             case EffectType.MODIFY_LIST:
                 match effect["method"]:
                     case ListMethod.APPEND:
-                        target_list = get_nested_attr(
-                            self.game_state, effect["target"]
-                        )
+                        target_list = self.accessor.get(effect["target"])
                         target_list.append(effect["value"])
                     case ListMethod.REMOVE:
-                        target_list = get_nested_attr(
-                            self.game_state, effect["target"]
-                        )
+                        target_list = self.accessor.get(effect["target"])
                         target_list.remove(effect["value"])
 
     def select(self, edge_name: str) -> None:
@@ -164,7 +171,7 @@ class GraphNavigator:
         Raises:
             InvalidEdgeError: If the edge is not currently selectable.
         """
-        if edge_name not in self.get_current_edges():
+        if edge_name not in self.current_edges:
             raise InvalidEdgeError(
                 MSG_INVALID_EDGE.format(
                     edge_name=edge_name, current_vertex=self.current_vertex
@@ -175,5 +182,18 @@ class GraphNavigator:
             self.proc_effect(effect)
         self.enter_vertex(edge.to_vertex)
 
+    def respond_with(self, edge_name: str) -> Turn:
+        """Syntatic sugar: select an edge and return the resulting turn.
 
+        Args:
+            edge_name (str): Edge identifier to select.
+
+        Returns:
+            Turn: The turn reached after selecting the edge.
+
+        Raises:
+            InvalidEdgeError: If the edge is not currently selectable.
+        """
+        self.select(edge_name)
+        return self.get_current_turn()
     

@@ -22,28 +22,24 @@ def test_not_loading_graph():
 # You can add new vertices
 def test_add_new_vertex():
     graph_editor = GraphEditor()
-    vertex_name = graph_editor.add_vertex("Hello world.")
+    vertex_name = graph_editor.add_vertex(text="Hello world.")
     assert len(graph_editor.graph.vertex_dict) == 1
     assert vertex_name == "vertex_0"
-    assert graph_editor.graph.vertex_dict["vertex_0"] == Vertex(
-        "vertex_0", {"text": "Hello world.", "effects": []}
-    )
+    assert graph_editor.graph.vertex_dict["vertex_0"] == Vertex(vertex_name="vertex_0", text="Hello world.")
 
 # You can edit existing vertices (removing/adding effects)
 def test_editing_vertex():
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("Hello world.", [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}])
+    graph_editor.add_vertex(text="Hello world.", effects=[{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}])
     graph_editor.edit_vertex_text("vertex_0", "Updated text.")
     graph_editor.remove_effect("vertex_0", {"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"})
     graph_editor.add_effect("vertex_0", {"type": "modify_value", "target": "player.gold", "delta": -1})
-    assert graph_editor.graph.vertex_dict["vertex_0"] == Vertex(
-        "vertex_0", {"text": "Updated text.", "effects": [{"type": "modify_value", "target": "player.gold", "delta": -1},]}
-    )
+    assert graph_editor.graph.vertex_dict["vertex_0"] == Vertex(vertex_name="vertex_0", text="Updated text.", effects=[{"type": "modify_value", "target": "player.gold", "delta": -1}])
 
 # You can edit existing vertices (directly changing effects)
 def test_editing_vertex_effects():
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("Hello world.")
+    graph_editor.add_vertex(text="Hello world.")
     new_effects = [
         {"type": "modify_value", "target": "player.gold", "delta": -1}
     ]
@@ -53,20 +49,18 @@ def test_editing_vertex_effects():
 # You can add new edges
 def test_add_new_edge():
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("Hello world.")
-    graph_editor.add_vertex("Goodbye world.")
-    edge_name = graph_editor.add_edge("vertex_0", to_vertex="vertex_1", text="This is an edge.")
+    graph_editor.add_vertex(text="Hello world.")
+    graph_editor.add_vertex(text="Goodbye world.")
+    edge_name = graph_editor.add_edge(from_vertex="vertex_0", to_vertex="vertex_1", text="This is an edge.")
     assert len(graph_editor.graph.edge_dict) == 1
     assert edge_name == "edge_0"
-    assert graph_editor.graph.edge_dict["edge_0"] == Edge(
-        "edge_0", {"from": "vertex_0", "to": "vertex_1", "text": "This is an edge.", "predicates": [], "effects": []}
-    )
+    assert graph_editor.graph.edge_dict["edge_0"] == Edge(edge_name="edge_0", from_vertex="vertex_0", to_vertex="vertex_1", text="This is an edge.")
 
 # If you don't add a to_vertex when creating an edge it makes a new one
 def test_add_new_edge_without_to_vertex():
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("Hello world.")
-    edge_name = graph_editor.add_edge("vertex_0", text="This is an edge without preexisting target.")
+    graph_editor.add_vertex(text="Hello world.")
+    edge_name = graph_editor.add_edge(from_vertex="vertex_0", text="This is an edge without preexisting target.")
     assert len(graph_editor.graph.edge_dict) == 1
     assert len(graph_editor.graph.vertex_dict) == 2
     assert edge_name == "edge_0"
@@ -75,9 +69,9 @@ def test_add_new_edge_without_to_vertex():
 # You can edit existing edges (removing/adding predicates/effects)
 def test_editing_edge():
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("Hello world.")
-    graph_editor.add_vertex("Goodbye world.")
-    graph_editor.add_edge("vertex_0", "vertex_1", "This is an edge.", [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], [{"type": "modify_value", "target": "player.gold", "delta": -1}])
+    graph_editor.add_vertex(text="Hello world.")
+    graph_editor.add_vertex(text="Goodbye world.")
+    graph_editor.add_edge(from_vertex="vertex_0", to_vertex="vertex_1", text="This is an edge.", predicates=[{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], effects=[{"type": "modify_value", "target": "player.gold", "delta": -1}])
     graph_editor.edit_from_vertex("edge_0", "vertex_1")
     graph_editor.edit_to_vertex("edge_0", "vertex_0")
     graph_editor.edit_edge_text("edge_0", "Updated text.")
@@ -85,16 +79,14 @@ def test_editing_edge():
     graph_editor.add_predicate("edge_0", {"type": "check_list", "path": "player.inventory", "op": "not in", "value": "Bomb"})
     graph_editor.remove_effect("edge_0", {"type": "modify_value", "target": "player.gold", "delta": -1})
     graph_editor.add_effect("edge_0", {"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Bomb"})
-    assert graph_editor.graph.edge_dict["edge_0"] == Edge(
-        "edge_0", {"from": "vertex_1", "to": "vertex_0", "text": "Updated text.", "predicates": [{"type": "check_list", "path": "player.inventory", "op": "not in", "value": "Bomb"},], "effects": [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Bomb"}]}
-    )
+    assert graph_editor.graph.edge_dict["edge_0"] == Edge(edge_name="edge_0", from_vertex="vertex_1", to_vertex="vertex_0", text="Updated text.", predicates=[{"type": "check_list", "path": "player.inventory", "op": "not in", "value": "Bomb"},], effects=[{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Bomb"}])
 
 # You can edit existing edges (directly changing predicates/effects)
 def test_editing_edge_predicates_and_effects():
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("Hello world.")
-    graph_editor.add_vertex("Goodbye world.")
-    graph_editor.add_edge("vertex_0", "vertex_1", "This is an edge.")
+    graph_editor.add_vertex(text="Hello world.")
+    graph_editor.add_vertex(text="Goodbye world.")
+    graph_editor.add_edge(from_vertex="vertex_0", to_vertex="vertex_1", text="This is an edge.")
     new_predicates = [
         {"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}
     ]
@@ -111,8 +103,8 @@ def test_removing_edge():
     graph_editor = GraphEditor()
     assert len(graph_editor.graph.vertex_dict) == 0
     assert len(graph_editor.graph.edge_dict) == 0
-    graph_editor.add_vertex("Hello world.")
-    graph_editor.add_edge("vertex_0", text="This is an edge.")
+    graph_editor.add_vertex(text="Hello world.")
+    graph_editor.add_edge(from_vertex="vertex_0", text="This is an edge.")
     assert len(graph_editor.graph.vertex_dict) == 2
     assert len(graph_editor.graph.edge_dict) == 1
     graph_editor.remove_edge("edge_0")
@@ -123,9 +115,9 @@ def test_removing_edge():
 def test_removing_vertex():
     graph_editor = GraphEditor()
     assert len(graph_editor.graph.vertex_dict) == 0
-    graph_editor.add_vertex("Hello world.")
+    graph_editor.add_vertex(text="Hello world.")
     assert len(graph_editor.graph.vertex_dict) == 1
-    graph_editor.add_vertex("Goodbye world.")
+    graph_editor.add_vertex(text="Goodbye world.")
     assert len(graph_editor.graph.vertex_dict) == 2
     graph_editor.remove_vertex("vertex_1")
     assert len(graph_editor.graph.vertex_dict) == 1
@@ -135,8 +127,8 @@ def test_removing_connected_vertex():
     graph_editor = GraphEditor()
     assert len(graph_editor.graph.vertex_dict) == 0
     assert len(graph_editor.graph.edge_dict) == 0
-    graph_editor.add_vertex("Hello world.")
-    graph_editor.add_edge("vertex_0", text="This is an edge.")
+    graph_editor.add_vertex(text="Hello world.")
+    graph_editor.add_edge(from_vertex="vertex_0", text="This is an edge.")
     assert len(graph_editor.graph.vertex_dict) == 2
     assert len(graph_editor.graph.edge_dict) == 1
     graph_editor.remove_vertex("vertex_1")
@@ -149,11 +141,11 @@ def test_removing_connected_vertex_cascade_delete():
     graph_editor = GraphEditor()
     assert len(graph_editor.graph.vertex_dict) == 0
     assert len(graph_editor.graph.edge_dict) == 0
-    graph_editor.add_vertex("Hello world.")
-    graph_editor.add_edge("vertex_0", text="This is an edge.")
+    graph_editor.add_vertex(text="Hello world.")
+    graph_editor.add_edge(from_vertex="vertex_0", text="This is an edge.")
     assert len(graph_editor.graph.vertex_dict) == 2
     assert len(graph_editor.graph.edge_dict) == 1
-    graph_editor.remove_vertex("vertex_1", True)
+    graph_editor.remove_vertex("vertex_1", cascade_delete=True)
     assert len(graph_editor.graph.vertex_dict) == 1
     assert len(graph_editor.graph.edge_dict) == 0
 
@@ -168,9 +160,9 @@ def test_save_to_yaml(tmp_path):
     yaml_file = tmp_path / "save_test.yaml"
     graph_editor = GraphEditor(yaml_file)
     graph_editor.edit_name("Bob")
-    graph_editor.add_vertex("Hello world.", [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}])
-    graph_editor.add_vertex("Goodbye world.", [{"type": "modify_value", "target": "player.name", "value": "Bob"}])
-    graph_editor.add_edge("vertex_0", "vertex_1", "This is an edge.", [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], [{"type": "modify_value", "target": "player.gold", "delta": -1}])
+    graph_editor.add_vertex(text="Hello world.", effects=[{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}])
+    graph_editor.add_vertex(text="Goodbye world.", effects=[{"type": "modify_value", "target": "player.name", "value": "Bob"}])
+    graph_editor.add_edge(from_vertex="vertex_0", to_vertex="vertex_1", text="This is an edge.", predicates=[{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], effects=[{"type": "modify_value", "target": "player.gold", "delta": -1}])
     graph_editor.save()
     with open(yaml_file, "r") as f:
         yaml_data = safe_load(f)
@@ -189,7 +181,7 @@ def test_save_to_yaml(tmp_path):
 # You can Save As if you pass an argument to save()
 def test_save_as(tmp_path):
     graph_editor = GraphEditor()
-    graph_editor.add_vertex("Hello world.")
+    graph_editor.add_vertex(text="Hello world.")
     yaml_file = tmp_path / "save_as_test.yaml"
     graph_editor.save(yaml_file)
     with open(yaml_file, "r") as f:
@@ -207,9 +199,9 @@ def test_save_as(tmp_path):
 def test_save_load_round_trip(tmp_path):
     graph_editor_1 = GraphEditor()
     graph_editor_1.edit_name("Bob")
-    graph_editor_1.add_vertex("Hello world.", [{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}])
-    graph_editor_1.add_vertex("Goodbye world.", [{"type": "modify_value", "target": "player.name", "value": "Bob"}])
-    graph_editor_1.add_edge("vertex_0", "vertex_1", "This is an edge.", [{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], [{"type": "modify_value", "target": "player.gold", "delta": -1}])
+    graph_editor_1.add_vertex(text="Hello world.", effects=[{"type": "modify_list", "target": "player.inventory", "method": "append", "value": "Flower"}])
+    graph_editor_1.add_vertex(text="Goodbye world.", effects=[{"type": "modify_value", "target": "player.name", "value": "Bob"}])
+    graph_editor_1.add_edge(from_vertex="vertex_0", to_vertex="vertex_1", text="This is an edge.", predicates=[{"type": "check_value", "path": "player.gold", "op": ">=", "value": 1}], effects=[{"type": "modify_value", "target": "player.gold", "delta": -1}])
     yaml_file = tmp_path / "round_trip_test.yaml"
     graph_editor_1.save(yaml_file)
     graph_editor_2 = GraphEditor(yaml_file)
@@ -246,7 +238,7 @@ def test_load_from_yaml_data():
 def test_export_yaml_text_round_trip():
     graph_editor = GraphEditor()
     graph_editor.edit_name("Carol")
-    graph_editor.add_vertex("Hello.")
+    graph_editor.add_vertex(text="Hello.")
     exported_text = graph_editor.export_yaml_text()
     parsed_data = safe_load(exported_text)
     assert parsed_data["name"] == "Carol"
@@ -272,8 +264,8 @@ def test_load_with_custom_ids_uses_next_numeric_suffix():
     )
     assert graph_editor.next_vertex_index == 8
     assert graph_editor.next_edge_index == 4
-    assert graph_editor.add_vertex("Next vertex.") == "vertex_8"
-    assert graph_editor.add_edge("vertex_8", "vertex_7", "Next edge.") == "edge_4"
+    assert graph_editor.add_vertex(text="Next vertex.") == "vertex_8"
+    assert graph_editor.add_edge(from_vertex="vertex_8", to_vertex="vertex_7", text="Next edge.") == "edge_4"
 
 # Deletions do not cause id reuse
 def test_add_after_delete_keeps_monotonic_ids():
@@ -286,16 +278,16 @@ def test_add_after_delete_keeps_monotonic_ids():
         }
     )
     graph_editor.remove_vertex("vertex_2", cascade_delete=True)
-    assert graph_editor.add_vertex("Replacement vertex.") == "vertex_3"
-    assert graph_editor.add_edge("vertex_0", "vertex_3", "Replacement edge.") == "edge_2"
+    assert graph_editor.add_vertex(text="Replacement vertex.") == "vertex_3"
+    assert graph_editor.add_edge(from_vertex="vertex_0", to_vertex="vertex_3", text="Replacement edge.") == "edge_2"
 
 # Invalid to_vertex is rejected
 def test_add_new_edge_rejects_invalid_to_vertex():
     graph_editor = GraphEditor()
-    valid_from = graph_editor.add_vertex("Hello world.")
+    valid_from = graph_editor.add_vertex(text="Hello world.")
     invalid_to = "vertex_99"
     with raises(VertexNotFoundError):
-        graph_editor.add_edge(valid_from, invalid_to, "This edge won't be created.")
+        graph_editor.add_edge(from_vertex=valid_from, to_vertex=invalid_to, text="This edge won't be created.")
     assert valid_from in graph_editor.graph.vertex_dict
     assert len(graph_editor.graph.vertex_dict) == 1
     assert len(graph_editor.graph.edge_dict) == 0
@@ -305,6 +297,6 @@ def test_add_new_edge_rejects_invalid_from_vertex():
     graph_editor = GraphEditor()
     invalid_from = "vertex_99"
     with raises(VertexNotFoundError):
-        graph_editor.add_edge(invalid_from, text="This edge won't be created.")
+        graph_editor.add_edge(from_vertex=invalid_from, text="This edge won't be created.")
     assert len(graph_editor.graph.vertex_dict) == 0
     assert len(graph_editor.graph.edge_dict) == 0

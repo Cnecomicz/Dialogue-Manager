@@ -88,14 +88,14 @@ def test_remove_edge_via_app(app):
 
 # Removing a selected vertex without cascade keeps connected edges
 def test_remove_vertex_without_cascade(app):
-    edge_name = app.graph_editor.add_edge("vertex_0", "vertex_1", "Temporary edge")
+    edge_name = app.graph_editor.add_edge(from_vertex="vertex_0", to_vertex="vertex_1", text="Temporary edge")
     was_removed = app.remove_node("vertex_1", cascade_delete=False)
     assert "vertex_1" not in app.graph_editor.graph.vertex_dict
     assert edge_name in app.graph_editor.graph.edge_dict
 
 # Removing a selected vertex with cascade removes selected edges
 def test_remove_vertex_with_cascade(app):
-    edge_name = app.graph_editor.add_edge("vertex_0", "vertex_1", "Temporary edge")
+    edge_name = app.graph_editor.add_edge(from_vertex="vertex_0", to_vertex="vertex_1", text="Temporary edge")
     was_removed = app.remove_node("vertex_1", cascade_delete=True)
     assert "vertex_1" not in app.graph_editor.graph.vertex_dict
     assert edge_name not in app.graph_editor.graph.edge_dict
@@ -132,8 +132,8 @@ def test_update_edge_endpoints_does_not_save_invalid_endpoint(app):
 
 # Unresolved count is based on how many fixes to be made
 def test_count_unresolved_connections_for_vertex_delete(app):
-    app.graph_editor.add_edge("vertex_0", "vertex_1", "Edge 1")
-    app.graph_editor.add_edge("vertex_1", "vertex_0", "Edge 2")
+    app.graph_editor.add_edge(from_vertex="vertex_0", to_vertex="vertex_1", text="Edge 1")
+    app.graph_editor.add_edge(from_vertex="vertex_1", to_vertex="vertex_0", text="Edge 2")
     unresolved_count = app.count_unresolved_connections("vertex_0")
     assert unresolved_count >= 2
 

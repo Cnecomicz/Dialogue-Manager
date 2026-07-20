@@ -20,6 +20,7 @@ from dash_app.constants import (
     PendingAction,
     PickField
 )
+from dash_app.cytoscape_adapter import CytoscapeAdapter
 from dash_app.layout import (
     build_log_children,
     get_bottom_panel_style,
@@ -135,7 +136,6 @@ from dialogue_model.constants import MISSING_VERTEX, START_VERTEX
 from dialogue_validator.graph_validator import (
     build_validation_report, collect_validation_errors
 )
-from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 
 class App(Dash):
     """Dash application wrapper for dialogue graph editing."""
@@ -224,7 +224,11 @@ class App(Dash):
             str: Newly created edge identifier.
         """
         return self.graph_editor.add_edge(
-            from_vertex, to_vertex, text, predicates, effects
+            from_vertex=from_vertex,
+            to_vertex=to_vertex,
+            text=text,
+            predicates=predicates,
+            effects=effects
         )
 
     def add_vertex(
@@ -241,7 +245,7 @@ class App(Dash):
         Returns:
             str: Newly created vertex identifier.
         """
-        return self.graph_editor.add_vertex(text, effects)
+        return self.graph_editor.add_vertex(text=text, effects=effects)
 
     def build_context_menu_selection(
         self,
@@ -2899,7 +2903,9 @@ class App(Dash):
             bool: "True" when a node was removed, otherwise "False".
         """
         if node_id in self.graph_editor.graph.vertex_dict:
-            self.graph_editor.remove_vertex(node_id, cascade_delete)
+            self.graph_editor.remove_vertex(
+                node_id, cascade_delete=cascade_delete
+            )
             return True
         if node_id in self.graph_editor.graph.edge_dict:
             self.graph_editor.remove_edge(node_id)

@@ -1,23 +1,26 @@
 from operator import eq, ge, gt, le, lt, ne
 from re import sub
-from typing import Any, Callable
+from typing import Callable
 
-def evaluate_text(text: str, game_state: "GameState") -> str:
-    """Evaluate placeholder expressions in text using the game state.
+from dialogue_navigator.state_accessor import GameStatePathError, StateAccessor
+
+def evaluate_text(text: str, accessor: StateAccessor) -> str:
+    """Evaluate placeholder expressions in text using game state values.
 
     Args:
         text (str): Text possibly containing placeholders like {player.gold}.
-        game_state (GameState): Game state object for resolving values.
+        accessor (StateAccessor): Accessor for resolving game state values.
 
     Returns:
-        str: Text with any placeholders replaced by evaluated values.
+        str: Text with any resolvable placeholders replaced by their values.
+            Unresolvable placeholders are left unchanged.
     """
     def replace_placeholder(match):
         attr_path = match.group(1)
         try:
-            value = get_nested_attr(game_state, attr_path)
+            value = accessor.get(attr_path)
             return str(value)
-        except AttributeError:
+        except GameStatePathError:
             return match.group(0)
     return sub(r"\{([^}]+)\}", replace_placeholder, text)
 
@@ -41,32 +44,3 @@ def get_operator(op: str) -> Callable[[object, object], bool]:
         "not in": lambda a, b: a not in b,
     }
     return operators[op]
-
-def get_nested_attr(obj: object, path: str) -> object:
-    """Resolve a dotted attribute path from an object.
-
-    Args:
-        obj (object): Root object.
-        path (str): Dotted path such as "player.equipment.weapon".
-
-    Returns:
-        object: Resolved nested attribute value.
-    """
-    for attr in path.split("."):
-        obj = getattr(obj, attr)
-    return obj
-
-def set_nested_attr(obj: object, path: str, value: Any) -> None:
-    """Set a dotted attribute path on an object.
-
-    Args:
-        obj (object): Root object.
-        path (str): Dotted path such as "player.equipment.weapon".
-        value (Any): Value to assign.
-    """
-    attrs = path.split(".")
-    for attr in attrs[:-1]:
-        obj = getattr(obj, attr)
-    setattr(obj, attrs[-1], value)
-
-

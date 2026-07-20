@@ -46,6 +46,14 @@ class GraphViewer:
         """
         self.yaml_file = yaml_file
 
+    def __repr__(self) -> str:
+        """Return a debug representation of this viewer.
+
+        Returns:
+            str: String representation of this viewer.
+        """
+        return f"<GraphViewer yaml_file={self.yaml_file!r}>"
+
     def get_effects_text(self, effects: list[dict[str, str | int]]) -> str:
         """Format effect mappings as Graphviz label text.
 

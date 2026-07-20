@@ -68,7 +68,11 @@ class GraphEditor:
         Returns:
             str: String representation of this editor.
         """
-        return f'GraphEditor(yaml_file="{self.yaml_file}")'
+        return (
+            f"<GraphEditor yaml_file={self.yaml_file!r} "
+            f"vertices={len(self.graph.vertex_dict)} "
+            f"edges={len(self.graph.edge_dict)}>"
+        )
 
     def __eq__(self, other: Any) -> bool:
         """Compare this editor with another object for graph equality.
@@ -84,11 +88,12 @@ class GraphEditor:
         return self.graph == other.graph
 
     def add_edge(
-        self, 
-        from_vertex: str, 
-        to_vertex: str | None = None, 
-        text: str | None = None, 
-        predicates: list[dict[str, str | int]] | None = None, 
+        self,
+        *,
+        from_vertex: str,
+        to_vertex: str | None = None,
+        text: str | None = None,
+        predicates: list[dict[str, str | int]] | None = None,
         effects: list[dict[str, str | int]] | None = None
     ) -> str:
         """Create and add a new edge to the graph.
@@ -119,13 +124,12 @@ class GraphEditor:
             effects = []
         edge_name = f"{EDGE_PREFIX}{self.next_edge_index}"
         self.graph.edge_dict[edge_name] = Edge(
-            edge_name, {
-                "from": from_vertex,
-                "to": to_vertex,
-                "text": text,
-                "predicates": predicates,
-                "effects": effects
-            }
+            edge_name=edge_name,
+            from_vertex=from_vertex,
+            to_vertex=to_vertex,
+            text=text,
+            predicates=predicates,
+            effects=effects
         )
         self.next_edge_index += 1
         return edge_name
@@ -156,8 +160,9 @@ class GraphEditor:
         self.graph.edge_dict[edge_name].predicates.append(predicate)
 
     def add_vertex(
-        self, 
-        text: str | None = None, 
+        self,
+        *,
+        text: str | None = None,
         effects: list[dict[str, str | int]] | None = None
     ) -> str:
         """Create and add a new vertex to the graph.
@@ -175,7 +180,7 @@ class GraphEditor:
             effects = []
         vertex_name = f"{VERTEX_PREFIX}{self.next_vertex_index}"
         self.graph.vertex_dict[vertex_name] = Vertex(
-            vertex_name, {"text": text, "effects": effects}
+            vertex_name=vertex_name, text=text, effects=effects
         )
         self.next_vertex_index += 1
         return vertex_name
@@ -332,8 +337,9 @@ class GraphEditor:
         return self.get_next_index(self.graph.vertex_dict, VERTEX_PREFIX)
 
     def load(
-        self, 
-        yaml_file: str | PathLike | None = None, 
+        self,
+        yaml_file: str | PathLike | None = None,
+        *,
         yaml_data: dict | None = None
     ) -> None:
         """Load graph data from file and/or parsed yaml mapping.
@@ -343,7 +349,11 @@ class GraphEditor:
             yaml_data (dict | None): Parsed yaml mapping.
         """
         self.yaml_file = yaml_file
-        self.graph = Graph(yaml_file=yaml_file, yaml_data=yaml_data)
+        self.graph = Graph(
+            yaml_file=yaml_file,
+            yaml_data=yaml_data,
+            require_existing_file=False
+        )
         self.next_vertex_index = self.get_next_vertex_index()
         self.next_edge_index = self.get_next_edge_index()
 
@@ -381,7 +391,7 @@ class GraphEditor:
         self.graph.edge_dict[edge_name].predicates.remove(predicate)
 
     def remove_vertex(
-        self, vertex_name: str, cascade_delete: bool = False
+        self, vertex_name: str, *, cascade_delete: bool = False
     ) -> None:
         """Remove a vertex and optionally connected edges.
 

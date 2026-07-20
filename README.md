@@ -12,8 +12,8 @@ It includes:
     predicates, and effects per each vertex or edge, and saves/loads into
     yaml.
 * A runtime graph navigator API that traverses dialogue graphs, getting
-    NPC and player text, filtering player options by game state predicates, 
-    and setting game state effects upon node entry.
+    NPC and player text, getting player options filtered by game state 
+    predicates, and setting game state effects upon node entry.
 * A Dash + Cytoscape visual editor with underlying editor API for creating
     and mutating graphs. 
 * A Graphviz renderer for static svg output.
@@ -28,7 +28,8 @@ It includes:
     to edges 
 * Parse plain text predicate/effect expressions to and from structured data
 * Navigate a graph at runtime, providing NPC lines and available player 
-    choices while handling predicates and effects
+    choices while handling predicates, effects, and game state dependent
+    variable text
 * Visualize and edit graphs interactively in the browser
 * Render graphs to svg for docs and design review
 
@@ -50,7 +51,7 @@ pip install -e .
 This project depends on the preexisting python packages dash, dash-cytoscape, 
 graphviz, and PyYAML.
 
-Install with development tools:
+You can also install this project with additional development tools:
 
 ```
 pip install -e ".[dev]"
@@ -104,14 +105,8 @@ the same directory as the source file.
 
 Check a dialogue graph for runtime validity with `dialogue-validate <path>`,
 for example `dialogue-validate data/alice_dialogue_graph.yaml`. It prints
-a success line when the graph is valid, or a validation report and a non-zero
-exist status when it is not.
-
-### Test suite
-
-With dev dependencies installed, run the test suite with `./run_tests.sh`. 
-This attempts to optimize which tests run using testmon. To override this, 
-use `COVERAGE=1 ./run_tests.sh`.
+a success line when the graph is valid, or a validation report when it is
+not.
 
 ### In game dialogue management API
 
@@ -119,14 +114,21 @@ Use the `GraphNavigator` API to handle presenting, filtering, and selecting
 dialogue options in your game engine. See a minimal working example 
 [below](#programmatic-usage-mwe).
 
+### Test suite
+
+With dev dependencies installed, run the test suite with `./run_tests.sh`. 
+This attempts to optimize which tests run using testmon. To override this, 
+use `COVERAGE=1 ./run_tests.sh`.
+
 ## Dialogue model yaml format
 
 A graph has this top-level shape:
 
 * name: NPC name
-* vertices: map of vertex_name -> vertex object. A vertex object has text,
-    representing the NPC dialogue, and optionally effects, representing
-    game state changes that occur upon entering this vertex.
+* vertices: map of vertex_name -> vertex object. A vertex object has:
+    * text, representing the NPC dialogue, and 
+    * optionally effects, representing game state changes that occur upon 
+        entering this vertex.
 * edges: map of edge_name -> edge object. An edge object has:
     * from, representing the source vertex,
     * to, representing the target vertex,
@@ -146,10 +148,11 @@ vertices:
         text: "Hello world."
         effects: []
     vertex_1:
-        text: "Here you go."
+        text: "Here you go. You have purchased {flags.flower_count} flowers."
         effects:
             - {type: "modify_list", target: "player.inventory", method: "append", value: "Flower"}
             - {type: "modify_list", target: "zeke.inventory", method: "remove", value: "Flower"}
+            - {type: "modify_value", target: "flags.flower_count", delta: 1}
 
 edges:
     edge_0:
@@ -168,9 +171,11 @@ For a larger example, see
 
 The editor supports Python-esque text forms of effects and predicates. These
 forms are parsed and converted into the above standardized yaml examples.
-This availability exists to support the editor where users can key predicates
-or effects by hand for a given vertex/edge. The following outlines the
-conversion between forms.
+This availability exists to support the browser based `dialogue-editor`
+where users can key predicates or effects by hand for a given vertex/edge;
+it is not mandatory if manually editing yaml files or directly calling
+`GraphEditor` methods outside of `dialogue-editor`. The following outlines
+the conversion between forms.
 
 ### Effects:
 
@@ -209,18 +214,20 @@ Well-formedness guarantees:
 * Each effect/predicate contains the keys required per that type.
 * Each vertex/edge has text with no empty or nested placeholder braces `{}`.
 
-Validation can be done in the command line with `dialogue-navigate <path>`
-or programmatically by importing methods from the `dialogue_validator` package.
+Validation can be done in the command line with `dialogue-validate <path>`
+or programmatically by importing functionality from the `dialogue_validator`
+package.
 
 ## Programmatic game engine usage MWE:
 
-This is a sample of how the runtime dialogue navigator could be used in 
-a game engine, with supporting helpful print statements in order to minimize
-the MWE.
+This is a minimal working example of how the runtime dialogue navigator
+could be used in a game engine. A game loop presents each turn, maps player
+input to one of the available options, and advances until the conversation
+is over.
 
 ```
 from dialogue_model.graph import Graph
-from dialogue_navigator.graph_navigator import GraphNavigator, InvalidEdgeError
+from dialogue_navigator.graph_navigator import GraphNavigator
 
 graph = Graph("data/alice_dialogue_graph.yaml")
 
@@ -238,36 +245,64 @@ class MWEGameState:
         self.player = MWEPlayer()
         self.alice = MWEAlice()
 
-graph_navigator = GraphNavigator(graph, MWEGameState())
+def render_turn(turn):
+    print(f"Alice: {turn.text}")
+    for index, option in enumerate(turn.options):
+        print(f"  [{index}] {option.text}")
 
-current_turn = graph_navigator.get_current_turn()
-print("Alice says:")
-for vertex_name, vertex_text in current_turn["vertex_text"].items():
-    print(f"{vertex_text} ({vertex_name})")
-print("Your options:")
-for edge_name, edge_text in current_turn["edge_texts"].items():
-    print(f"{edge_text} ({edge_name})")
+graph_navigator = GraphNavigator(graph, game_state=MWEGameState())
 
-try:
-    graph_navigator.select("edge_0")
-except InvalidEdgeError as exception:
-    print(exception)
-
-current_turn = graph_navigator.get_current_turn()
-print("Alice then says:")
-for vertex_name, vertex_text in current_turn["vertex_text"].items():
-    print(f"{vertex_text} ({vertex_name})")
-print("Your options now:")
-for edge_name, edge_text in current_turn["edge_texts"].items():
-    print(f"{edge_text} ({edge_name})")
-
+turn = graph_navigator.get_current_turn()
+while not turn.is_over:
+    render_turn(turn)
+    choice = turn.options[0] # Supposing the player always chooses option 0
+    turn = graph_navigator.respond_with(choice.edge)
+render_turn(turn)
 ```
 
-Note that validation automatically occurs when instantiating a 
+In expected use cases, `GraphNavigator` will handle all mechanical aspects
+of dialogue navigation (replacing text placeholder variables with their
+values, filtering available edges to only ones with predicates satisfied,
+and applying effects when an edge is selected). A typical user of
+`GraphNavigator` need only be aware of:
+* `get_current_turn()` to return a `Turn` object,
+* `select(edge_name)` to commit a choice of edge player response, and
+* `respond_with(edge_name)`, which is syntactic sugar for `select(edge_name)`
+    followed by `get_current_turn()`. 
+
+Note that validation automatically occurs when instantiating a
 `GraphNavigator` and so need not be explicitly invoked. The game engine
-is not expected to edit a Graph in any way; changes in dialogue availability
-should occur by changing GameState flags that the predicates will then check 
+is not expected to edit a `Graph` in any way; changes in dialogue availability
+should occur by changing game state values that predicates will then check 
 against, and therefore a single validation check on creation should suffice.
+
+## Game state contract
+
+The navigator resolves paths such as `player.gold` and `alice.inventory`,
+used by predicates, effects, and text placeholders, against a game state
+object that your engine owns. The dialogue project deliberately does not
+define a game state class; this can be anything, as long as its attribute
+tree matches the paths your graph uses. In the MWE above, `player.gold`
+resolves because `MWEGameState` has a `player` attribute whose value has
+a `gold` attribute.
+
+By default, `GraphNavigator(graph, game_state, accessor)` wraps `game_state`
+in an `AttributeStateAccessor` which reads and writes those paths as ordinary
+object attributes. If your state is not stored as plain attributes (for
+instance, it is a dictionary, an entity component system, etc), pass a custom
+`accessor` instead:
+
+```
+from dialogue_navigator.state_accessor import StateAccessor
+
+class MyAccessor:
+    def get(self, path):
+        ...
+    def set(self, path, value):
+        ...
+
+graph_navigator = GraphNavigator(graph, accessor=MyAccessor())
+```
 
 ## Package Layout
 
@@ -277,41 +312,42 @@ Browser-based visual editor.
 
 ### dialogue_editor
 
-GraphEditor mutation and persistence API. Used by the Dash + Cytoscape app, 
+`GraphEditor` mutation and persistence API. Used by the Dash + Cytoscape app, 
 with public access to methods as well.
 
 ### dialogue_model
 
-Graph, Vertex, and Edge classes. Codecs for converting/parsing between yaml
-and python syntax.
+`Graph`, `Vertex`, and `Edge` classes. Codecs for converting/parsing between 
+yaml and python syntax.
 
 ### dialogue_navigator
 
-GraphNavigator runtime edge validation and effect processing. Handles complete
-dialogue turn life cycle. 
+`GraphNavigator` runtime edge validation and effect processing. Handles
+complete dialogue turn life cycle with `Turn` and `Option` classes. Provides
+an accessor seam to handle any engine's game state managers.
 
 ### dialogue_validator
 
-Graph validation API. Provides `collect_validation_errors` (non-raising),
-`validate` (raising), and the validation error family.
+`GraphValidator` validity API. Used by `GraphNavigator`, with public access
+to methods as well.
 
 ### dialogue_viewer
 
-GraphViewer class, a static svg renderer.
+`GraphViewer` class, a static svg renderer.
 
 ## Behavior notes
 
-GraphEditor and consequently the `dialogue-editor` browser app handle vertex
+`GraphEditor` and consequently the `dialogue-editor` browser app handle vertex
 deletion with an optional `cascade_delete` parameter, defaulting to `False`.
 When `True`, removing a vertex removes all connected edges. When `False`,
 removing a vertex orphans all edges having that vertex as its source or 
 target, flagging the from and to keys as `__MISSING__`.
 
-Graphs begin at vertex_0, which cannot be deleted.
+Graphs begin at `vertex_0`, which cannot be deleted.
 
 ## Editor log messages
 
-The Log in `dialogue-editor` is intended to be a user-facing history of 
+The log in `dialogue-editor` is intended to be a user-facing history of 
 changes made in the UI.
 
 The editor uses these terms in the log:
@@ -347,5 +383,8 @@ The editor uses these terms in the log:
 `dialogue-render <path>` renders a yaml graph to svg in the same directory
 as the source file.
 
-`dialogue-validate <path>` checks a yaml graph for runtime validity, printing
-status report and 0 or nonzero exit codes.
+`dialogue-validate <path>` checks a yaml graph for runtime validity and
+prints a status report.
+
+(With dev dependencies) `./run_tests.sh` runs an optimized pytest suite.
+To force all tests to run, use `COVERAGE=1 ./run_tests.sh`.

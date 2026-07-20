@@ -1,5 +1,5 @@
+from dash_app.cytoscape_adapter import CytoscapeAdapter
 from dialogue_editor.graph_editor import GraphEditor
-from dialogue_viewer.cytoscape_adapter import CytoscapeAdapter
 
 # The adapter takes as input a Graph
 def test_instantiating_adapter(alice_graph):
