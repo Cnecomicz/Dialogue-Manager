@@ -77,7 +77,7 @@ ERROR_UPDATE_ENDPOINT_EMPTY = (
 )
 ERROR_UPDATE_ENDPOINT_MISSING = (
     "Could not update {field} for Player node {node_id} because NPC node "
-    "{vertex_id} does not exist. Enter an existing NPC node ID in {field} "
+    "{vertex_name} does not exist. Enter an existing NPC node ID in {field} "
     "and try again."
 )
 ERROR_UPLOAD_INVALID_DATA = (

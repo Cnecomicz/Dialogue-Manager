@@ -2992,7 +2992,7 @@ class App(Dash):
                     ERROR_UPDATE_ENDPOINT_MISSING.format(
                         field=FIELD_SOURCE,
                         node_id=self.action_logger.quote_value(node_id),
-                        vertex_id=self.action_logger.quote_value(
+                        vertex_name=self.action_logger.quote_value(
                             candidate_from_vertex
                         )
                     )
@@ -3018,7 +3018,7 @@ class App(Dash):
                     ERROR_UPDATE_ENDPOINT_MISSING.format(
                         field=FIELD_TARGET,
                         node_id=self.action_logger.quote_value(node_id),
-                        vertex_id=self.action_logger.quote_value(
+                        vertex_name=self.action_logger.quote_value(
                             candidate_to_vertex
                         )
                     )
