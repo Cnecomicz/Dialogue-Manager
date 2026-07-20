@@ -40,7 +40,21 @@ This project requires Python 3.11 or newer.
 Using the static svg render requires [Graphviz](https://graphviz.org) installed 
 on your system.
 
-After downloading this project off of 
+### Install a released version
+
+To install a specific published release, install it directly from its tag.
+For example, to install v1.0.0:
+
+```
+pip install "git+https://github.com/Cnecomicz/dialogue.git@v1.0.0"
+```
+
+Releases are listed at
+[https://github.com/Cnecomicz/dialogue/releases](https://github.com/Cnecomicz/dialogue/releases).
+
+### Install from source
+
+To work from the latest source, after downloading this project off of
 [https://github.com/Cnecomicz/dialogue](https://github.com/Cnecomicz/dialogue), 
 install it in the terminal using pip:
 
