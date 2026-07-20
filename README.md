@@ -226,8 +226,8 @@ input to one of the available options, and advances until the conversation
 is over.
 
 ```
-from dialogue_model.graph import Graph
-from dialogue_navigator.graph_navigator import GraphNavigator
+from dialogue_model import Graph
+from dialogue_navigator import GraphNavigator
 
 graph = Graph("data/alice_dialogue_graph.yaml")
 
@@ -293,7 +293,7 @@ instance, it is a dictionary, an entity component system, etc), pass a custom
 `accessor` instead:
 
 ```
-from dialogue_navigator.state_accessor import StateAccessor
+from dialogue_navigator import StateAccessor
 
 class MyAccessor:
     def get(self, path):
