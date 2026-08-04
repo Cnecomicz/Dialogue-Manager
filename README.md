@@ -1,4 +1,4 @@
-# Dialogue Manager
+# Dialogue
 
 A Python toolkit for building, editing, navigating, and visualizing branching
 dialogue graphs for video games. This is intended to support my current
