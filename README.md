@@ -45,7 +45,7 @@ on your system.
 To install a specific published release, install it directly from its tag.
 For example, to install v1.0.0:
 
-```
+```bash
 pip install "git+https://github.com/Cnecomicz/dialogue.git@v1.0.0"
 ```
 
@@ -58,7 +58,7 @@ To work from the latest source, after downloading this project off of
 [https://github.com/Cnecomicz/dialogue](https://github.com/Cnecomicz/dialogue), 
 install it in the terminal using pip:
 
-```
+```bash
 pip install -e .
 ```
 
@@ -67,7 +67,7 @@ graphviz, and PyYAML.
 
 You can also install this project with additional development tools:
 
-```
+```bash
 pip install -e ".[dev]"
 ```
 
@@ -154,7 +154,7 @@ A graph has this top-level shape:
 
 Example:
 
-```
+```yaml
 name: Zeke
 
 vertices:
@@ -240,7 +240,7 @@ could be used in a game engine. A game loop presents each turn, maps player
 input to one of the available options, and advances until the conversation
 is over.
 
-```
+```python
 from dialogue_model import Graph
 from dialogue_navigator import GraphNavigator
 
@@ -307,7 +307,7 @@ object attributes. If your state is not stored as plain attributes (for
 instance, it is a dictionary, an entity component system, etc), pass a custom
 `accessor` instead:
 
-```
+```python
 from dialogue_navigator import StateAccessor
 
 class MyAccessor:
