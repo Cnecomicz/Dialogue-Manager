@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
 ## [Unreleased]
+### Added
+- Minor tweaks to `README.md`.
+- Minor tweaks to `pyproject.toml`.
 
 ## [1.0.0] - 2026-07-19
 ### Added
