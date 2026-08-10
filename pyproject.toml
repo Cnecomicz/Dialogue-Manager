@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -10,6 +10,8 @@ authors = [
 ]
 description = "An engine and library for handling dialogue graphs in video games."
 readme = "README.md"
+license = "LGPL-2.1-or-later"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
